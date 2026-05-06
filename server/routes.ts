@@ -5,6 +5,11 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { insertGameCollectionSchema, insertRomSaveSlotSchema, insertUploadedRomSchema } from "@shared/schema";
+import {
+  SYSTEM_IMAGES,
+  isSystemImageId,
+  type SystemImageId,
+} from "@shared/system-images";
 import { z } from "zod";
 
 const ROM_EXTENSIONS: Record<string, string[]> = {
@@ -30,6 +35,13 @@ const EMULATORJS_CORES: Record<string, string> = {
 };
 
 const ROM_ROOT = path.resolve(process.cwd(), "rom-storage");
+const SYSTEM_IMAGE_CACHE_DIR = path.resolve(process.cwd(), "system-image-cache");
+const SYSTEM_IMAGE_FETCH_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "CabinetBridge/0.2 (+https://github.com/anthropics/claude-code; mailto:noreply@anthropic.com) Mozilla/5.0",
+  Referer: "https://commons.wikimedia.org/",
+  Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+};
 const LIBRETRO_PLAYLISTS: Record<string, string> = {
   nes: "Nintendo - Nintendo Entertainment System",
   snes: "Nintendo - Super Nintendo Entertainment System",
@@ -338,6 +350,52 @@ export async function registerRoutes(
     },
   );
 
+  app.get("/api/system-images", (_req, res) => {
+    const list = Object.values(SYSTEM_IMAGES).map((entry) => ({
+      id: entry.id,
+      url: `/api/system-images/${entry.id}`,
+      source: entry.source,
+      sourceUrl: entry.sourceUrl,
+      license: entry.license,
+      upstreamUrl: entry.url,
+    }));
+    res.json(list);
+  });
+
+  app.get("/api/system-images/:id", async (req, res) => {
+    const id = String(req.params.id);
+    if (!isSystemImageId(id)) {
+      return res.status(404).json({ message: "Unknown system image id." });
+    }
+    const refresh = req.query.refresh === "1" || req.query.refresh === "true";
+    try {
+      const file = await getCachedSystemImage(id, { forceRefresh: refresh });
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+      res.sendFile(file);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to fetch image.";
+      res.status(404).json({ message });
+    }
+  });
+
+  app.post("/api/system-images/:id/refresh", async (req, res) => {
+    const id = String(req.params.id);
+    if (!isSystemImageId(id)) {
+      return res.status(404).json({ message: "Unknown system image id." });
+    }
+    try {
+      const file = await getCachedSystemImage(id, { forceRefresh: true });
+      const stat = await fs.stat(file);
+      res.json({ id, refreshed: true, bytes: stat.size });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to refresh image.";
+      res.status(502).json({ id, refreshed: false, message });
+    }
+  });
+
   app.post("/api/roms/:id/scrape-art", async (req, res) => {
     const id = Number(req.params.id);
     const rom = await storage.getUploadedRom(id);
@@ -355,6 +413,52 @@ export async function registerRoutes(
   });
 
   return httpServer;
+}
+
+async function getCachedSystemImage(
+  id: SystemImageId,
+  { forceRefresh = false }: { forceRefresh?: boolean } = {},
+): Promise<string> {
+  await fs.mkdir(SYSTEM_IMAGE_CACHE_DIR, { recursive: true });
+  const cachePath = path.join(SYSTEM_IMAGE_CACHE_DIR, `${id}.jpg`);
+  if (!forceRefresh) {
+    try {
+      const stat = await fs.stat(cachePath);
+      if (stat.size > 0) return cachePath;
+    } catch {
+      // miss — fall through to fetch
+    }
+  }
+
+  const upstream = SYSTEM_IMAGES[id].url;
+  let lastError: unknown = null;
+  try {
+    const response = await fetch(upstream, { headers: SYSTEM_IMAGE_FETCH_HEADERS });
+    if (response.ok) {
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length > 0) {
+        await fs.writeFile(cachePath, buffer);
+        return cachePath;
+      }
+      lastError = new Error("Empty image body from upstream.");
+    } else {
+      lastError = new Error(`Upstream returned ${response.status}.`);
+    }
+  } catch (error) {
+    lastError = error;
+  }
+
+  // If a stale cached copy exists, prefer serving it over failing.
+  try {
+    const stat = await fs.stat(cachePath);
+    if (stat.size > 0) return cachePath;
+  } catch {
+    // no stale cache
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("System image fetch failed.");
 }
 
 async function findLibretroBoxArt(system: string, title: string) {

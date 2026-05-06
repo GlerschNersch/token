@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Game, System } from "@/data/library";
 
 /**
@@ -68,6 +69,8 @@ export function SystemTile({
   className?: string;
 }) {
   const [a, b] = system.art;
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = !!system.image && !imageFailed;
   return (
     <div
       className={`relative w-full h-full overflow-hidden ${className}`}
@@ -75,9 +78,32 @@ export function SystemTile({
         background: `linear-gradient(140deg, hsl(${a}) 0%, hsl(${b}) 100%)`,
       }}
     >
-      <PixelGrid accent={`hsl(${b})`} dim />
+      {showImage ? (
+        <>
+          <img
+            src={system.image!.url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover mix-blend-soft-light"
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+            data-testid={`img-system-${system.id}`}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.45) 100%)",
+            }}
+          />
+        </>
+      ) : (
+        <PixelGrid accent={`hsl(${b})`} dim />
+      )}
       <div className="absolute inset-x-0 top-2 flex justify-center">
-        <span className="font-display text-[clamp(18px,3vw,28px)] font-black text-white/90 drop-shadow tracking-tight leading-none">
+        <span
+          className="font-display text-[clamp(18px,3vw,28px)] font-black text-white/90 tracking-tight leading-none"
+          style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.55))" }}
+        >
           {system.mono}
         </span>
       </div>

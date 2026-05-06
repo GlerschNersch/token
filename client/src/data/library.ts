@@ -1,6 +1,12 @@
 // Console definitions and uploaded-library helpers. The active game catalog is
 // intentionally empty by default; ROM uploads from the backend populate it.
 import type { UploadedRom } from "@shared/schema";
+import {
+  SYSTEM_IMAGES,
+  systemImageProxyPath,
+  type SystemImage,
+  isSystemImageId,
+} from "@shared/system-images";
 
 export type SystemId =
   | "favorites"
@@ -28,6 +34,14 @@ export interface System {
   slug: string;
   /** Optional pixel-art-style monogram (1-3 chars). */
   mono: string;
+  /** Console hardware photo metadata; URL is rewritten to a same-origin proxy. */
+  image?: SystemImage;
+}
+
+function systemImage(id: string): SystemImage | undefined {
+  if (!isSystemImageId(id)) return undefined;
+  const upstream = SYSTEM_IMAGES[id];
+  return { ...upstream, url: systemImageProxyPath(id) };
 }
 
 export interface Game {
@@ -63,6 +77,7 @@ export const SYSTEMS: System[] = [
     art: ["0 76% 52%", "16 88% 48%"],
     slug: "nes",
     mono: "NES",
+    image: systemImage("nes"),
   },
   {
     id: "snes",
@@ -73,6 +88,7 @@ export const SYSTEMS: System[] = [
     art: ["264 70% 58%", "322 78% 56%"],
     slug: "snes",
     mono: "SNES",
+    image: systemImage("snes"),
   },
   {
     id: "n64",
@@ -83,6 +99,7 @@ export const SYSTEMS: System[] = [
     art: ["188 80% 46%", "210 76% 52%"],
     slug: "n64",
     mono: "N64",
+    image: systemImage("n64"),
   },
   {
     id: "gba",
@@ -93,6 +110,7 @@ export const SYSTEMS: System[] = [
     art: ["288 70% 56%", "200 80% 52%"],
     slug: "gba",
     mono: "GBA",
+    image: systemImage("gba"),
   },
   {
     id: "genesis",
@@ -103,6 +121,7 @@ export const SYSTEMS: System[] = [
     art: ["220 78% 52%", "200 76% 48%"],
     slug: "genesis",
     mono: "GEN",
+    image: systemImage("genesis"),
   },
   {
     id: "ps1",
@@ -113,6 +132,7 @@ export const SYSTEMS: System[] = [
     art: ["232 60% 54%", "284 60% 50%"],
     slug: "psx",
     mono: "PS1",
+    image: systemImage("ps1"),
   },
   {
     id: "ps2",
@@ -123,6 +143,7 @@ export const SYSTEMS: System[] = [
     art: ["232 70% 38%", "264 60% 30%"],
     slug: "ps2",
     mono: "PS2",
+    image: systemImage("ps2"),
   },
   {
     id: "arcade",
@@ -133,6 +154,7 @@ export const SYSTEMS: System[] = [
     art: ["322 92% 56%", "42 96% 56%"],
     slug: "arcade",
     mono: "ARC",
+    image: systemImage("arcade"),
   },
   {
     id: "dreamcast",
@@ -143,6 +165,7 @@ export const SYSTEMS: System[] = [
     art: ["28 92% 56%", "16 88% 48%"],
     slug: "dreamcast",
     mono: "DC",
+    image: systemImage("dreamcast"),
   },
 ];
 
