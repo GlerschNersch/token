@@ -947,6 +947,12 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
       .virtual-pad[hidden] {
         display: none;
       }
+      .virtual-pad__tray {
+        display: none;
+      }
+      .virtual-pad__hide {
+        display: none;
+      }
       .virtual-pad button {
         appearance: none;
         min-width: 54px;
@@ -1069,15 +1075,15 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         font-size: 10px;
       }
       @media (max-width: 720px) {
-        #game {
-          height: min(52vh, 430px);
-          min-height: 260px;
+        body.cabinet-pad-mobile.cabinet-pad-on #game {
+          height: var(--cabinet-emu-height, min(54vh, 460px));
+          min-height: 240px;
           overflow: hidden;
         }
-        #game canvas,
-        #game iframe,
-        #game video {
-          max-height: min(52vh, 430px) !important;
+        body.cabinet-pad-mobile.cabinet-pad-on #game canvas,
+        body.cabinet-pad-mobile.cabinet-pad-on #game iframe,
+        body.cabinet-pad-mobile.cabinet-pad-on #game video {
+          max-height: var(--cabinet-emu-height, min(54vh, 460px)) !important;
         }
         .cabinet-menu-panel {
           left: 12px;
@@ -1114,90 +1120,149 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         .cabinet-save-slot button {
           min-height: 34px;
         }
-        .virtual-pad {
+        body.cabinet-pad-mobile .virtual-pad {
+          inset: auto 0 0 0;
+          height: var(--cabinet-tray-height, max(46vh, 360px));
+          pointer-events: none;
+        }
+        body.cabinet-pad-mobile .virtual-pad__tray {
+          position: absolute;
           inset: 0;
+          display: block;
+          pointer-events: auto;
+          background:
+            radial-gradient(120% 80% at 50% -10%, rgba(236, 72, 153, 0.12), transparent 60%),
+            linear-gradient(180deg, rgba(11, 11, 16, 0.92), rgba(5, 5, 7, 0.98));
+          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.5);
+        }
+        body.cabinet-pad-mobile .virtual-pad__hide {
+          position: absolute;
+          z-index: 2;
+          top: 6px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          appearance: none;
+          min-width: 96px;
+          min-height: 22px;
+          padding: 4px 14px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 999px;
+          background: rgba(5, 5, 7, 0.7);
+          color: rgba(248, 250, 252, 0.78);
+          font: 800 9px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          cursor: pointer;
+          pointer-events: auto;
+          touch-action: manipulation;
+        }
+        body.cabinet-pad-mobile .virtual-pad__hide:hover,
+        body.cabinet-pad-mobile .virtual-pad__hide:focus-visible {
+          background: rgba(236, 72, 153, 0.34);
+          border-color: rgba(236, 72, 153, 0.7);
+          color: #f8fafc;
+          outline: none;
         }
         .virtual-pad__shoulders {
-          top: max(86px, calc(env(safe-area-inset-top) + 74px));
+          position: absolute;
+          left: max(14px, env(safe-area-inset-left));
+          right: max(14px, env(safe-area-inset-right));
+          top: 38px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          pointer-events: none;
         }
-        .virtual-pad__dpad {
-          grid-template-columns: repeat(3, 52px);
-          grid-template-rows: repeat(3, 52px);
-          bottom: max(38px, env(safe-area-inset-bottom));
-        }
-        .virtual-pad__face {
-          grid-template-columns: repeat(3, 52px);
-          grid-template-rows: repeat(3, 52px);
-          bottom: max(48px, env(safe-area-inset-bottom));
-        }
-        .virtual-pad button {
-          min-width: 50px;
-          min-height: 50px;
+        .virtual-pad__shoulders button {
+          min-width: min(22vw, 90px);
+          min-height: 40px;
+          border-radius: 14px;
+          font-size: 11px;
+          pointer-events: auto;
         }
         .virtual-pad__system {
-          top: min(56vh, 450px);
+          position: absolute;
+          top: 38px;
+          left: 50%;
           bottom: auto;
+          transform: translateX(-50%);
+          display: flex;
+          gap: 10px;
+          pointer-events: none;
         }
         .virtual-pad__system button {
-          min-width: 74px;
-          min-height: 44px;
+          min-width: 78px;
+          min-height: 40px;
+          border-radius: 14px;
+          font-size: 10px;
+          pointer-events: auto;
+        }
+        .virtual-pad__dpad {
+          left: max(10px, env(safe-area-inset-left));
+          bottom: max(20px, env(safe-area-inset-bottom));
+          grid-template-columns: repeat(3, 60px);
+          grid-template-rows: repeat(3, 60px);
+          gap: 6px;
+          pointer-events: none;
+        }
+        .virtual-pad__face {
+          right: max(10px, env(safe-area-inset-right));
+          bottom: max(20px, env(safe-area-inset-bottom));
+          grid-template-columns: repeat(3, 60px);
+          grid-template-rows: repeat(3, 60px);
+          gap: 6px;
+          pointer-events: none;
+        }
+        .virtual-pad button {
+          min-width: 56px;
+          min-height: 56px;
         }
       }
       @media (max-width: 520px) {
-        #game {
-          height: min(50vh, 390px);
-          min-height: 250px;
-        }
-        #game canvas,
-        #game iframe,
-        #game video {
-          max-height: min(50vh, 390px) !important;
-        }
         .virtual-pad__dpad {
-          left: 12px;
-          bottom: max(32px, env(safe-area-inset-bottom));
-          grid-template-columns: repeat(3, 46px);
-          grid-template-rows: repeat(3, 46px);
-          gap: 4px;
+          grid-template-columns: repeat(3, 56px);
+          grid-template-rows: repeat(3, 56px);
+          gap: 5px;
         }
         .virtual-pad__face {
-          right: 12px;
-          bottom: max(42px, env(safe-area-inset-bottom));
-          grid-template-columns: repeat(3, 46px);
-          grid-template-rows: repeat(3, 46px);
-          gap: 4px;
+          grid-template-columns: repeat(3, 56px);
+          grid-template-rows: repeat(3, 56px);
+          gap: 5px;
         }
         .virtual-pad button {
-          min-width: 46px;
-          min-height: 46px;
+          min-width: 52px;
+          min-height: 52px;
         }
-        .virtual-pad__system {
-          gap: 8px;
-          top: min(53vh, 410px);
+        .virtual-pad__shoulders button,
+        .virtual-pad__system button {
+          min-height: 38px;
         }
         .virtual-pad__system button {
-          min-width: 66px;
+          min-width: 70px;
+          font-size: 10px;
         }
       }
-      @media (max-width: 340px) {
+      @media (max-width: 360px) {
         .virtual-pad__dpad {
-          left: 8px;
-          grid-template-columns: repeat(3, 44px);
-          grid-template-rows: repeat(3, 44px);
-          gap: 3px;
+          grid-template-columns: repeat(3, 50px);
+          grid-template-rows: repeat(3, 50px);
+          gap: 4px;
         }
         .virtual-pad__face {
-          right: 8px;
-          grid-template-columns: repeat(3, 44px);
-          grid-template-rows: repeat(3, 44px);
-          gap: 3px;
+          grid-template-columns: repeat(3, 50px);
+          grid-template-rows: repeat(3, 50px);
+          gap: 4px;
         }
         .virtual-pad button {
-          min-width: 44px;
-          min-height: 44px;
+          min-width: 48px;
+          min-height: 48px;
         }
         .virtual-pad__system button {
-          min-width: 64px;
+          min-width: 62px;
         }
       }
     </style>
@@ -1253,9 +1318,15 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
       </div>
     </div>
     <div class="virtual-pad" id="cabinet-gamepad" aria-label="Virtual gamepad overlay" hidden data-testid="overlay-virtual-gamepad">
+      <div class="virtual-pad__tray" aria-hidden="true"></div>
+      <button type="button" class="virtual-pad__hide" id="cabinet-pad-hide" data-testid="button-gamepad-hide" aria-label="Hide virtual gamepad">Hide Pad</button>
       <div class="virtual-pad__shoulders" aria-label="Shoulder buttons">
         <button type="button" data-vkey="q" data-ejs-input="10" data-testid="button-gamepad-l1" aria-label="L1 shoulder">L1</button>
         <button type="button" data-vkey="w" data-ejs-input="11" data-testid="button-gamepad-r1" aria-label="R1 shoulder">R1</button>
+      </div>
+      <div class="virtual-pad__system" aria-label="System buttons">
+        <button type="button" data-vkey="Shift" data-ejs-input="2" data-testid="button-gamepad-select" aria-label="Select">Select</button>
+        <button type="button" data-vkey="Enter" data-ejs-input="3" data-testid="button-gamepad-start" aria-label="Start">Start</button>
       </div>
       <div class="virtual-pad__dpad" aria-label="Directional pad">
         <button type="button" class="up" data-vkey="ArrowUp" data-ejs-input="4" data-testid="button-gamepad-up" aria-label="D-pad up">↑</button>
@@ -1263,10 +1334,6 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         <span class="virtual-pad__dpad-core" aria-hidden="true"></span>
         <button type="button" class="right" data-vkey="ArrowRight" data-ejs-input="7" data-testid="button-gamepad-right" aria-label="D-pad right">→</button>
         <button type="button" class="down" data-vkey="ArrowDown" data-ejs-input="5" data-testid="button-gamepad-down" aria-label="D-pad down">↓</button>
-      </div>
-      <div class="virtual-pad__system" aria-label="System buttons">
-        <button type="button" data-vkey="Shift" data-ejs-input="2" data-testid="button-gamepad-select" aria-label="Select">Select</button>
-        <button type="button" data-vkey="Enter" data-ejs-input="3" data-testid="button-gamepad-start" aria-label="Start">Start</button>
       </div>
       <div class="virtual-pad__face" aria-label="Face buttons">
         <button type="button" class="x" data-vkey="s" data-ejs-input="9" data-testid="button-gamepad-x" aria-label="X button">X</button>
@@ -1629,6 +1696,7 @@ function cabinetDeleteLocalSaveSlot(slot) {
 function cabinetSetupVirtualPad() {
   var pad = document.querySelector("#cabinet-gamepad");
   var toggle = document.querySelector("#cabinet-pad-toggle");
+  var hideButton = document.querySelector("#cabinet-pad-hide");
   if (!pad || !toggle) return;
   var activePointers = {};
   var touchCapable =
@@ -1636,10 +1704,28 @@ function cabinetSetupVirtualPad() {
     "ontouchstart" in window ||
     (navigator.maxTouchPoints || 0) > 0;
   var visible = !!touchCapable;
+  var mobileQuery = window.matchMedia ? window.matchMedia("(max-width: 720px)") : null;
+  function syncMobileFlag() {
+    if (mobileQuery && mobileQuery.matches) {
+      document.body.classList.add("cabinet-pad-mobile");
+    } else {
+      document.body.classList.remove("cabinet-pad-mobile");
+    }
+  }
+  syncMobileFlag();
+  if (mobileQuery) {
+    var mqHandler = function () { syncMobileFlag(); };
+    if (mobileQuery.addEventListener) {
+      mobileQuery.addEventListener("change", mqHandler);
+    } else if (mobileQuery.addListener) {
+      mobileQuery.addListener(mqHandler);
+    }
+  }
   function setPadVisible(nextVisible, announce) {
     visible = !!nextVisible;
     pad.hidden = !visible;
     pad.classList.toggle("is-visible", visible);
+    document.body.classList.toggle("cabinet-pad-on", visible);
     toggle.setAttribute("aria-pressed", visible ? "true" : "false");
     toggle.textContent = visible ? "Hide Pad" : "Gamepad";
     if (announce) {
@@ -1656,6 +1742,12 @@ function cabinetSetupVirtualPad() {
   toggle.addEventListener("click", function () {
     setPadVisible(!visible, true);
   });
+  if (hideButton) {
+    hideButton.addEventListener("click", function (event) {
+      event.preventDefault();
+      setPadVisible(false, true);
+    });
+  }
   pad.addEventListener("contextmenu", function (event) {
     event.preventDefault();
   });
