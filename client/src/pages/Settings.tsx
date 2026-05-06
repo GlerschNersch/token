@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { useIntegration } from "@/lib/integration";
 import { QUICK_ACTIONS, SYSTEMS, formatRomSize } from "@/data/library";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Upload, FileArchive, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Upload, FileArchive, Trash2, FolderOpen, X } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { UploadedRom } from "@shared/schema";
 
@@ -328,9 +328,27 @@ function RomUploadSection() {
   const [system, setSystem] = useState("nes");
   const [favorite, setFavorite] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: roms = [] } = useQuery<UploadedRom[]>({
     queryKey: ["/api/roms"],
   });
+
+  const mergeFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return;
+    setFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}:${f.size}`));
+      const merged = [...prev];
+      for (const f of incoming) {
+        const key = `${f.name}:${f.size}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(f);
+        }
+      }
+      return merged;
+    });
+  };
 
   const upload = useMutation({
     mutationFn: async () => {
@@ -354,8 +372,7 @@ function RomUploadSection() {
     },
     onSuccess: async () => {
       setFiles([]);
-      const input = document.getElementById("rom-file") as HTMLInputElement | null;
-      if (input) input.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
       await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
     },
   });
@@ -403,14 +420,65 @@ function RomUploadSection() {
             </select>
           </Field>
           <Field label="ROM file" hint="Examples: .nes, .sfc, .gba, .z64, .iso, .zip">
-            <Input
+            <input
+              ref={fileInputRef}
               id="rom-file"
               type="file"
               multiple
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+              className="sr-only"
+              onChange={(e) => {
+                mergeFiles(Array.from(e.target.files ?? []));
+                e.target.value = "";
+              }}
               data-testid="input-rom-file"
-              accept=".nes,.sfc,.smc,.gba,.n64,.z64,.v64,.gen,.md,.smd,.bin,.cue,.iso,.chd,.pbp,.zip,.7z,.cdi,.gdi"
             />
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                mergeFiles(Array.from(e.dataTransfer.files ?? []));
+              }}
+              className={`flex flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors ${
+                dragActive
+                  ? "border-accent bg-accent/10"
+                  : "border-border bg-background/40 hover:border-accent/60 hover:bg-accent/5"
+              }`}
+              data-testid="dropzone-rom-file"
+            >
+              <FolderOpen className="size-6 text-accent" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="font-mono uppercase tracking-wider"
+                data-testid="button-browse-rom-files"
+              >
+                Browse ROM files
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                <span className="hidden sm:inline">Tap or drag and drop ROM files here. </span>
+                <span className="sm:hidden">Tap to choose ROM files. </span>
+                Multiple files supported.
+              </p>
+            </div>
           </Field>
         </div>
 
@@ -433,18 +501,49 @@ function RomUploadSection() {
 
         {files.length > 0 ? (
           <div className="rounded-md border border-border bg-card/50 p-3" data-testid="text-selected-rom">
-            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-              <FileArchive className="size-4 text-accent" />
-              {files.length} file{files.length === 1 ? "" : "s"} selected ·{" "}
-              {formatRomSize(files.reduce((sum, item) => sum + item.size, 0))}
+            <div className="flex items-center justify-between gap-2 text-xs font-mono text-muted-foreground">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileArchive className="size-4 text-accent shrink-0" />
+                <span className="truncate">
+                  {files.length} file{files.length === 1 ? "" : "s"} selected ·{" "}
+                  {formatRomSize(files.reduce((sum, item) => sum + item.size, 0))}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setFiles([]);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+                className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground shrink-0"
+                data-testid="button-clear-rom-files"
+              >
+                Clear
+              </button>
             </div>
             <ul className="mt-2 space-y-1 text-[11px] font-mono text-muted-foreground">
-              {files.slice(0, 6).map((item) => (
-                <li key={`${item.name}-${item.size}`} className="truncate">
-                  {item.name} · {formatRomSize(item.size)}
+              {files.map((item) => (
+                <li key={`${item.name}-${item.size}`} className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    {item.name} · {formatRomSize(item.size)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFiles((prev) =>
+                        prev.filter(
+                          (f) => !(f.name === item.name && f.size === item.size),
+                        ),
+                      )
+                    }
+                    aria-label={`Remove ${item.name}`}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                    data-testid={`button-remove-rom-file-${item.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
                 </li>
               ))}
-              {files.length > 6 ? <li>+ {files.length - 6} more</li> : null}
             </ul>
           </div>
         ) : null}
