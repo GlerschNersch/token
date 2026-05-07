@@ -363,3 +363,12 @@ themselves. Run `npm run test:watch` to keep Vitest active during development.
 - RetroAchievements: <https://retroachievements.org>
 - ScreenScraper: <https://www.screenscraper.fr>
 - EmulatorJS: <https://emulatorjs.org>
+
+---
+
+## Support
+
+If HomeArcade has been useful to you, a small tip is always appreciated but never expected!
+
+[![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
+
