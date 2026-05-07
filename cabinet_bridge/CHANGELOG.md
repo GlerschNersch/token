@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.14
+
+- Polish: Settings page cleaned up — removed duplicate RetroAchievements and EmulationStation sections, removed stale prototype language, regrouped service credentials together, cleaner section order
+
 ## 0.3.13
 
 - Fix: fast-forward button now calls Module.setFastForward() with fallback chain for different EmulatorJS builds

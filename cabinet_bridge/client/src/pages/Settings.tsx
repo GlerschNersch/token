@@ -11,7 +11,7 @@ import { SYSTEMS, formatRomSize } from "@/data/library";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { Link } from "wouter";
-import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, Palette } from "lucide-react";
+import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
@@ -68,13 +68,11 @@ export default function Settings() {
             Configuration
           </div>
           <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight mt-1 mb-2">
-            Home Assistant integration
+            Settings
           </h1>
           <p className="text-sm text-muted-foreground max-w-prose">
-            HomeArcade calls your Home Assistant instance, which in turn runs the
-            scripts that wake, launch, or shut down the emulator PC. This panel records
-            the URLs HomeArcade will hit. In the prototype, calls are simulated unless
-            you toggle Live mode below.
+            Configure HomeArcade's connection to Home Assistant, manage your ROM library,
+            and customise the look and feel of the UI.
           </p>
 
           <div
@@ -106,9 +104,10 @@ export default function Settings() {
               : "Settings sync to add-on storage"}
           </div>
 
+          {/* ── 1. Home Assistant connection ─────────────────────────────── */}
           <Section
-            title="Connection"
-            description="Where HomeArcade sends its requests. The base URL is only used when Live mode is on."
+            title="Home Assistant connection"
+            description="Where HomeArcade sends its requests. The base URL is only needed when Live mode is on."
           >
             <Field label="Home Assistant base URL" hint="e.g. https://homeassistant.local:8123 or https://ha.example.com">
               <Input
@@ -146,8 +145,8 @@ export default function Settings() {
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   When off, every action is logged to the Activity panel as a simulation.
-                  Turn this on once your HA webhooks exist and the URL above is reachable
-                  from the device showing this UI.
+                  Turn this on once your HA webhooks are configured and the URL above is
+                  reachable from this device.
                 </p>
               </div>
             </div>
@@ -167,6 +166,7 @@ export default function Settings() {
             ) : null}
           </Section>
 
+          {/* ── 2. ScreenScraper ─────────────────────────────────────────── */}
           <Section
             title="ScreenScraper.fr (optional)"
             description="When configured, HomeArcade fetches game descriptions, release years, developers, publishers, and genres automatically on upload. Register for free at screenscraper.fr."
@@ -193,12 +193,40 @@ export default function Settings() {
             </Field>
           </Section>
 
+          {/* ── 3. RetroAchievements ─────────────────────────────────────── */}
+          <Section
+            title="RetroAchievements (optional)"
+            description="Earn achievements for your classic games. Register for free at retroachievements.org. Requires a game supported by the RA database."
+          >
+            <Field label="RA Username" hint="Your retroachievements.org username.">
+              <Input
+                type="text"
+                value={config.raUsername ?? ""}
+                onChange={(e) => setConfig({ raUsername: e.target.value })}
+                placeholder="your_ra_username"
+                data-testid="input-ra-username"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="RA API Token" hint="Found under Settings → Keys on retroachievements.org.">
+              <Input
+                type="password"
+                value={config.raToken ?? ""}
+                onChange={(e) => setConfig({ raToken: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-ra-token"
+                autoComplete="off"
+              />
+            </Field>
+          </Section>
 
+          {/* ── 4. ROM library ───────────────────────────────────────────── */}
           <RomLibrarySection />
 
+          {/* ── 5. Game launch endpoints ─────────────────────────────────── */}
           <Section
             title="Game launch endpoints"
-            description={`HomeArcade derives launch URLs as /api/webhook/cabinet_launch_<slug>. These mappings come from your uploaded ROM library.`}
+            description="HomeArcade derives a webhook URL for each uploaded ROM. Register these in Home Assistant to wire up physical buttons, automations, or voice commands."
           >
             <div className="rounded-md border border-border bg-background/40 overflow-hidden">
               <table className="w-full text-sm" data-testid="table-launch-endpoints">
@@ -217,7 +245,7 @@ export default function Settings() {
                   {uploadedRoms.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="px-3 py-6 text-center text-xs text-muted-foreground">
-                        Upload ROMs above to generate launch endpoints.
+                        Upload ROMs to generate launch endpoints.
                       </td>
                     </tr>
                   ) : uploadedRoms.map((rom) => {
@@ -251,45 +279,18 @@ export default function Settings() {
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Register one webhook script per uploaded game in HA, or use a single dispatch
-              script that takes the slug as a payload field.
+              script that reads the slug from the payload.
             </p>
           </Section>
 
-
-
+          {/* ── 6. Metadata import ───────────────────────────────────────── */}
           <Section
-            title="RetroAchievements (optional)"
-            description="Earn achievements for your classic games. Register for free at retroachievements.org. Requires a game supported by the RA database."
-          >
-            <Field label="RA Username" hint="Your retroachievements.org username.">
-              <Input
-                type="text"
-                value={config.raUsername ?? ""}
-                onChange={(e) => setConfig({ raUsername: e.target.value })}
-                placeholder="your_ra_username"
-                data-testid="input-ra-username"
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="RA API Token" hint="Found under Settings → Keys on retroachievements.org.">
-              <Input
-                type="password"
-                value={config.raToken ?? ""}
-                onChange={(e) => setConfig({ raToken: e.target.value })}
-                placeholder="••••••••"
-                data-testid="input-ra-token"
-                autoComplete="off"
-              />
-            </Field>
-          </Section>
-
-          <Section
-            title="Metadata import — EmulationStation &amp; LaunchBox"
-            description="Import game metadata from a gamelist.xml (EmulationStation/Batocera/RetroPie) or LaunchBox Metadata.xml. Games are matched by filename or title."
+            title="Metadata import"
+            description="Import game metadata from an EmulationStation gamelist.xml or a LaunchBox platform XML. Games are matched by filename or title to your uploaded ROMs."
           >
             <div className="rounded-md border border-border bg-background/40 p-3">
-              <Label className="text-sm font-medium">Upload gamelist.xml</Label>
-              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Select a gamelist.xml from EmulationStation, Batocera, or RetroPie.</p>
+              <Label className="text-sm font-medium">EmulationStation / Batocera / RetroPie</Label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Upload a gamelist.xml file.</p>
               <input
                 type="file"
                 accept=".xml,text/xml,application/xml"
@@ -330,9 +331,10 @@ export default function Settings() {
                 <p className="text-xs text-destructive mt-2" data-testid="text-es-import-error">{esError}</p>
               )}
             </div>
+
             <div className="rounded-md border border-border bg-background/40 p-3">
-              <Label className="text-sm font-medium">Upload LaunchBox Metadata.xml</Label>
-              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Select a platform XML from your LaunchBox Data/Platforms folder.</p>
+              <Label className="text-sm font-medium">LaunchBox</Label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Upload a platform XML from your LaunchBox Data/Platforms folder.</p>
               <input
                 type="file"
                 accept=".xml,text/xml,application/xml"
@@ -375,85 +377,9 @@ export default function Settings() {
             </div>
           </Section>
 
-          <Section
-            title="RetroAchievements (optional)"
-            description="Earn achievements for your classic games. Register for free at retroachievements.org. Requires a game supported by the RA database."
-          >
-            <Field label="RA Username" hint="Your retroachievements.org username.">
-              <Input
-                type="text"
-                value={config.raUsername ?? ""}
-                onChange={(e) => setConfig({ raUsername: e.target.value })}
-                placeholder="your_ra_username"
-                data-testid="input-ra-username"
-                autoComplete="off"
-              />
-            </Field>
-            <Field label="RA API Token" hint="Found under Settings → Keys on retroachievements.org.">
-              <Input
-                type="password"
-                value={config.raToken ?? ""}
-                onChange={(e) => setConfig({ raToken: e.target.value })}
-                placeholder="••••••••"
-                data-testid="input-ra-token"
-                autoComplete="off"
-              />
-            </Field>
-          </Section>
-
-          <Section
-            title="EmulationStation / Batocera import"
-            description="Import game metadata from a gamelist.xml file. Games are matched by filename or title to your uploaded ROMs."
-          >
-            <div className="rounded-md border border-border bg-background/40 p-3">
-              <Label className="text-sm font-medium">Upload gamelist.xml</Label>
-              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Select a gamelist.xml from EmulationStation, Batocera, or RetroPie.</p>
-              <input
-                type="file"
-                accept=".xml,text/xml,application/xml"
-                data-testid="input-es-xml"
-                className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-sm file:font-mono file:uppercase file:tracking-wide file:cursor-pointer"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setEsImporting(true);
-                  setEsResult(null);
-                  setEsError(null);
-                  try {
-                    const buf = await file.arrayBuffer();
-                    const res = await fetch("/api/import/emulationstation", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/xml" },
-                      body: buf,
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || "Import failed");
-                    setEsResult({ imported: data.imported, skipped: data.skipped });
-                    await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-                  } catch (err) {
-                    setEsError(String(err));
-                  } finally {
-                    setEsImporting(false);
-                    e.target.value = "";
-                  }
-                }}
-              />
-              {esImporting && <p className="text-xs text-muted-foreground mt-2">Importing…</p>}
-              {esResult && (
-                <p className="text-xs text-status-online mt-2" data-testid="text-es-import-result">
-                  ✓ Imported {esResult.imported} game{esResult.imported !== 1 ? "s" : ""}, skipped {esResult.skipped}.
-                </p>
-              )}
-              {esError && (
-                <p className="text-xs text-destructive mt-2" data-testid="text-es-import-error">{esError}</p>
-              )}
-            </div>
-          </Section>
-
+          {/* ── 7. Kiosk mode ────────────────────────────────────────────── */}
           <Section
             title="Kiosk / Arcade mode"
-
-
             description="Lock the UI to a specific collection, hide upload and settings, and optionally require a PIN to exit. Useful for shared arcade cabinets."
           >
             <div className="flex items-start gap-3 rounded-md border border-border bg-background/40 p-3">
@@ -497,6 +423,7 @@ export default function Settings() {
             </Field>
           </Section>
 
+          {/* ── 8. Now Playing sensor ─────────────────────────────────────── */}
           <Section
             title="Now Playing sensor"
             description="HomeArcade exposes a live endpoint so Home Assistant can display what game is currently running."
@@ -530,6 +457,7 @@ export default function Settings() {
     max: 100`}</Code>
           </Section>
 
+          {/* ── 9. Lovelace card ─────────────────────────────────────────── */}
           <Section
             title="Lovelace card"
             description="Add HomeArcade as a card to your Home Assistant dashboard — shows now-playing status and a quick-launch shelf of recent games."
@@ -539,7 +467,7 @@ export default function Settings() {
                 Download <code>homearcade-card.js</code> from the add-on and place it in your HA{" "}
                 <code>www/</code> folder (i.e. <code>/config/www/homearcade-card.js</code>).
                 <Code>{`# From a terminal on your HA host:
-wget -O /config/www/homearcade-card.js \
+wget -O /config/www/homearcade-card.js \\
   http://homeassistant.local:7860/homearcade-card.js`}</Code>
               </Step>
               <Step n={2} title="Register the resource">
@@ -567,6 +495,7 @@ max_recent: 6`}</Code>
             </div>
           </Section>
 
+          {/* ── 10. Appearance ───────────────────────────────────────────── */}
           <Section
             title="Appearance"
             description="Choose a colour theme for the HomeArcade UI. Your choice is saved in the browser."
@@ -608,7 +537,8 @@ max_recent: 6`}</Code>
             </div>
           </Section>
 
-          <Section title="Reset" description="Clear all overrides set in this session.">
+          {/* ── 11. Reset + Help ─────────────────────────────────────────── */}
+          <Section title="Reset" description="Clear all locally saved settings.">
             <Button
               variant="outline"
               onClick={() => resetConfig()}
@@ -696,7 +626,7 @@ function RomLibrarySection() {
   return (
     <Section
       title="ROM library"
-      description="Upload ROMs from each system's page so they're filed under the right console automatically. This panel just lets you manage already-uploaded ROMs."
+      description="Upload ROMs from each system's page so they're filed under the right console automatically. This panel lets you manage already-uploaded ROMs."
     >
       <div
         className="rounded-md border border-border bg-card/40 p-4"
@@ -707,31 +637,12 @@ function RomLibrarySection() {
         </div>
         <p className="text-sm mt-1 max-w-prose">
           Open a system from the sidebar — for example{" "}
-          <Link
-            href={filterToPath("ps1")}
-            className="text-primary hover:underline"
-            data-testid="link-upload-ps1"
-          >
-            PS1
-          </Link>
+          <Link href={filterToPath("ps1")} className="text-primary hover:underline" data-testid="link-upload-ps1">PS1</Link>
           ,{" "}
-          <Link
-            href={filterToPath("snes")}
-            className="text-primary hover:underline"
-            data-testid="link-upload-snes"
-          >
-            SNES
-          </Link>
+          <Link href={filterToPath("snes")} className="text-primary hover:underline" data-testid="link-upload-snes">SNES</Link>
           , or{" "}
-          <Link
-            href={filterToPath("nes")}
-            className="text-primary hover:underline"
-            data-testid="link-upload-nes"
-          >
-            NES
-          </Link>{" "}
-          — and you'll see an "Upload ROMs" dropzone pinned to that system. Files dropped there are
-          saved under the current console without you having to pick one.
+          <Link href={filterToPath("nes")} className="text-primary hover:underline" data-testid="link-upload-nes">NES</Link>{" "}
+          — and you'll find an "Upload ROMs" dropzone pinned to that system.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {SYSTEMS.map((s) => (
@@ -801,11 +712,7 @@ function RomLibrarySection() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          `Delete ${rom.title}? This removes the uploaded ROM file, save metadata, and collection links.`,
-                        )
-                      ) {
+                      if (window.confirm(`Delete ${rom.title}? This removes the uploaded ROM file, save metadata, and collection links.`)) {
                         deleteRom.mutate(rom);
                       }
                     }}
@@ -831,26 +738,14 @@ function RomLibrarySection() {
 
       {deleteRom.isSuccess ? (
         <div className="rounded-md border border-status-online/40 bg-status-online/10 px-3 py-2 text-xs text-status-online" data-testid="success-rom-delete">
-          ROM removed from the library. Its save metadata and collection links were cleared too.
+          ROM removed from the library.
         </div>
       ) : null}
-
-      <p className="text-xs text-muted-foreground">
-        Prototype note: ROM uploads stream through the web app backend. For huge PS1/PS2/Dreamcast images, a production Home Assistant install should usually reference files already stored on your NAS or emulator PC instead of pushing multi-GB files through the browser.
-      </p>
     </Section>
   );
 }
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
     <section className="mt-8 pt-6 border-t border-border first:border-t-0 first:pt-0">
       <h2 className="font-display text-base font-semibold tracking-tight">{title}</h2>
@@ -860,15 +755,7 @@ function Section({
   );
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <Label className="text-sm font-medium">{label}</Label>
@@ -878,15 +765,7 @@ function Field({
   );
 }
 
-function Step({
-  n,
-  title,
-  children,
-}: {
-  n: number;
-  title: string;
-  children: React.ReactNode;
-}) {
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <li className="flex gap-3">
       <span className="shrink-0 size-6 rounded-full bg-arcade-gradient text-white font-mono text-[12px] font-bold flex items-center justify-center">
