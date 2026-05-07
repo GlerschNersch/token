@@ -18,6 +18,10 @@ RUN NODE_ENV=development npm install --no-audit --no-fund --ignore-scripts
 # Compile better-sqlite3 natively — this IS needed at runtime.
 RUN npm rebuild better-sqlite3
 
+# CACHE_BUST: increment to force Docker to re-copy source and rebuild.
+# Current: 2
+ARG CACHE_BUST=2
+
 # Copy the rest of the source and build.
 COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts ./
 COPY shared ./shared
