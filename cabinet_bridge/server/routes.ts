@@ -2007,7 +2007,10 @@ document.addEventListener("click", function (event) {
   }
   if (target.id === "cabinet-controls") {
     cabinetSetMenuOpen(false);
-    cabinetToast("Keyboard and pad: arrows, A/B/X/Y, Start Enter, Select Shift, L1 Q, R1 W. Save 1, Load 2.");
+    var isPsx = window.CABINET_CORE === "psx" || window.CABINET_CORE === "pcsx2";
+    cabinetToast(isPsx
+      ? "PS1/PS2: Cross Z, Circle X, Square A, Triangle S, L1 Q, R1 W, L2 E, R2 R, L3 Tab, R3 C. Save 1, Load 2."
+      : "Keyboard and pad: arrows, A/B/X/Y, Start Enter, Select Shift, L1 Q, R1 W. Save 1, Load 2.");
   }
 });
 cabinetSetupSystemMenu();
@@ -2021,6 +2024,7 @@ window.EJS_onGameStart = function () {
 };
 window.EJS_player = "#game";
 window.EJS_core = ${JSON.stringify(core)};
+window.CABINET_CORE = ${JSON.stringify(core)};
 window.EJS_gameName = ${JSON.stringify(title)};
 window.EJS_gameID = ${JSON.stringify(gameId)};
 window.EJS_gameUrl = "./file";
@@ -2042,6 +2046,11 @@ window.EJS_defaultControls = {
     9: { value: "s", value2: "BUTTON_3" },
     10: { value: "q", value2: "LEFT_TOP_SHOULDER" },
     11: { value: "w", value2: "RIGHT_TOP_SHOULDER" },
+${["psx", "pcsx2"].includes(core) ? `
+    12: { value: "e", value2: "LEFT_BOTTOM_SHOULDER" },
+    13: { value: "r", value2: "RIGHT_BOTTOM_SHOULDER" },
+    14: { value: "tab", value2: "LEFT_ANALOG" },
+    15: { value: "c", value2: "RIGHT_ANALOG" },` : ""}
     24: { value: "1" },
     25: { value: "2" },
     26: { value: "3" }

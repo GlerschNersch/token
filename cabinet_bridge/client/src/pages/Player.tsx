@@ -89,16 +89,31 @@ export default function Player({ id }: { id: string }) {
         <p className="mt-1 text-xs text-foreground">
           The library now opens this player directly. If you land here, use Play now above.
         </p>
-        <div className="mt-2 grid gap-2 text-xs text-foreground sm:grid-cols-4">
-          <div><span className="font-mono text-muted-foreground">Start</span> Enter</div>
-          <div><span className="font-mono text-muted-foreground">Select</span> Shift</div>
-          <div><span className="font-mono text-muted-foreground">Move</span> Arrow keys</div>
-          <div><span className="font-mono text-muted-foreground">SNES A/B</span> X / Z</div>
-          <div><span className="font-mono text-muted-foreground">SNES X/Y</span> S / A</div>
-          <div><span className="font-mono text-muted-foreground">L/R</span> Q / W</div>
-          <div><span className="font-mono text-muted-foreground">Quick save</span> 1</div>
-          <div><span className="font-mono text-muted-foreground">Quick load</span> 2</div>
-        </div>
+        {rom?.system === "ps1" || rom?.system === "ps2" ? (
+          <div className="mt-2 grid gap-2 text-xs text-foreground sm:grid-cols-4">
+            <div><span className="font-mono text-muted-foreground">Start</span> Enter</div>
+            <div><span className="font-mono text-muted-foreground">Select</span> Shift</div>
+            <div><span className="font-mono text-muted-foreground">D-Pad</span> Arrow keys</div>
+            <div><span className="font-mono text-muted-foreground">Cross / Circle</span> Z / X</div>
+            <div><span className="font-mono text-muted-foreground">Square / Triangle</span> A / S</div>
+            <div><span className="font-mono text-muted-foreground">L1 / R1</span> Q / W</div>
+            <div><span className="font-mono text-muted-foreground">L2 / R2</span> E / R</div>
+            <div><span className="font-mono text-muted-foreground">L3 / R3</span> Tab / C</div>
+            <div><span className="font-mono text-muted-foreground">Quick save</span> 1</div>
+            <div><span className="font-mono text-muted-foreground">Quick load</span> 2</div>
+          </div>
+        ) : (
+          <div className="mt-2 grid gap-2 text-xs text-foreground sm:grid-cols-4">
+            <div><span className="font-mono text-muted-foreground">Start</span> Enter</div>
+            <div><span className="font-mono text-muted-foreground">Select</span> Shift</div>
+            <div><span className="font-mono text-muted-foreground">Move</span> Arrow keys</div>
+            <div><span className="font-mono text-muted-foreground">A / B</span> Z / X</div>
+            <div><span className="font-mono text-muted-foreground">X / Y</span> A / S</div>
+            <div><span className="font-mono text-muted-foreground">L / R</span> Q / W</div>
+            <div><span className="font-mono text-muted-foreground">Quick save</span> 1</div>
+            <div><span className="font-mono text-muted-foreground">Quick load</span> 2</div>
+          </div>
+        )}
       </section>
 
       {error ? (
