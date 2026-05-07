@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { RightPanel } from "@/components/RightPanel";
@@ -11,19 +12,23 @@ import { Button } from "@/components/ui/button";
 import { Search, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { useIntegration } from "@/lib/integration";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { filterToPath } from "@/lib/filter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 
 type Sort = "title" | "year" | "recent" | "rating";
 
 export default function Home({
+  filter,
   arcadeMode,
   onToggleArcade,
 }: {
+  filter: Filter;
   arcadeMode: boolean;
   onToggleArcade: () => void;
 }) {
-  const [filter, setFilter] = useState<Filter>("favorites");
+  const [, navigate] = useLocation();
+  const goToFilter = (next: Filter) => navigate(filterToPath(next));
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
   const [openGame, setOpenGame] = useState<Game | null>(null);
@@ -95,7 +100,7 @@ export default function Home({
 
   const filtered = useMemo(() => {
     let list = games;
-    if (filter.startsWith("collection:")) {
+    if (typeof filter === "string" && filter.startsWith("collection:")) {
       const collectionId = Number(filter.replace("collection:", ""));
       const collection = collections.find((item) => item.id === collectionId);
       const romIds = new Set(collection?.romIds ?? []);
@@ -161,7 +166,7 @@ export default function Home({
   );
 
   const heading = useMemo(() => {
-    if (filter.startsWith("collection:")) {
+    if (typeof filter === "string" && filter.startsWith("collection:")) {
       const collectionId = Number(filter.replace("collection:", ""));
       return collections.find((collection) => collection.id === collectionId)?.name ?? "Collection";
     }
@@ -202,12 +207,14 @@ export default function Home({
     toggleCollectionItem.mutate({ collectionId, romId: game.romId, selected });
   };
 
+  const isCollectionFilter = typeof filter === "string" && filter.startsWith("collection:");
+
   return (
     <div className="flex h-full">
-      <Sidebar active={filter} onSelect={setFilter} />
+      <Sidebar active={filter} />
 
       <main className="flex-1 min-w-0 flex flex-col" data-testid="main-content">
-        <MobileTopBar active={filter} onSelect={setFilter} />
+        <MobileTopBar active={filter} />
 
         {/* Header */}
         <div className="px-5 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-border">
@@ -267,7 +274,7 @@ export default function Home({
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => setFilter(s.id)}
+                    onClick={() => goToFilter(s.id)}
                     className="group relative aspect-[16/10] rounded-lg overflow-hidden border border-card-border hover-elevate active-elevate-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     data-testid={`tile-system-${s.id}`}
                   >
@@ -296,7 +303,7 @@ export default function Home({
                 action={
                   <button
                     type="button"
-                    onClick={() => setFilter("recent")}
+                    onClick={() => goToFilter("recent")}
                     className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                     data-testid="button-see-all-recent"
                   >
@@ -318,7 +325,7 @@ export default function Home({
                   ? "All Games"
                   : filter === "recent"
                   ? "Recently Played"
-                  : filter.startsWith("collection:")
+                  : isCollectionFilter
                   ? "Collection Games"
                   : `${SYSTEMS.find((s) => s.id === filter)?.shortName} Library`
               }
@@ -342,7 +349,7 @@ export default function Home({
               }
             />
             {filtered.length === 0 ? (
-              <EmptyState query={query} filter={filter} onResetFilter={() => setFilter("all")} />
+              <EmptyState query={query} filter={filter} onResetFilter={() => goToFilter("all")} />
             ) : (
               <Grid games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} />
             )}

@@ -6,6 +6,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { IntegrationProvider } from "@/lib/integration";
+import { parseFilter, parseCollectionFilter, DEFAULT_FILTER } from "@/lib/filter";
 import Home from "@/pages/Home";
 import Settings from "@/pages/Settings";
 import Player from "@/pages/Player";
@@ -21,7 +22,25 @@ function AppRouter({
   return (
     <Switch>
       <Route path="/">
-        <Home arcadeMode={arcadeMode} onToggleArcade={onToggleArcade} />
+        <Home filter={DEFAULT_FILTER} arcadeMode={arcadeMode} onToggleArcade={onToggleArcade} />
+      </Route>
+      <Route path="/library/collection/:id">
+        {(params) => (
+          <Home
+            filter={parseCollectionFilter(params.id)}
+            arcadeMode={arcadeMode}
+            onToggleArcade={onToggleArcade}
+          />
+        )}
+      </Route>
+      <Route path="/library/:filter">
+        {(params) => (
+          <Home
+            filter={parseFilter(params.filter)}
+            arcadeMode={arcadeMode}
+            onToggleArcade={onToggleArcade}
+          />
+        )}
       </Route>
       <Route path="/settings">
         <Settings />

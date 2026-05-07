@@ -4,12 +4,12 @@ import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
 import { useIntegration } from "@/lib/integration";
 import { useQuery } from "@tanstack/react-query";
+import { filterToPath } from "@/lib/filter";
 import {
   Heart,
   Clock,
   LayoutGrid,
   Settings as SettingsIcon,
-  Power,
   Tv,
   Wifi,
   WifiOff,
@@ -21,12 +21,13 @@ export type Filter = SystemId | `collection:${number}`;
 
 interface SidebarProps {
   active: Filter;
-  onSelect: (id: Filter) => void;
   /** When true, never hidden on mobile — used inside the mobile sheet. */
   alwaysVisible?: boolean;
+  /** Fired after a sidebar nav item is selected. Mobile drawer closes via this. */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ active, onSelect, alwaysVisible = false }: SidebarProps) {
+export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarProps) {
   const { pc } = useIntegration();
   const [location] = useLocation();
   const onSettingsRoute = location.startsWith("/settings");
@@ -57,7 +58,8 @@ export function Sidebar({ active, onSelect, alwaysVisible = false }: SidebarProp
     >
       <div className="px-5 py-5 border-b border-sidebar-border">
         <Link
-          href="/"
+          href={filterToPath("favorites")}
+          onClick={onNavigate}
           className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-accent"
           data-testid="link-home"
         >
@@ -71,24 +73,27 @@ export function Sidebar({ active, onSelect, alwaysVisible = false }: SidebarProp
             icon={<Heart className="size-4" />}
             label="Favorites"
             count={favCount}
+            href={filterToPath("favorites")}
             selected={!onSettingsRoute && active === "favorites"}
-            onClick={() => onSelect("favorites")}
+            onNavigate={onNavigate}
             testId="nav-favorites"
           />
           <NavItem
             icon={<Clock className="size-4" />}
             label="Recently Played"
             count={recentCount}
+            href={filterToPath("recent")}
             selected={!onSettingsRoute && active === "recent"}
-            onClick={() => onSelect("recent")}
+            onNavigate={onNavigate}
             testId="nav-recent"
           />
           <NavItem
             icon={<LayoutGrid className="size-4" />}
             label="All Games"
             count={allCount}
+            href={filterToPath("all")}
             selected={!onSettingsRoute && active === "all"}
-            onClick={() => onSelect("all")}
+            onNavigate={onNavigate}
             testId="nav-all"
           />
         </Group>
@@ -107,8 +112,9 @@ export function Sidebar({ active, onSelect, alwaysVisible = false }: SidebarProp
               }
               label={s.shortName}
               count={systemCounts[s.id] ?? 0}
+              href={filterToPath(s.id)}
               selected={!onSettingsRoute && active === s.id}
-              onClick={() => onSelect(s.id)}
+              onNavigate={onNavigate}
               testId={`nav-system-${s.id}`}
             />
           ))}
@@ -122,8 +128,9 @@ export function Sidebar({ active, onSelect, alwaysVisible = false }: SidebarProp
                 icon={<Folder className="size-4" />}
                 label={collection.name}
                 count={collection.romIds.length}
+                href={filterToPath(`collection:${collection.id}` as Filter)}
                 selected={!onSettingsRoute && active === `collection:${collection.id}`}
-                onClick={() => onSelect(`collection:${collection.id}`)}
+                onNavigate={onNavigate}
                 testId={`nav-collection-${collection.id}`}
               />
             ))}
@@ -134,6 +141,7 @@ export function Sidebar({ active, onSelect, alwaysVisible = false }: SidebarProp
       <div className="px-3 pb-3 border-t border-sidebar-border pt-3 space-y-2">
         <Link
           href="/settings"
+          onClick={onNavigate}
           className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium hover-elevate active-elevate-2 ${
             onSettingsRoute ? "bg-sidebar-accent text-foreground" : "text-muted-foreground"
           }`}
@@ -163,21 +171,23 @@ function NavItem({
   icon,
   label,
   count,
+  href,
   selected,
-  onClick,
+  onNavigate,
   testId,
 }: {
   icon: React.ReactNode;
   label: string;
   count?: number;
+  href: string;
   selected: boolean;
-  onClick: () => void;
+  onNavigate?: () => void;
   testId: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Link
+      href={href}
+      onClick={onNavigate}
       data-testid={testId}
       data-state={selected ? "active" : "inactive"}
       className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium hover-elevate active-elevate-2 transition-colors ${
@@ -193,7 +203,7 @@ function NavItem({
           {count.toLocaleString()}
         </span>
       ) : null}
-    </button>
+    </Link>
   );
 }
 

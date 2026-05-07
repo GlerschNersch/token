@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { Wordmark } from "@/components/Logo";
@@ -7,12 +7,10 @@ import { Menu } from "lucide-react";
 
 interface Props {
   active: Filter;
-  onSelect: (id: Filter) => void;
 }
 
-export function MobileTopBar({ active, onSelect }: Props) {
+export function MobileTopBar({ active }: Props) {
   const [open, setOpen] = useState(false);
-  const [, navigate] = useLocation();
 
   return (
     <div
@@ -33,14 +31,7 @@ export function MobileTopBar({ active, onSelect }: Props) {
         <SheetContent side="left" className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border">
           <SheetTitle className="sr-only">Cabinet Bridge navigation</SheetTitle>
           <div className="h-full flex">
-            <SidebarMobileWrapper
-              active={active}
-              onSelect={(id) => {
-                onSelect(id);
-                navigate("/");
-                setOpen(false);
-              }}
-            />
+            <SidebarMobileWrapper active={active} onNavigate={() => setOpen(false)} />
           </div>
         </SheetContent>
       </Sheet>
@@ -52,10 +43,16 @@ export function MobileTopBar({ active, onSelect }: Props) {
   );
 }
 
-function SidebarMobileWrapper({ active, onSelect }: Props) {
+function SidebarMobileWrapper({
+  active,
+  onNavigate,
+}: {
+  active: Filter;
+  onNavigate: () => void;
+}) {
   return (
     <div className="flex flex-col w-full h-full">
-      <Sidebar active={active} onSelect={onSelect} alwaysVisible />
+      <Sidebar active={active} alwaysVisible onNavigate={onNavigate} />
     </div>
   );
 }

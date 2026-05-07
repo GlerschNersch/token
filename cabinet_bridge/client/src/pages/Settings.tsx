@@ -32,9 +32,9 @@ export default function Settings() {
 
   return (
     <div className="flex h-full">
-      <Sidebar active="favorites" onSelect={() => undefined} />
+      <Sidebar active="favorites" />
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto" data-testid="page-settings">
-        <MobileTopBar active="favorites" onSelect={() => undefined} />
+        <MobileTopBar active="favorites" />
 
         <div className="px-5 sm:px-10 py-6 sm:py-10 max-w-3xl w-full mx-auto">
           <Link
