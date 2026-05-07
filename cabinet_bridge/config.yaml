@@ -1,5 +1,5 @@
 name: Cabinet Bridge
-version: "0.1.4"
+version: "0.1.5"
 slug: cabinet_bridge
 description: Retro gaming frontend for Home Assistant — manage ROMs, browse systems, launch games via webhooks.
 url: https://github.com/anthropics/cabinet-bridge
