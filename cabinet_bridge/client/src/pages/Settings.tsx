@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { THEMES, type AppTheme, applyTheme } from "@/App";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { Input } from "@/components/ui/input";
@@ -10,13 +11,20 @@ import { QUICK_ACTIONS, SYSTEMS, formatRomSize } from "@/data/library";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { Link } from "wouter";
-import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight } from "lucide-react";
+import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, Palette } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
 
 export default function Settings() {
   const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
   const [copied, setCopied] = useState<string | null>(null);
+  const [activeTheme, setActiveTheme] = useState<AppTheme>(
+    () => (localStorage.getItem("ha-theme") as AppTheme | null) ?? "default"
+  );
+  const handleTheme = (t: AppTheme) => {
+    applyTheme(t);
+    setActiveTheme(t);
+  };
   const [esImporting, setEsImporting] = useState(false);
   const [esResult, setEsResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [esError, setEsError] = useState<string | null>(null);
@@ -605,6 +613,117 @@ script:
                 ))}
               </select>
             </Field>
+          </Section>
+
+          <Section
+            title="Now Playing sensor"
+            description="HomeArcade exposes a live endpoint so Home Assistant can display what game is currently running."
+          >
+            <p className="text-xs text-muted-foreground">
+              Add a <code>rest</code> sensor to your <code>configuration.yaml</code> that polls the add-on:
+            </p>
+            <Code>{`rest:
+  - resource: http://homeassistant.local:7860/api/now-playing
+    scan_interval: 15
+    sensor:
+      - name: "HomeArcade Now Playing"
+        unique_id: homearcade_now_playing
+        value_template: >
+          {% if value_json.playing %}
+            {{ value_json.title }}
+          {% else %}
+            Idle
+          {% endif %}
+        json_attributes:
+          - playing
+          - system
+          - id`}</Code>
+            <p className="text-xs text-muted-foreground mt-2">
+              Optionally create an <code>input_text.homearcade_now_playing</code> helper in HA — HomeArcade
+              will update it automatically via the REST API whenever a game starts or stops.
+            </p>
+            <Code>{`input_text:
+  homearcade_now_playing:
+    name: HomeArcade Now Playing
+    max: 100`}</Code>
+          </Section>
+
+          <Section
+            title="Lovelace card"
+            description="Add HomeArcade as a card to your Home Assistant dashboard — shows now-playing status and a quick-launch shelf of recent games."
+          >
+            <ol className="space-y-4 list-none p-0 m-0">
+              <Step n={1} title="Copy the card file">
+                Download <code>homearcade-card.js</code> from the add-on and place it in your HA{" "}
+                <code>www/</code> folder (i.e. <code>/config/www/homearcade-card.js</code>).
+                <Code>{`# From a terminal on your HA host:
+wget -O /config/www/homearcade-card.js \
+  http://homeassistant.local:7860/homearcade-card.js`}</Code>
+              </Step>
+              <Step n={2} title="Register the resource">
+                In HA go to <strong>Settings → Dashboards → Resources → Add</strong> and enter:
+                <Code>{`URL:  /local/homearcade-card.js
+Type: JavaScript Module`}</Code>
+              </Step>
+              <Step n={3} title="Add the card to a dashboard">
+                Edit any dashboard, choose <strong>Add Card → Manual</strong> and paste:
+                <Code>{`type: custom:homearcade-card
+title: HomeArcade
+base_url: http://homeassistant.local:7860
+max_recent: 6`}</Code>
+              </Step>
+            </ol>
+            <div className="mt-3 flex items-center gap-2">
+              <a
+                href="/homearcade-card.js"
+                download="homearcade-card.js"
+                className="inline-flex items-center gap-1.5 text-xs font-mono text-primary hover:underline"
+                data-testid="link-download-card"
+              >
+                <ExternalLink className="size-3.5" /> Download homearcade-card.js
+              </a>
+            </div>
+          </Section>
+
+          <Section
+            title="Appearance"
+            description="Choose a colour theme for the HomeArcade UI. Your choice is saved in the browser."
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(
+                [
+                  { id: "default",   label: "Default",   swatch: ["#f026ab", "#22d3ee", "#0f0f18"] },
+                  { id: "synthwave", label: "Synthwave",  swatch: ["#d946ef", "#06f0e0", "#0b0612"] },
+                  { id: "gameboy",   label: "Game Boy",   swatch: ["#4ade80", "#86efac", "#0f1a0a"] },
+                  { id: "oled",      label: "OLED Black", swatch: ["#ff2dba", "#06f0e0", "#000000"] },
+                ] as { id: AppTheme; label: string; swatch: string[] }[]
+              ).map(({ id, label, swatch }) => (
+                <button
+                  key={id}
+                  onClick={() => handleTheme(id)}
+                  data-testid={`button-theme-${id}`}
+                  className={`flex flex-col items-center gap-2 rounded-lg border p-3 text-xs font-mono transition-all ${
+                    activeTheme === id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <div className="flex gap-1">
+                    {swatch.map((c, i) => (
+                      <span
+                        key={i}
+                        className="size-5 rounded-full border border-white/10"
+                        style={{ background: c }}
+                      />
+                    ))}
+                  </div>
+                  <span>{label}</span>
+                  {activeTheme === id && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Active</span>
+                  )}
+                </button>
+              ))}
+            </div>
           </Section>
 
           <Section title="Reset" description="Clear all overrides set in this session.">

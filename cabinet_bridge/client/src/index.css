@@ -338,3 +338,138 @@ a:focus-visible,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   CUSTOM THEMES — applied via data-theme attribute on <html>
+   Each block overrides the .dark palette for that theme.
+   ============================================================ */
+
+/* ---------- Synthwave — deep purple, neon pink, electric teal ---------- */
+html.dark[data-theme="synthwave"] {
+  --background: 265 45% 4%;
+  --foreground: 290 60% 94%;
+  --border: 270 30% 20%;
+  --card: 265 42% 7%;
+  --card-foreground: 290 60% 94%;
+  --card-border: 270 28% 14%;
+  --sidebar: 265 48% 3%;
+  --sidebar-foreground: 290 55% 92%;
+  --sidebar-border: 270 30% 13%;
+  --sidebar-primary: 295 100% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 265 40% 12%;
+  --sidebar-accent-foreground: 290 55% 92%;
+  --sidebar-ring: 295 100% 65%;
+  --popover: 265 42% 7%;
+  --popover-foreground: 290 60% 94%;
+  --popover-border: 270 28% 16%;
+  --primary: 295 100% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 265 32% 14%;
+  --secondary-foreground: 290 60% 94%;
+  --muted: 265 28% 12%;
+  --muted-foreground: 270 20% 60%;
+  --accent: 180 100% 55%;
+  --accent-foreground: 265 45% 4%;
+  --destructive: 0 80% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 265 30% 18%;
+  --ring: 295 100% 65%;
+  --chart-1: 295 100% 65%;
+  --chart-2: 180 100% 55%;
+  --chart-3: 42 96% 60%;
+  --chart-4: 142 60% 56%;
+  --chart-5: 340 80% 68%;
+}
+
+html.dark[data-theme="synthwave"] body {
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, hsl(295 100% 30% / 0.22), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, hsl(180 100% 28% / 0.16), transparent 60%);
+}
+
+/* ---------- Game Boy — olive-green LCD, classic handheld feel ---------- */
+html.dark[data-theme="gameboy"] {
+  --background: 84 30% 7%;
+  --foreground: 88 55% 80%;
+  --border: 86 25% 18%;
+  --card: 84 28% 10%;
+  --card-foreground: 88 55% 80%;
+  --card-border: 86 24% 15%;
+  --sidebar: 84 32% 5%;
+  --sidebar-foreground: 88 50% 78%;
+  --sidebar-border: 86 26% 12%;
+  --sidebar-primary: 88 65% 48%;
+  --sidebar-primary-foreground: 84 50% 6%;
+  --sidebar-accent: 84 26% 14%;
+  --sidebar-accent-foreground: 88 50% 78%;
+  --sidebar-ring: 88 65% 48%;
+  --popover: 84 28% 10%;
+  --popover-foreground: 88 55% 80%;
+  --popover-border: 86 24% 16%;
+  --primary: 88 65% 48%;
+  --primary-foreground: 84 50% 6%;
+  --secondary: 84 22% 16%;
+  --secondary-foreground: 88 55% 80%;
+  --muted: 84 20% 13%;
+  --muted-foreground: 86 18% 52%;
+  --accent: 100 70% 55%;
+  --accent-foreground: 84 50% 6%;
+  --destructive: 0 70% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 84 22% 20%;
+  --ring: 88 65% 48%;
+  --chart-1: 88 65% 48%;
+  --chart-2: 100 70% 55%;
+  --chart-3: 60 80% 52%;
+  --chart-4: 130 60% 48%;
+  --chart-5: 72 70% 55%;
+}
+
+html.dark[data-theme="gameboy"] body {
+  background-image:
+    radial-gradient(1000px 500px at 80% -5%, hsl(88 65% 20% / 0.18), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(100 70% 20% / 0.14), transparent 60%);
+}
+
+/* ---------- OLED Black — true black, hyper-saturated neon accents ---------- */
+html.dark[data-theme="oled"] {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 93%;
+  --border: 0 0% 12%;
+  --card: 0 0% 4%;
+  --card-foreground: 0 0% 93%;
+  --card-border: 0 0% 9%;
+  --sidebar: 0 0% 2%;
+  --sidebar-foreground: 0 0% 91%;
+  --sidebar-border: 0 0% 10%;
+  --sidebar-primary: 322 100% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 8%;
+  --sidebar-accent-foreground: 0 0% 91%;
+  --sidebar-ring: 322 100% 65%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 93%;
+  --popover-border: 0 0% 10%;
+  --primary: 322 100% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 93%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 188 100% 58%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 85% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 0 0% 14%;
+  --ring: 322 100% 65%;
+  --chart-1: 322 100% 65%;
+  --chart-2: 188 100% 58%;
+  --chart-3: 42 100% 62%;
+  --chart-4: 142 70% 58%;
+  --chart-5: 264 90% 70%;
+}
+
+html.dark[data-theme="oled"] body {
+  background-image: none;
+}

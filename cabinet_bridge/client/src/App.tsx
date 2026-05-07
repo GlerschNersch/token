@@ -13,6 +13,18 @@ import Player from "@/pages/Player";
 import Achievements from "@/pages/Achievements";
 import NotFound from "@/pages/not-found";
 
+export const THEMES = ["default", "synthwave", "gameboy", "oled"] as const;
+export type AppTheme = (typeof THEMES)[number];
+
+export function applyTheme(theme: AppTheme) {
+  if (theme === "default") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", theme);
+  }
+  localStorage.setItem("ha-theme", theme);
+}
+
 function AppRouter({
   arcadeMode,
   onToggleArcade,
@@ -61,6 +73,11 @@ function App() {
   // Dark is the default — this is a TV/cabinet UI.
   useEffect(() => {
     document.documentElement.classList.add("dark");
+    // Restore saved theme on mount
+    const saved = localStorage.getItem("ha-theme") as AppTheme | null;
+    if (saved && saved !== "default") {
+      document.documentElement.setAttribute("data-theme", saved);
+    }
   }, []);
 
   const [arcadeMode, setArcadeMode] = useState(false);

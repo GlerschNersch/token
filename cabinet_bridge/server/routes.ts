@@ -20,6 +20,10 @@ import {
 } from "@shared/system-images";
 import { z } from "zod";
 
+// In-memory "now playing" state — tracks the game currently open in the browser player
+let nowPlayingRom: { id: number; title: string; system: string } | null = null;
+
+
 const ROM_EXTENSIONS: Record<string, string[]> = {
   nes: [".nes", ".zip", ".7z"],
   snes: [".sfc", ".smc", ".zip", ".7z"],
@@ -634,6 +638,13 @@ export async function registerRoutes(
       durationSeconds: z.number().int().min(0).optional(),
     }).parse(req.body);
 
+    // Track "now playing" in memory
+    if (event === "started") {
+      nowPlayingRom = { id: rom.id, title: rom.title, system: rom.system };
+    } else {
+      nowPlayingRom = null;
+    }
+
     const settings = await storage.getIntegrationSettings();
     // Accumulate real play time
     if (event === "ended" && durationSeconds && durationSeconds > 0) {
@@ -642,7 +653,7 @@ export async function registerRoutes(
     }
 
     if (settings.haBaseUrl && settings.haToken) {
-      const eventType = event === "started" ? "cabinet_bridge_game_started" : "cabinet_bridge_game_ended";
+      const eventType = event === "started" ? "homearcade_game_started" : "homearcade_game_ended";
       const payload = {
         game: rom.title,
         system: rom.system,
@@ -650,6 +661,7 @@ export async function registerRoutes(
         ...(durationSeconds !== undefined ? { duration_seconds: durationSeconds } : {}),
       };
       try {
+        // Fire HA event
         await fetch(`${settings.haBaseUrl}/api/events/${eventType}`, {
           method: "POST",
           headers: {
@@ -659,12 +671,34 @@ export async function registerRoutes(
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(4000),
         });
+        // Also update input_text.homearcade_now_playing helper (if it exists)
+        const nowPlayingValue = event === "started"
+          ? `${rom.title} (${rom.system})`
+          : "";
+        await fetch(`${settings.haBaseUrl}/api/states/input_text.homearcade_now_playing`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${settings.haToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ state: nowPlayingValue }),
+          signal: AbortSignal.timeout(4000),
+        }).catch(() => {}); // ignore if helper doesn't exist
       } catch {
         // HA event failure is non-fatal
       }
     }
 
     res.json({ ok: true });
+  });
+
+  // Current "now playing" state — polled by the Lovelace card and HA REST sensor
+  app.get("/api/now-playing", (_req, res) => {
+    if (nowPlayingRom) {
+      res.json({ playing: true, ...nowPlayingRom });
+    } else {
+      res.json({ playing: false });
+    }
   });
 
   // ── Save-state server backups ──────────────────────────────────────────────
@@ -1497,6 +1531,27 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         background: rgba(239, 68, 68, 0.28);
         border-color: rgba(239, 68, 68, 0.68);
       }
+      .cabinet-opt {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.07);
+        color: rgba(248,250,252,0.8);
+        cursor: pointer;
+        font: 800 9px ui-monospace,monospace;
+        letter-spacing: 0.12em;
+        min-height: 36px;
+        padding: 8px 6px;
+        text-transform: uppercase;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+      }
+      .cabinet-opt:hover,
+      .cabinet-opt:focus-visible {
+        background: rgba(236,72,153,0.2);
+        border-color: rgba(236,72,153,0.55);
+        color: #fff;
+        outline: none;
+      }
       .cabinet-aspect-btn {
         appearance: none;
         border: 1px solid rgba(255,255,255,0.16);
@@ -2033,6 +2088,7 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         <button type="button" id="cabinet-remap-open" data-testid="button-remap-controls">Remap Keys</button>
         <button type="button" id="cabinet-gamepad-test-open" data-testid="button-gamepad-tester">Test Pad</button>
         <button type="button" id="cabinet-netplay-open" data-testid="button-netplay">Netplay</button>
+        <button type="button" id="cabinet-sleep-open" data-testid="button-sleep-timer">Sleep Timer</button>
         <button type="button" class="danger" id="cabinet-exit" data-testid="button-exit-player">Exit Game</button>
       </div>
     </nav>
@@ -2045,6 +2101,35 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         <button type="button" class="cabinet-save-close" id="cabinet-save-manager-close" aria-label="Close save-state manager" data-testid="button-close-save-manager">×</button>
       </div>
       <div class="cabinet-save-grid" id="cabinet-save-grid" data-testid="grid-save-slots"></div>
+    </section>
+    <section class="cabinet-save-panel" id="cabinet-sleep-panel" aria-label="Sleep timer" aria-hidden="true" data-testid="panel-sleep-timer">
+      <div class="cabinet-save-panel__header">
+        <div>
+          <p class="cabinet-save-title">Sleep Timer</p>
+          <p class="cabinet-save-subtitle">Auto-saves and exits after the chosen time</p>
+        </div>
+        <button type="button" class="cabinet-save-close" id="cabinet-sleep-close" aria-label="Close sleep timer" data-testid="button-close-sleep-timer">×</button>
+      </div>
+      <div style="padding:14px 18px 18px;display:flex;flex-direction:column;gap:16px;">
+        <div id="cabinet-sleep-picker" style="display:flex;flex-direction:column;gap:10px;">
+          <div style="color:rgba(248,250,252,0.56);font:800 9px ui-monospace,monospace;letter-spacing:0.18em;text-transform:uppercase;">Duration</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;" id="cabinet-sleep-group" role="radiogroup" aria-label="Sleep duration">
+            <button type="button" class="cabinet-opt" data-sleep-mins="15" data-testid="button-sleep-15">15 min</button>
+            <button type="button" class="cabinet-opt" data-sleep-mins="30" data-testid="button-sleep-30">30 min</button>
+            <button type="button" class="cabinet-opt" data-sleep-mins="45" data-testid="button-sleep-45">45 min</button>
+            <button type="button" class="cabinet-opt" data-sleep-mins="60" data-testid="button-sleep-60">60 min</button>
+          </div>
+          <button type="button" id="cabinet-sleep-start" data-testid="button-start-sleep-timer"
+            style="margin-top:4px;padding:9px 16px;border-radius:8px;font:700 12px ui-monospace,monospace;letter-spacing:0.08em;background:hsl(322 92% 60%);color:#fff;border:none;cursor:pointer;opacity:0.5;pointer-events:none;"
+            disabled>Start Timer</button>
+        </div>
+        <div id="cabinet-sleep-running" style="display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;">
+          <div style="font:700 13px ui-monospace,monospace;color:rgba(248,250,252,0.56);letter-spacing:0.12em;text-transform:uppercase;">Time Remaining</div>
+          <div id="cabinet-sleep-countdown" style="font:800 48px ui-monospace,monospace;color:#fff;letter-spacing:-0.02em;">--:--</div>
+          <button type="button" id="cabinet-sleep-cancel" data-testid="button-cancel-sleep-timer"
+            style="padding:9px 20px;border-radius:8px;font:700 12px ui-monospace,monospace;letter-spacing:0.08em;background:transparent;color:rgba(248,250,252,0.7);border:1px solid rgba(248,250,252,0.2);cursor:pointer;">Cancel Timer</button>
+        </div>
+      </div>
     </section>
     <section class="cabinet-save-panel" id="cabinet-display-panel" aria-label="Display settings" aria-hidden="true" data-testid="panel-display-settings">
       <div class="cabinet-save-panel__header">
@@ -2468,6 +2553,103 @@ function cabinetEscapeText(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+function cabinetSetPanelOpen(panelId, open) {
+  var panel = document.querySelector("#" + panelId);
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  if (!panel || !backdrop) return;
+  if (open) { cabinetSetMenuOpen(false); }
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  panel.classList.toggle("is-open", open);
+  backdrop.classList.toggle("is-open", open);
+}
+
+var cabinetSleepSelectedMins = 0;
+var cabinetSleepTimerId = null;
+var cabinetSleepEndTime = 0;
+var cabinetSleepTickId = null;
+
+function cabinetSelectSleepDuration(mins) {
+  cabinetSleepSelectedMins = mins;
+  var btns = document.querySelectorAll("[data-sleep-mins]");
+  btns.forEach(function(b) {
+    var active = Number(b.getAttribute("data-sleep-mins")) === mins;
+    b.style.background = active ? "hsl(322 92% 60%)" : "rgba(255,255,255,0.07)";
+    b.style.color = active ? "#fff" : "rgba(248,250,252,0.8)";
+    b.style.border = active ? "none" : "1px solid rgba(255,255,255,0.12)";
+  });
+  var startBtn = document.querySelector("#cabinet-sleep-start");
+  if (startBtn) {
+    startBtn.removeAttribute("disabled");
+    startBtn.style.opacity = "1";
+    startBtn.style.pointerEvents = "auto";
+  }
+}
+
+function cabinetUpdateSleepCountdown() {
+  var remaining = Math.max(0, cabinetSleepEndTime - Date.now());
+  var totalSecs = Math.ceil(remaining / 1000);
+  var mins = Math.floor(totalSecs / 60);
+  var secs = totalSecs % 60;
+  var el = document.querySelector("#cabinet-sleep-countdown");
+  if (el) {
+    el.textContent = String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0");
+  }
+  if (remaining <= 0) {
+    clearInterval(cabinetSleepTickId);
+    cabinetSleepTickId = null;
+    cabinetSleepFire();
+  }
+}
+
+function cabinetSleepFire() {
+  cabinetToast("Sleep timer: auto-saving and exiting…");
+  var returnTo = window.CABINET_RETURN_TO || "";
+  var duration = cabinetSessionStart ? Math.round((Date.now() - cabinetSessionStart) / 1000) : 0;
+  var doExit = function() {
+    fetch("./play-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: "ended", durationSeconds: duration }),
+    }).catch(function(){}).finally(function() {
+      if (returnTo) { window.location.href = returnTo; return; }
+      if (window.opener) { window.close(); return; }
+      window.location.href = "/";
+    });
+  };
+  if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") {
+    try { window.EJS_emulator.saveState(0); } catch(e) {}
+    setTimeout(doExit, 800);
+  } else {
+    doExit();
+  }
+}
+
+function cabinetStartSleepTimer() {
+  if (!cabinetSleepSelectedMins) return;
+  cabinetSleepEndTime = Date.now() + cabinetSleepSelectedMins * 60 * 1000;
+  // Switch UI to running state
+  var picker = document.querySelector("#cabinet-sleep-picker");
+  var running = document.querySelector("#cabinet-sleep-running");
+  if (picker) picker.style.display = "none";
+  if (running) { running.style.display = "flex"; }
+  cabinetUpdateSleepCountdown();
+  cabinetSleepTickId = setInterval(cabinetUpdateSleepCountdown, 1000);
+  cabinetSetPanelOpen("cabinet-sleep-panel", false);
+  cabinetToast("Sleep timer set for " + cabinetSleepSelectedMins + " min");
+}
+
+function cabinetCancelSleepTimer() {
+  if (cabinetSleepTickId) { clearInterval(cabinetSleepTickId); cabinetSleepTickId = null; }
+  cabinetSleepEndTime = 0;
+  // Reset picker UI
+  var picker = document.querySelector("#cabinet-sleep-picker");
+  var running = document.querySelector("#cabinet-sleep-running");
+  if (picker) picker.style.display = "flex";
+  if (running) running.style.display = "none";
+  cabinetSetPanelOpen("cabinet-sleep-panel", false);
+  cabinetToast("Sleep timer cancelled");
+}
+
 function cabinetSetSaveManagerOpen(open) {
   var panel = document.querySelector("#cabinet-save-panel");
   var backdrop = document.querySelector("#cabinet-menu-backdrop");
@@ -2728,11 +2910,26 @@ document.addEventListener("click", function (event) {
       if (window.opener) { window.close(); return; }
       window.location.href = "/";
     };
-    fetch("./play-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: "ended", durationSeconds: duration }),
-    }).catch(function () {}).finally(doExit);
+    // Auto-save to slot 0 before exiting so progress is never lost
+    var doPostAndExit = function () {
+      fetch("./play-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: "ended", durationSeconds: duration }),
+      }).catch(function () {}).finally(doExit);
+    };
+    if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") {
+      cabinetToast("Auto-saving…");
+      try {
+        window.EJS_emulator.saveState(0);
+        // Give the emulator a moment to write the state, then exit
+        setTimeout(doPostAndExit, 800);
+      } catch (e) {
+        doPostAndExit();
+      }
+    } else {
+      doPostAndExit();
+    }
   }
   if (target.id === "cabinet-save") {
     cabinetQuickSaveSlot(cabinetCurrentSaveSlot);
@@ -2747,6 +2944,23 @@ document.addEventListener("click", function (event) {
   }
   if (target.id === "cabinet-save-manager-close") {
     cabinetSetSaveManagerOpen(false);
+  }
+  if (target.id === "cabinet-sleep-open") {
+    cabinetSetMenuOpen(false);
+    cabinetSetPanelOpen("cabinet-sleep-panel", true);
+  }
+  if (target.id === "cabinet-sleep-close") {
+    cabinetSetPanelOpen("cabinet-sleep-panel", false);
+  }
+  if (target.id === "cabinet-sleep-cancel") {
+    cabinetCancelSleepTimer();
+  }
+  if (target.id === "cabinet-sleep-start") {
+    cabinetStartSleepTimer();
+  }
+  var sleepMins = target.getAttribute("data-sleep-mins");
+  if (sleepMins) {
+    cabinetSelectSleepDuration(Number(sleepMins));
   }
   var saveAction = target.getAttribute("data-save-action");
   if (saveAction) {
@@ -3344,6 +3558,12 @@ window.EJS_onGameStart = function () {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ event: "started" }),
   }).catch(function () {});
+  // Auto-save on unexpected navigation / tab close
+  window.addEventListener("beforeunload", function () {
+    if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") {
+      try { window.EJS_emulator.saveState(0); } catch (e) { /* ignore */ }
+    }
+  });
 };
 window.EJS_player = "#game";
 window.EJS_core = ${JSON.stringify(core)};
