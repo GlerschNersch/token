@@ -74,6 +74,7 @@ export const collectionItems = sqliteTable("collection_items", {
 export const romSaveSlots = sqliteTable("rom_save_slots", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   romId: integer("rom_id").notNull(),
+  userId: text("user_id").notNull().default("default"),
   slot: integer("slot").notNull(),
   label: text("label").notNull(),
   updatedAt: integer("updated_at").notNull(),

@@ -87,6 +87,9 @@ for (const statement of [
   "ALTER TABLE uploaded_roms ADD COLUMN play_status TEXT NOT NULL DEFAULT 'unset'",
   "ALTER TABLE uploaded_roms ADD COLUMN community_score INTEGER",
   "ALTER TABLE uploaded_roms ADD COLUMN wheel_art_url TEXT",
+  // Per-user save state isolation
+  "ALTER TABLE rom_save_slots ADD COLUMN user_id TEXT NOT NULL DEFAULT \'default\'",
+  "CREATE UNIQUE INDEX IF NOT EXISTS rom_save_slots_user_idx ON rom_save_slots (rom_id, user_id, slot)",
 ]) {
   try {
     sqlite.exec(statement);
@@ -124,9 +127,9 @@ export interface IStorage {
   deleteCollection(id: number): Promise<boolean>;
   addRomToCollection(collectionId: number, romId: number): Promise<GameCollectionWithItems | undefined>;
   removeRomFromCollection(collectionId: number, romId: number): Promise<GameCollectionWithItems | undefined>;
-  listRomSaveSlots(romId: number): Promise<RomSaveSlot[]>;
+  listRomSaveSlots(romId: number, userId: string): Promise<RomSaveSlot[]>;
   upsertRomSaveSlot(saveSlot: InsertRomSaveSlot): Promise<RomSaveSlot>;
-  deleteRomSaveSlot(romId: number, slot: number): Promise<boolean>;
+  deleteRomSaveSlot(romId: number, slot: number, userId: string): Promise<boolean>;
   getIntegrationSettings(): Promise<IntegrationSettings>;
   saveIntegrationSettings(settings: IntegrationSettings): Promise<IntegrationSettings>;
 }
@@ -311,11 +314,11 @@ export class DatabaseStorage implements IStorage {
     return collections.find((item) => item.id === collectionId);
   }
 
-  async listRomSaveSlots(romId: number): Promise<RomSaveSlot[]> {
+  async listRomSaveSlots(romId: number, userId: string): Promise<RomSaveSlot[]> {
     return db
       .select()
       .from(romSaveSlots)
-      .where(eq(romSaveSlots.romId, romId))
+      .where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.userId, userId)))
       .orderBy(romSaveSlots.slot)
       .all();
   }
@@ -324,7 +327,7 @@ export class DatabaseStorage implements IStorage {
     const existing = db
       .select()
       .from(romSaveSlots)
-      .where(and(eq(romSaveSlots.romId, saveSlot.romId), eq(romSaveSlots.slot, saveSlot.slot)))
+      .where(and(eq(romSaveSlots.romId, saveSlot.romId), eq(romSaveSlots.userId, saveSlot.userId ?? "default"), eq(romSaveSlots.slot, saveSlot.slot)))
       .get();
 
     if (existing) {
@@ -339,10 +342,10 @@ export class DatabaseStorage implements IStorage {
     return db.insert(romSaveSlots).values(saveSlot).returning().get();
   }
 
-  async deleteRomSaveSlot(romId: number, slot: number): Promise<boolean> {
+  async deleteRomSaveSlot(romId: number, slot: number, userId: string): Promise<boolean> {
     const result = db
       .delete(romSaveSlots)
-      .where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.slot, slot)))
+      .where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.userId, userId), eq(romSaveSlots.slot, slot)))
       .run();
     return result.changes > 0;
   }

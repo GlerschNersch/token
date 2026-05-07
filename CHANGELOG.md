@@ -4,6 +4,14 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [0.3.17] — 2026-05-07
+
+### Fix: save-state manager now shows only the logged-in user's saves
+
+The save slot metadata (labels, timestamps, slot numbers) was stored in the database keyed only by `romId + slot`, so all HA users could see each other's occupied slots in the Save Manager even though the actual emulator save files were already isolated via `EJS_gameID` scoping. This release adds a `userId` column to `rom_save_slots` and scopes all three endpoints (list, upsert, delete) to the requesting user. Existing rows in the old format default to `"default"` and remain accessible to all users until re-saved.
+
+---
+
 ## [0.3.16] — 2026-05-07
 
 ### Per-user save states (Home Assistant multi-user support)

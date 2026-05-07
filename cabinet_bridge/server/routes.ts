@@ -413,7 +413,8 @@ export async function registerRoutes(
       return res.status(404).json({ message: "Uploaded ROM not found." });
     }
 
-    const slots = await storage.listRomSaveSlots(romId);
+    const { userId } = getUserFromRequest(req);
+    const slots = await storage.listRomSaveSlots(romId, userId);
     res.json(slots);
   });
 
@@ -433,8 +434,10 @@ export async function registerRoutes(
     }
 
     const updatedAt = Date.now();
+    const { userId } = getUserFromRequest(req);
     const saveSlot = insertRomSaveSlotSchema.parse({
       romId,
+      userId,
       slot,
       label: parsed.data.label || `Slot ${slot}`,
       updatedAt,
@@ -454,7 +457,8 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Save slot must be 1-9." });
     }
 
-    await storage.deleteRomSaveSlot(romId, slot);
+    const { userId: delUserId } = getUserFromRequest(req);
+    await storage.deleteRomSaveSlot(romId, slot, delUserId);
     res.status(204).end();
   });
 
