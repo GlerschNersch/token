@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.8
+
+- Fix: service worker now uses a versioned cache name (`home-arcade-v0.3.8`) so stale JS is cleared on every addon update
+- Fix: shell HTML is now fetched network-first so the app always boots with the latest code
+
 ## 0.3.7
 
 - Removed Quick action endpoints section from Settings

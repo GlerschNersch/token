@@ -1,5 +1,6 @@
 // HomeArcade service worker — shell caching for offline/installable PWA
-const CACHE = "home-arcade-v1";
+// Cache name includes the version so every addon update busts the old cache.
+const CACHE = "home-arcade-v0.3.8";
 const SHELL = [
   "./",
   "./index.html",
@@ -12,6 +13,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  // Delete every cache that isn't the current version
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
@@ -25,10 +27,20 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET" || url.pathname.startsWith("/api/")) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
+      // Always revalidate the shell (network-first for HTML)
+      if (url.pathname === "/" || url.pathname.endsWith("/index.html")) {
+        return fetch(event.request).then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        }).catch(() => cached || caches.match("./index.html"));
+      }
+      // Static assets: cache-first
       if (cached) return cached;
       return fetch(event.request).then((response) => {
-        // Cache successful same-origin navigations and static assets
-        if (response.ok && (url.pathname === "/" || url.pathname.startsWith("/assets/"))) {
+        if (response.ok && url.pathname.startsWith("/assets/")) {
           const clone = response.clone();
           caches.open(CACHE).then((cache) => cache.put(event.request, clone));
         }
