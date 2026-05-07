@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import type { Server } from 'node:http';
 import { storage } from "./storage";
+import { dataPath } from "./data-dir";
 import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
@@ -34,8 +35,8 @@ const EMULATORJS_CORES: Record<string, string> = {
   arcade: "mame2003",
 };
 
-const ROM_ROOT = path.resolve(process.cwd(), "rom-storage");
-const SYSTEM_IMAGE_CACHE_DIR = path.resolve(process.cwd(), "system-image-cache");
+const ROM_ROOT = path.resolve(dataPath("rom-storage"));
+const SYSTEM_IMAGE_CACHE_DIR = path.resolve(dataPath("system-image-cache"));
 const SYSTEM_IMAGE_FETCH_HEADERS: Record<string, string> = {
   "User-Agent":
     "CabinetBridge/0.2 (+https://github.com/anthropics/claude-code; mailto:noreply@anthropic.com) Mozilla/5.0",

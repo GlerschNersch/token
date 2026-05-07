@@ -13,8 +13,10 @@ import type {
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { and, desc, eq } from "drizzle-orm";
+import { dataPath, ensureDir, getDataDir } from "./data-dir";
 
-const sqlite = new Database("data.db");
+ensureDir(getDataDir());
+const sqlite = new Database(dataPath("data.db"));
 sqlite.pragma("journal_mode = WAL");
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS uploaded_roms (
