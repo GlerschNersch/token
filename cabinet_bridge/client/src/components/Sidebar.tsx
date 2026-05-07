@@ -9,6 +9,10 @@ import {
   Heart,
   Clock,
   LayoutGrid,
+  BookMarked,
+  Gamepad2,
+  CheckCircle2,
+  XCircle,
   Settings as SettingsIcon,
   Trophy,
   Tv,
@@ -46,6 +50,9 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
     GAMES.filter((g) => g.lastPlayed && g.lastPlayed > 0).length +
     uploadedRoms.filter((r) => r.lastPlayed && r.lastPlayed > 0).length;
   const allCount = GAMES.length + uploadedRoms.length;
+  const backlogCount = uploadedRoms.filter((r) => r.playStatus === "backlog").length;
+  const playingCount = uploadedRoms.filter((r) => r.playStatus === "playing").length;
+  const completedCount = uploadedRoms.filter((r) => r.playStatus === "completed").length;
   const systemCounts = Object.fromEntries(
     SYSTEMS.map((system) => [
       system.id,
@@ -99,6 +106,41 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
             onNavigate={onNavigate}
             testId="nav-all"
           />
+          {(backlogCount > 0 || playingCount > 0 || completedCount > 0) && (
+            <>
+              <NavItem
+                icon={<BookMarked className="size-4" />}
+                label="Backlog"
+                count={backlogCount}
+                href={filterToPath("backlog" as any)}
+                selected={!onSettingsRoute && (active as string) === "backlog"}
+                onNavigate={onNavigate}
+                testId="nav-backlog"
+              />
+              {playingCount > 0 && (
+                <NavItem
+                  icon={<Gamepad2 className="size-4" />}
+                  label="Now Playing"
+                  count={playingCount}
+                  href={filterToPath("playing" as any)}
+                  selected={!onSettingsRoute && (active as string) === "playing"}
+                  onNavigate={onNavigate}
+                  testId="nav-playing"
+                />
+              )}
+              {completedCount > 0 && (
+                <NavItem
+                  icon={<CheckCircle2 className="size-4" />}
+                  label="Completed"
+                  count={completedCount}
+                  href={filterToPath("completed" as any)}
+                  selected={!onSettingsRoute && (active as string) === "completed"}
+                  onNavigate={onNavigate}
+                  testId="nav-completed"
+                />
+              )}
+            </>
+          )}
         </Group>
 
         <Group label="Systems">

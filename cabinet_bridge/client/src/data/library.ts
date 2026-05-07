@@ -10,6 +10,10 @@ import {
 
 export type SystemId =
   | "favorites"
+  | "backlog"
+  | "playing"
+  | "completed"
+  | "dropped"
   | "recent"
   | "all"
   | "nes"
@@ -74,6 +78,8 @@ export interface Game {
   /** Total minutes played. */
   minutesPlayed?: number;
   favorite?: boolean;
+  playStatus?: string;
+  createdAt?: number;
 }
 
 export const SYSTEMS: System[] = [
@@ -313,6 +319,8 @@ export function uploadedRomToGame(rom: UploadedRom): Game {
     minutesPlayed: rom.minutesPlayed ?? 0,
     romHash: rom.romHash ?? null,
     favorite: rom.favorite,
+    playStatus: rom.playStatus ?? "unset",
+    createdAt: rom.createdAt,
   };
 }
 

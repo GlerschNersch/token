@@ -2,7 +2,7 @@ import type { Filter } from "@/components/Sidebar";
 import { SYSTEMS, type SystemId } from "@/data/library";
 
 const SYSTEM_IDS = new Set<SystemId>(SYSTEMS.map((s) => s.id));
-const SPECIAL: ReadonlyArray<SystemId> = ["favorites", "recent", "all"];
+const SPECIAL: ReadonlyArray<SystemId> = ["favorites", "recent", "all", "backlog", "playing", "completed", "dropped"];
 
 export const DEFAULT_FILTER: Filter = "favorites";
 

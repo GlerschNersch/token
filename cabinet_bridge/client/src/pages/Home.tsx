@@ -10,7 +10,7 @@ import { RomUpload } from "@/components/RomUpload";
 import { GAMES, SYSTEMS, type Game, type SystemId, uploadedRomToGame } from "@/data/library";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { Search, ChevronRight, SlidersHorizontal, LayoutGrid, LayoutList, Shuffle } from "lucide-react";
 import { useIntegration } from "@/lib/integration";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
@@ -36,6 +36,8 @@ export default function Home({
   const [openGame, setOpenGame] = useState<Game | null>(null);
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
   const [ratingOverrides, setRatingOverrides] = useState<Record<string, number>>({});
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { pc } = useIntegration();
   const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({
     queryKey: ["/api/roms"],
@@ -61,6 +63,16 @@ export default function Home({
     mutationFn: async ({ game, favorite }: { game: Game; favorite: boolean }) => {
       if (!game.romId) return null;
       const res = await apiRequest("PATCH", `/api/roms/${game.romId}/favorite`, { favorite });
+      return (await res.json()) as UploadedRom;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+    },
+  });
+  const setStatusMutation = useMutation({
+    mutationFn: async ({ game, playStatus }: { game: Game; playStatus: string }) => {
+      if (!game.romId) return null;
+      const res = await apiRequest("PATCH", `/api/roms/${game.romId}/play-status`, { playStatus });
       return (await res.json()) as UploadedRom;
     },
     onSuccess: async () => {
@@ -101,6 +113,7 @@ export default function Home({
       ...g,
       favorite: favOverrides[g.id] !== undefined ? favOverrides[g.id] : !!g.favorite,
       rating: ratingOverrides[g.id] !== undefined ? ratingOverrides[g.id] : g.rating,
+      playStatus: statusOverrides[g.id] !== undefined ? statusOverrides[g.id] : (g.playStatus ?? "unset"),
     }));
   }, [favOverrides, ratingOverrides, uploadedRoms]);
 
@@ -237,6 +250,18 @@ export default function Home({
     }
   };
 
+  const setStatus = (g: Game, playStatus: string) => {
+    setStatusOverrides((prev) => ({ ...prev, [g.id]: playStatus }));
+    setOpenGame((cur) => (cur && cur.id === g.id ? { ...cur, playStatus } : cur));
+    if (g.romId) setStatusMutation.mutate({ game: g, playStatus });
+  };
+
+  const pickRandom = () => {
+    if (filtered.length === 0) return;
+    const pick = filtered[Math.floor(Math.random() * filtered.length)];
+    setOpenGame(pick);
+  };
+
   const handleCreateCollection = () => {
     const name = window.prompt("Name this collection", "RPGs");
     const trimmed = name?.trim();
@@ -292,6 +317,25 @@ export default function Home({
                 />
               </div>
               <SortMenu sort={sort} setSort={setSort} />
+              <button
+                type="button"
+                onClick={pickRandom}
+                title="Surprise me — pick a random game"
+                disabled={filtered.length === 0}
+                className="size-9 flex items-center justify-center rounded-md border border-border bg-background/40 text-muted-foreground hover:text-foreground hover-elevate disabled:opacity-40"
+                data-testid="button-surprise"
+              >
+                <Shuffle className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode((v) => v === "grid" ? "list" : "grid")}
+                title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                className="size-9 flex items-center justify-center rounded-md border border-border bg-background/40 text-muted-foreground hover:text-foreground hover-elevate"
+                data-testid="button-view-toggle"
+              >
+                {viewMode === "grid" ? <LayoutList className="size-4" /> : <LayoutGrid className="size-4" />}
+              </button>
             </div>
           </div>
         </div>
@@ -439,8 +483,10 @@ export default function Home({
             />
             {filtered.length === 0 ? (
               <EmptyState query={query} filter={filter} onResetFilter={() => goToFilter("all")} />
-            ) : (
+            ) : viewMode === "grid" ? (
               <Grid games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} />
+            ) : (
+              <ListView games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} />
             )}
           </section>
 
@@ -472,6 +518,7 @@ export default function Home({
         collections={collections}
         onCreateCollection={handleCreateCollection}
         onToggleCollection={handleToggleCollection}
+        onSetStatus={setStatus}
       />
     </div>
   );
@@ -494,6 +541,91 @@ function Grid({
       {games.map((g) => (
         <GameCard key={g.id} game={g} onOpen={onOpen} onToggleFav={onToggleFav} />
       ))}
+    </div>
+  );
+}
+
+
+function ListView({
+  games,
+  onOpen,
+  onToggleFav,
+}: {
+  games: Game[];
+  onOpen: (g: Game) => void;
+  onToggleFav: (g: Game) => void;
+}) {
+  const STATUS_LABELS: Record<string, string> = {
+    unset: "", backlog: "Backlog", playing: "Playing", completed: "Completed", dropped: "Dropped",
+  };
+  const STATUS_COLORS: Record<string, string> = {
+    backlog: "text-blue-400", playing: "text-green-400", completed: "text-chart-3", dropped: "text-muted-foreground",
+  };
+  return (
+    <div className="flex flex-col divide-y divide-border rounded-lg border border-border overflow-hidden" data-testid="list-games">
+      {games.map((g) => {
+        const system = SYSTEMS.find((s) => s.id === g.system);
+        const isNew = g.createdAt && Date.now() - g.createdAt < 7 * 24 * 60 * 60 * 1000;
+        return (
+          <div
+            key={g.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpen(g)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(g); } }}
+            className="flex items-center gap-3 px-4 py-2.5 bg-card hover:bg-card/80 cursor-pointer group"
+            data-testid={`row-game-${g.id}`}
+          >
+            {/* Thumbnail */}
+            <div className="shrink-0 w-12 h-8 rounded overflow-hidden border border-card-border">
+              {g.artUrl ? (
+                <img src={g.artUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-mono text-[9px] font-bold text-white/60"
+                  style={{ background: `linear-gradient(135deg, hsl(${g.art[0]}), hsl(${g.art[1]}))` }}>
+                  {system?.monogram ?? g.system.slice(0, 3).toUpperCase()}
+                </div>
+              )}
+            </div>
+            {/* Title + badges */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="font-medium text-sm truncate">{g.title}</span>
+                {isNew && (
+                  <span className="shrink-0 px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30">
+                    New
+                  </span>
+                )}
+                {g.playStatus && g.playStatus !== "unset" && (
+                  <span className={`shrink-0 font-mono text-[10px] ${STATUS_COLORS[g.playStatus] ?? "text-muted-foreground"}`}>
+                    · {STATUS_LABELS[g.playStatus]}
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">
+                {system?.shortName ?? g.system}{g.genre && g.genre !== "Uploaded ROM" ? ` · ${g.genre}` : ""}
+                {(g.minutesPlayed ?? 0) > 0 ? ` · ${g.minutesPlayed}m played` : ""}
+              </div>
+            </div>
+            {/* Rating + fav */}
+            <div className="shrink-0 flex items-center gap-3">
+              {g.rating > 0 && (
+                <div className="flex items-center gap-0.5 font-mono text-[11px] text-chart-3">
+                  {"★".repeat(g.rating)}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onToggleFav(g); }}
+                className="size-7 flex items-center justify-center rounded text-muted-foreground hover:text-primary focus:outline-none"
+                aria-label={g.favorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <span className={g.favorite ? "text-primary" : ""}>♥</span>
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -297,6 +297,18 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  app.patch("/api/roms/:id/play-status", async (req, res) => {
+    const id = Number(req.params.id);
+    const VALID = ["unset", "backlog", "playing", "completed", "dropped"];
+    const parsed = z.object({ playStatus: z.string() }).safeParse(req.body);
+    if (!parsed.success || !VALID.includes(parsed.data.playStatus)) {
+      return res.status(400).json({ message: "Invalid play status." });
+    }
+    const updated = await storage.updateUploadedRomPlayStatus(id, parsed.data.playStatus);
+    if (!updated) return res.status(404).json({ message: "Uploaded ROM not found." });
+    res.json(updated);
+  });
+
   app.delete("/api/roms/:id", async (req, res) => {
     const id = Number(req.params.id);
     const deleted = await storage.deleteUploadedRom(id);

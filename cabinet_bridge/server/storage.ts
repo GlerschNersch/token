@@ -84,6 +84,7 @@ for (const statement of [
   "ALTER TABLE uploaded_roms ADD COLUMN players TEXT",
   "ALTER TABLE uploaded_roms ADD COLUMN rom_hash TEXT",
   "ALTER TABLE uploaded_roms ADD COLUMN minutes_played INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE uploaded_roms ADD COLUMN play_status TEXT NOT NULL DEFAULT 'unset'",
 ]) {
   try {
     sqlite.exec(statement);
@@ -111,6 +112,7 @@ export interface IStorage {
   markUploadedRomPlayed(id: number): Promise<UploadedRom | undefined>;
   listRomsByDiscGroup(discGroup: string): Promise<UploadedRom[]>;
   incrementRomMinutesPlayed(id: number, minutes: number): Promise<UploadedRom | undefined>;
+  updateUploadedRomPlayStatus(id: number, status: string): Promise<UploadedRom | undefined>;
   updateUploadedRomMetadata(
     id: number,
     meta: Partial<Pick<InsertUploadedRom, "description" | "releaseYear" | "developer" | "publisher" | "genre" | "players" | "artUrl" | "scrapeStatus" | "scrapeMessage">>,
@@ -207,6 +209,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(uploadedRoms.id, id))
       .returning()
       .get();
+  }
+
+  async updateUploadedRomPlayStatus(id: number, status: string): Promise<UploadedRom | undefined> {
+    return db.update(uploadedRoms)
+      .set({ playStatus: status })
+      .where(eq(uploadedRoms.id, id)).returning().get();
   }
 
   async updateUploadedRomRating(id: number, rating: number): Promise<UploadedRom | undefined> {

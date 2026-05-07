@@ -34,6 +34,16 @@ export function GameCard({
         <GameArt game={game} />
       </div>
 
+      {/* Top-left NEW badge */}
+      {(() => {
+        const isNew = game.createdAt && Date.now() - game.createdAt < 7 * 24 * 60 * 60 * 1000;
+        return isNew ? (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 pointer-events-none">
+            New
+          </div>
+        ) : null;
+      })()}
+
       {/* Top-right favorite */}
       <button
         type="button"

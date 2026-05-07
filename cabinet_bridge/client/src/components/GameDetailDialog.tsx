@@ -15,6 +15,7 @@ export function GameDetailDialog({
   collections,
   onCreateCollection,
   onToggleCollection,
+  onSetStatus,
 }: {
   game: Game | null;
   onClose: () => void;
@@ -23,6 +24,7 @@ export function GameDetailDialog({
   collections: GameCollectionWithItems[];
   onCreateCollection: () => void;
   onToggleCollection: (collectionId: number, game: Game, selected: boolean) => void;
+  onSetStatus?: (g: Game, status: string) => void;
 }) {
   const { dispatch } = useIntegration();
 
@@ -158,6 +160,42 @@ export function GameDetailDialog({
                 ) : null}
               </div>
             </div>
+
+            {game.romId && onSetStatus ? (
+              <div className="rounded-md border border-border bg-background/50 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                  Play Status
+                </div>
+                <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Play status" data-testid="group-play-status">
+                  {([
+                    { id: "unset", label: "—" },
+                    { id: "backlog", label: "Backlog" },
+                    { id: "playing", label: "Playing" },
+                    { id: "completed", label: "Completed" },
+                    { id: "dropped", label: "Dropped" },
+                  ] as const).map(({ id, label }) => {
+                    const active = (game.playStatus ?? "unset") === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => onSetStatus(game, id)}
+                        className={`px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                          active
+                            ? "border-primary/60 bg-primary/15 text-primary"
+                            : "border-border bg-background/70 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                        }`}
+                        data-testid={`button-status-${id}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             {game.romId ? (
               <div className="rounded-md border border-border bg-background/50 p-3">
