@@ -36,6 +36,16 @@ export interface IntegrationConfig {
   liveMode: boolean;
   /** Override map for action endpoints by id. */
   endpoints: Record<string, string>;
+  /** ScreenScraper.fr credentials */
+  ssUserId?: string;
+  ssPassword?: string;
+  /** Kiosk / arcade mode */
+  kioskMode?: boolean;
+  kioskPin?: string;
+  kioskCollectionId?: number | null;
+  /** RetroAchievements */
+  raUsername?: string;
+  raToken?: string;
 }
 
 export type IntegrationSaveStatus = "idle" | "loading" | "saving" | "saved" | "error";
@@ -70,6 +80,13 @@ interface IntegrationContextValue {
 
 const defaultConfig: IntegrationConfig = {
   haBaseUrl: "https://homeassistant.local:8123",
+  ssUserId: "",
+  ssPassword: "",
+  kioskMode: false,
+  kioskPin: "",
+  kioskCollectionId: null,
+  raUsername: "",
+  raToken: "",
   haToken: "",
   liveMode: false,
   endpoints: {},
@@ -107,6 +124,13 @@ function normalizeConfig(raw: unknown): IntegrationConfig {
     haToken: typeof source.haToken === "string" ? source.haToken : defaultConfig.haToken,
     liveMode: typeof source.liveMode === "boolean" ? source.liveMode : defaultConfig.liveMode,
     endpoints,
+    ssUserId: typeof source.ssUserId === "string" ? source.ssUserId : "",
+    ssPassword: typeof source.ssPassword === "string" ? source.ssPassword : "",
+    kioskMode: typeof source.kioskMode === "boolean" ? source.kioskMode : false,
+    kioskPin: typeof source.kioskPin === "string" ? source.kioskPin : "",
+    kioskCollectionId: (typeof source.kioskCollectionId === "number" || source.kioskCollectionId === null) ? source.kioskCollectionId : null,
+    raUsername: typeof source.raUsername === "string" ? source.raUsername : "",
+    raToken: typeof source.raToken === "string" ? source.raToken : "",
   };
 }
 
@@ -114,6 +138,13 @@ function configsEqual(a: IntegrationConfig, b: IntegrationConfig): boolean {
   if (a.haBaseUrl !== b.haBaseUrl) return false;
   if (a.haToken !== b.haToken) return false;
   if (a.liveMode !== b.liveMode) return false;
+  if (a.ssUserId !== b.ssUserId) return false;
+  if (a.ssPassword !== b.ssPassword) return false;
+  if (a.kioskMode !== b.kioskMode) return false;
+  if (a.kioskPin !== b.kioskPin) return false;
+  if (a.kioskCollectionId !== b.kioskCollectionId) return false;
+  if (a.raUsername !== b.raUsername) return false;
+  if (a.raToken !== b.raToken) return false;
   const aKeys = Object.keys(a.endpoints);
   const bKeys = Object.keys(b.endpoints);
   if (aKeys.length !== bKeys.length) return false;

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { dataPath } from "./data-dir";
 import express from "express";
 import path from "node:path";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import zlib from "node:zlib";
 import {
@@ -54,6 +55,7 @@ const EMULATORJS_CORES: Record<string, string> = {
 };
 
 const ROM_ROOT = path.resolve(dataPath("rom-storage"));
+const SAVE_BACKUP_DIR = path.resolve(dataPath("save-backups"));
 const SYSTEM_IMAGE_CACHE_DIR = path.resolve(dataPath("system-image-cache"));
 const SYSTEM_IMAGE_FETCH_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -240,6 +242,7 @@ export async function registerRoutes(
       }
     }
 
+    const bootstrapSettings = await storage.getIntegrationSettings();
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.send(renderEmulatorBootstrap({
       core,
@@ -247,6 +250,9 @@ export async function registerRoutes(
       gameId: `${rom.system}-${rom.slug}`,
       romId: rom.id,
       discs,
+      romHash: rom.romHash ?? null,
+      raUsername: bootstrapSettings.raUsername ?? "",
+      raToken: bootstrapSettings.raToken ?? "",
     }));
   });
 
@@ -464,6 +470,7 @@ export async function registerRoutes(
 
       await fs.mkdir(systemDir, { recursive: true });
       await fs.writeFile(filePath, body);
+      const romHash = crypto.createHash("md5").update(body).digest("hex");
 
       // Try ScreenScraper first (rich metadata + art), fall back to Libretro art only
       const settings = await storage.getIntegrationSettings();
@@ -494,6 +501,8 @@ export async function registerRoutes(
         playCount: 0,
         discNumber,
         discGroup,
+        romHash,
+        minutesPlayed: 0,
         createdAt: Date.now(),
       });
 
@@ -625,6 +634,134 @@ export async function registerRoutes(
     }
 
     res.json({ ok: true });
+  });
+
+  // ── Save-state server backups ──────────────────────────────────────────────
+  app.get("/api/roms/:id/save-backups", async (req, res) => {
+    const id = Number(req.params.id);
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+    const dir = path.join(SAVE_BACKUP_DIR, String(id));
+    try {
+      const files = await fs.readdir(dir);
+      const slots = files
+        .map((f) => { const m = f.match(/^slot-(\d+)\.state$/); return m ? Number(m[1]) : null; })
+        .filter((s): s is number => s !== null)
+        .sort((a, b) => a - b);
+      res.json({ slots });
+    } catch {
+      res.json({ slots: [] });
+    }
+  });
+
+  app.get("/api/roms/:id/save-backup/:slot", async (req, res) => {
+    const id = Number(req.params.id);
+    const slot = Number(req.params.slot);
+    if (!Number.isFinite(slot) || slot < 1 || slot > 99) return res.status(400).json({ message: "Invalid slot." });
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+    const filePath = path.join(SAVE_BACKUP_DIR, String(id), `slot-${slot}.state`);
+    try {
+      const buf = await fs.readFile(filePath);
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="slot-${slot}.state"`);
+      res.send(buf);
+    } catch {
+      res.status(404).json({ message: "No backup for this slot." });
+    }
+  });
+
+  app.put("/api/roms/:id/save-backup/:slot", async (req, res) => {
+    const id = Number(req.params.id);
+    const slot = Number(req.params.slot);
+    if (!Number.isFinite(slot) || slot < 1 || slot > 99) return res.status(400).json({ message: "Invalid slot." });
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+    const dir = path.join(SAVE_BACKUP_DIR, String(id));
+    await fs.mkdir(dir, { recursive: true });
+    const filePath = path.join(dir, `slot-${slot}.state`);
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", async () => {
+      const buf = Buffer.concat(chunks);
+      if (buf.length > 64 * 1024 * 1024) {
+        return res.status(413).json({ message: "Backup too large (64 MB max)." });
+      }
+      await fs.writeFile(filePath, buf);
+      res.json({ ok: true, slot, size: buf.length });
+    });
+    req.on("error", () => res.status(500).json({ message: "Upload error." }));
+  });
+
+  app.delete("/api/roms/:id/save-backup/:slot", async (req, res) => {
+    const id = Number(req.params.id);
+    const slot = Number(req.params.slot);
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+    const filePath = path.join(SAVE_BACKUP_DIR, String(id), `slot-${slot}.state`);
+    try { await fs.unlink(filePath); } catch { /* not found is fine */ }
+    res.json({ ok: true });
+  });
+
+  // ── EmulationStation XML import ─────────────────────────────────────────────
+  app.post("/api/import/emulationstation", express.raw({ limit: "50mb", type: ["text/xml", "application/xml", "application/octet-stream", "text/plain"] }), async (req, res) => {
+    try {
+      const xml = req.body.toString("utf8");
+      // Parse <game> blocks with simple regex (gamelist.xml is predictable)
+      const gameBlocks = [...xml.matchAll(/<game[^>]*>([\s\S]*?)<\/game>/gi)];
+      const roms = await storage.listUploadedRoms();
+      const results: { title: string; updated: boolean; reason?: string }[] = [];
+
+      for (const block of gameBlocks) {
+        const inner = block[1];
+        const get = (tag: string) => {
+          const m = inner.match(new RegExp(`<${tag}[^>]*>([\s\S]*?)<\/${tag}>`, "i"));
+          return m ? m[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').trim() : null;
+        };
+        const path2 = get("path");
+        const name = get("name");
+        if (!path2 && !name) continue;
+
+        const baseName = path2 ? path2.split(/[\/]/).pop()?.replace(/\..*$/, "").toLowerCase() : null;
+        const match = roms.find((r) => {
+          if (baseName && r.originalName.replace(/\..*$/, "").toLowerCase() === baseName) return true;
+          if (name && r.title.toLowerCase() === (name ?? "").toLowerCase()) return true;
+          return false;
+        });
+
+        if (!match) {
+          results.push({ title: name ?? path2 ?? "?", updated: false, reason: "no matching ROM" });
+          continue;
+        }
+
+        const descRaw = get("desc");
+        const dateRaw = get("releasedate");
+        const devRaw = get("developer");
+        const pubRaw = get("publisher");
+        const genreRaw = get("genre");
+        const playersRaw = get("players");
+        const imageRaw = get("image");
+
+        const meta: Record<string, unknown> = {};
+        if (descRaw) meta.description = descRaw.slice(0, 2000);
+        if (dateRaw) { const y = Number(dateRaw.slice(0, 4)); if (y >= 1970 && y <= 2030) meta.releaseYear = y; }
+        if (devRaw) meta.developer = devRaw.slice(0, 256);
+        if (pubRaw) meta.publisher = pubRaw.slice(0, 256);
+        if (genreRaw) meta.genre = genreRaw.slice(0, 256);
+        if (playersRaw) meta.players = playersRaw.slice(0, 16);
+        if (imageRaw && imageRaw.startsWith("http")) meta.artUrl = imageRaw;
+        if (Object.keys(meta).length > 0) {
+          if (meta.artUrl || meta.description || meta.developer || meta.publisher || meta.genre) {
+            meta.scrapeStatus = "matched";
+          }
+          await storage.updateUploadedRomMetadata(match.id, meta as Parameters<typeof storage.updateUploadedRomMetadata>[1]);
+        }
+        results.push({ title: match.title, updated: true });
+      }
+      res.json({ imported: results.filter((r) => r.updated).length, skipped: results.filter((r) => !r.updated).length, results });
+    } catch (err) {
+      res.status(400).json({ message: String(err) });
+    }
   });
 
   return httpServer;
@@ -1777,8 +1914,8 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
     <nav class="cabinet-menu-panel" id="cabinet-menu-panel" aria-label="Game system menu" aria-hidden="true">
       <div class="cabinet-menu-panel__header">
         <div>
-          <p class="cabinet-menu-title">System Menu</p>
-          <p class="cabinet-menu-subtitle">Save, load, controls, exit</p>
+          <p class="cabinet-menu-title">${safeTitle}</p>
+          <p class="cabinet-menu-subtitle">Save, load, controls, exit${romHash ? ` · MD5: <span style="user-select:all;cursor:text;" title="MD5 hash — click to select">${romHash}</span>` : ""}</p>
         </div>
       </div>
       <div class="cabinet-menu-grid">
@@ -1794,6 +1931,7 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         <button type="button" id="cabinet-screenshot" data-testid="button-screenshot">Screenshot</button>
         <button type="button" id="cabinet-display-open" data-testid="button-display-settings">Display</button>
         <button type="button" id="cabinet-remap-open" data-testid="button-remap-controls">Remap Keys</button>
+        <button type="button" id="cabinet-gamepad-test-open" data-testid="button-gamepad-tester">Test Pad</button>
         <button type="button" class="danger" id="cabinet-exit" data-testid="button-exit-player">Exit Game</button>
       </div>
     </nav>
@@ -1846,6 +1984,19 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
       <div id="cabinet-remap-grid" style="padding:14px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow-y:auto;max-height:calc(min(86vh,720px)-94px);"></div>
       <div style="padding:0 18px 14px;display:flex;gap:8px;">
         <button type="button" id="cabinet-remap-reset" style="appearance:none;border:1px solid rgba(239,68,68,0.5);border-radius:12px;background:rgba(239,68,68,0.12);color:#f8fafc;cursor:pointer;font:800 9px ui-monospace,monospace;letter-spacing:0.12em;padding:10px 16px;text-transform:uppercase;">Reset to Defaults</button>
+      </div>
+    </section>
+    <section class="cabinet-save-panel" id="cabinet-gamepad-panel" aria-label="Gamepad tester" aria-hidden="true" data-testid="panel-gamepad-tester">
+      <div class="cabinet-save-panel__header">
+        <div>
+          <p class="cabinet-save-title">Gamepad Tester</p>
+          <p class="cabinet-save-subtitle">Connect a controller and press any button to detect it.</p>
+        </div>
+        <button type="button" class="cabinet-save-close" id="cabinet-gamepad-panel-close" aria-label="Close gamepad tester" data-testid="button-close-gamepad-tester">×</button>
+      </div>
+      <div id="cabinet-gamepad-tester-body" style="padding:14px 18px 18px;overflow-y:auto;max-height:calc(min(86vh,720px)-94px);">
+        <p id="cabinet-gp-status" style="font:600 11px ui-monospace,monospace;color:rgba(248,250,252,0.5);letter-spacing:0.08em;margin:0 0 12px;">No controller detected yet. Press any button on your gamepad.</p>
+        <div id="cabinet-gp-list" style="display:flex;flex-direction:column;gap:10px;"></div>
       </div>
     </section>
     <div class="cabinet-toast" id="cabinet-toast" role="status" aria-live="polite"></div>
@@ -1901,7 +2052,7 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
 </html>`;
 }
 
-function renderEmulatorBootstrap({ core, title, gameId, romId, discs }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }> }) {
+function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; }) {
   return `"use strict";
 function cabinetToast(message) {
   var toast = document.querySelector("#cabinet-toast");
@@ -2072,6 +2223,7 @@ function cabinetSendInput(inputValue, fallbackKey) {
   }, 80);
 }
 var cabinetRomId = ${JSON.stringify(romId)};
+var cabinetRomHash = ${JSON.stringify(romHash || "")};
 var cabinetSaveSlots = [];
 var cabinetCurrentSaveSlot = 1;
 function cabinetSaveStateEndpoint(slot) {
@@ -2148,6 +2300,7 @@ function cabinetRenderSaveSlots() {
   grid.innerHTML = "";
   for (var slot = 1; slot <= 9; slot += 1) {
     var state = cabinetGetSaveSlot(slot);
+    var hasBackup = cabinetServerBackups.indexOf(slot) !== -1;
     var card = document.createElement("article");
     card.className = "cabinet-save-slot";
     card.setAttribute("data-filled", state ? "true" : "false");
@@ -2156,14 +2309,17 @@ function cabinetRenderSaveSlots() {
     var thumbHtml = state && thumb
       ? '<div class="cabinet-save-slot__thumb"><img src="' + thumb + '" alt="Save slot ' + slot + ' preview" loading="lazy"></div>'
       : '<div class="cabinet-save-slot__thumb cabinet-save-slot__thumb--empty"></div>';
+    var cloudBadge = hasBackup ? ' <span title="Server backup exists" style="font-size:10px;">&#9729;</span>' : "";
     card.innerHTML =
       thumbHtml +
-      '<div class="cabinet-save-slot__eyebrow">Slot ' + slot + '</div>' +
+      '<div class="cabinet-save-slot__eyebrow">Slot ' + slot + cloudBadge + '</div>' +
       '<div class="cabinet-save-slot__label">' + (state ? cabinetEscapeText(state.label || ("Slot " + slot)) : "Empty") + '</div>' +
-      '<div class="cabinet-save-slot__meta">' + (state ? cabinetRelativeTime(state.updatedAt) : "No save data yet") + '</div>' +
+      '<div class="cabinet-save-slot__meta">' + (state ? cabinetRelativeTime(state.updatedAt) : (hasBackup ? "No local save — server backup available" : "No save data yet")) + '</div>' +
       '<div class="cabinet-save-slot__actions">' +
       '<button type="button" data-save-action="save" data-slot="' + slot + '" data-testid="button-save-slot-' + slot + '">Save</button>' +
       '<button type="button" data-save-action="load" data-slot="' + slot + '" data-testid="button-load-slot-' + slot + '"' + (state ? "" : " disabled") + ">Load</button>" +
+      '<button type="button" data-save-action="backup" data-slot="' + slot + '" data-testid="button-backup-slot-' + slot + '"' + (state ? "" : " disabled") + ' title="Back up to server" style="background:rgba(59,130,246,0.18);border-color:rgba(59,130,246,0.4);">&#9729; Backup</button>' +
+      '<button type="button" data-save-action="restore" data-slot="' + slot + '" data-testid="button-restore-slot-' + slot + '"' + (hasBackup ? "" : " disabled") + ' title="Restore from server" style="background:rgba(34,197,94,0.18);border-color:rgba(34,197,94,0.4);">&#8635; Restore</button>' +
       '<button type="button" class="danger" data-save-action="delete" data-slot="' + slot + '" data-testid="button-delete-slot-' + slot + '"' + (state ? "" : " disabled") + ">Delete</button>" +
       "</div>";
     grid.appendChild(card);
@@ -2188,7 +2344,7 @@ function cabinetSetSaveManagerOpen(open) {
   panel.classList.toggle("is-open", open);
   backdrop.classList.toggle("is-open", open);
   if (open) {
-    cabinetFetchSaveSlots();
+    cabinetFetchServerBackups().then(function() { cabinetFetchSaveSlots(); });
     var closeButton = document.querySelector("#cabinet-save-manager-close");
     if (closeButton && closeButton.focus) {
       window.setTimeout(function () {
@@ -2471,6 +2627,12 @@ document.addEventListener("click", function (event) {
       if (saveAction === "delete") {
         cabinetDeleteLocalSaveSlot(slot);
       }
+      if (saveAction === "backup") {
+        cabinetBackupSlot(slot);
+      }
+      if (saveAction === "restore") {
+        cabinetRestoreSlot(slot);
+      }
     }
   }
   if (target.id === "cabinet-pad-toggle") {
@@ -2742,9 +2904,141 @@ document.addEventListener("keydown", function (e) {
 window.addEventListener("EJS_emulator_ready", function () {
   cabinetApplyRemap(cabinetLoadRemap());
 });
+// ── Server-side save backup/restore ────────────────────────────────────────
+var cabinetServerBackups = [];
+async function cabinetFetchServerBackups() {
+  try {
+    var r = await fetch("./save-backups");
+    if (!r.ok) return;
+    var d = await r.json();
+    cabinetServerBackups = d.slots || [];
+  } catch (_e) {
+    cabinetServerBackups = [];
+  }
+}
+async function cabinetBackupSlot(slot) {
+  var emulator = window.EJS_emulator;
+  if (!emulator || !emulator.gameManager || !emulator.gameManager.FS) {
+    cabinetToast("Game must be running to back up a save");
+    return;
+  }
+  var FS = emulator.gameManager.FS;
+  var gameId = window.EJS_gameID || "";
+  var statePath = "/" + gameId + "-" + slot + ".state";
+  var data;
+  try {
+    data = FS.readFile(statePath, { encoding: "binary" });
+  } catch (_e) {
+    cabinetToast("No save data in slot " + slot + " to back up");
+    return;
+  }
+  try {
+    var r = await fetch("./save-backup/" + slot, {
+      method: "PUT",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: data instanceof Uint8Array ? data : new Uint8Array(data),
+    });
+    if (!r.ok) throw new Error((await r.json()).message || "Failed");
+    if (!cabinetServerBackups.includes(slot)) cabinetServerBackups.push(slot);
+    cabinetServerBackups.sort(function (a, b) { return a - b; });
+    cabinetToast("Slot " + slot + " backed up to server ☁");
+    cabinetRenderSaveSlots();
+  } catch (err) {
+    cabinetToast("Backup failed: " + err.message);
+  }
+}
+async function cabinetRestoreSlot(slot) {
+  var emulator = window.EJS_emulator;
+  if (!emulator || !emulator.gameManager || !emulator.gameManager.FS) {
+    cabinetToast("Game must be running to restore a save");
+    return;
+  }
+  try {
+    var r = await fetch("./save-backup/" + slot);
+    if (!r.ok) throw new Error("No backup for slot " + slot);
+    var buf = await r.arrayBuffer();
+    var FS = emulator.gameManager.FS;
+    var gameId = window.EJS_gameID || "";
+    var statePath = "/" + gameId + "-" + slot + ".state";
+    FS.writeFile(statePath, new Uint8Array(buf));
+    if (FS.syncfs) FS.syncfs(false, function () {});
+    await cabinetRecordSaveSlot(slot);
+    cabinetToast("Slot " + slot + " restored from server ☁");
+  } catch (err) {
+    cabinetToast("Restore failed: " + err.message);
+  }
+}
+
+// ── Gamepad tester ──────────────────────────────────────────────────────────
+function cabinetSetupGamepadPanel() {
+  var openBtn = document.querySelector("#cabinet-gamepad-test-open");
+  var closeBtn = document.querySelector("#cabinet-gamepad-panel-close");
+  var panel = document.querySelector("#cabinet-gamepad-panel");
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  if (!openBtn || !panel || !backdrop) return;
+  var gpRaf = null;
+  function renderGamepads() {
+    var statusEl = document.querySelector("#cabinet-gp-status");
+    var listEl = document.querySelector("#cabinet-gp-list");
+    if (!statusEl || !listEl) return;
+    var gamepads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+    if (gamepads.length === 0) {
+      statusEl.textContent = "No controller detected. Press any button on your gamepad.";
+      listEl.innerHTML = "";
+    } else {
+      statusEl.textContent = gamepads.length + " controller" + (gamepads.length > 1 ? "s" : "") + " connected.";
+      listEl.innerHTML = gamepads.map(function (gp) {
+        var btnHtml = (gp.buttons || []).map(function (btn, i) {
+          var pressed = btn.pressed || btn.value > 0.1;
+          return '<span style="display:inline-block;min-width:28px;padding:3px 5px;margin:2px;border-radius:6px;font:700 9px ui-monospace,monospace;text-align:center;background:' + (pressed ? "#22c55e" : "rgba(248,250,252,0.08)") + ';color:' + (pressed ? "#fff" : "rgba(248,250,252,0.4)") + ';" title="Button ' + i + '">' + i + '</span>';
+        }).join("");
+        var axisHtml = (gp.axes || []).map(function (v, i) {
+          var pct = Math.round((v + 1) * 50);
+          return '<span style="display:inline-block;margin:2px 4px;font:600 9px ui-monospace,monospace;color:rgba(248,250,252,0.6);">A' + i + ':<b style="color:#f8fafc;">' + v.toFixed(2) + '</b></span>';
+        }).join("");
+        return '<div style="background:rgba(248,250,252,0.04);border:1px solid rgba(248,250,252,0.1);border-radius:12px;padding:10px 14px;margin-bottom:6px;">'
+          + '<div style="font:700 11px ui-monospace,monospace;color:#f8fafc;margin-bottom:6px;">' + (gp.id || "Unknown Controller") + '</div>'
+          + '<div style="margin-bottom:4px;">' + (btnHtml || "<em style=\"font-style:italic;color:rgba(248,250,252,0.3);font-size:10px;\">No buttons</em>") + '</div>'
+          + '<div>' + (axisHtml || "") + '</div>'
+          + '</div>';
+      }).join("");
+    }
+    if (panel.getAttribute("aria-hidden") !== "true") {
+      gpRaf = requestAnimationFrame(renderGamepads);
+    }
+  }
+  openBtn.addEventListener("click", function () {
+    cabinetSetMenuOpen(false);
+    panel.setAttribute("aria-hidden", "false");
+    panel.classList.add("is-open");
+    backdrop.classList.add("is-open");
+    renderGamepads();
+  });
+  function closePanel() {
+    panel.setAttribute("aria-hidden", "true");
+    panel.classList.remove("is-open");
+    backdrop.classList.remove("is-open");
+    if (gpRaf) { cancelAnimationFrame(gpRaf); gpRaf = null; }
+  }
+  if (closeBtn) closeBtn.addEventListener("click", closePanel);
+  backdrop.addEventListener("click", function () {
+    if (panel.classList.contains("is-open")) closePanel();
+  });
+  window.addEventListener("gamepadconnected", function (e) {
+    cabinetToast("Gamepad connected: " + e.gamepad.id.slice(0, 40));
+    if (panel.classList.contains("is-open")) renderGamepads();
+  });
+  window.addEventListener("gamepaddisconnected", function (e) {
+    cabinetToast("Gamepad disconnected");
+    if (panel.classList.contains("is-open")) renderGamepads();
+  });
+}
+
 cabinetSetupSystemMenu();
 cabinetSetupVirtualPad();
+cabinetSetupGamepadPanel();
 cabinetFetchSaveSlots();
+cabinetFetchServerBackups();
 window.EJS_ready = function () {
   cabinetSetLaunchProgress(62, "Emulator ready. Loading game…", "Core ready");
 };
@@ -2770,6 +3064,7 @@ ${discs.length > 1
 window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
 window.EJS_startOnLoaded = true;
 window.EJS_AdUrl = "";
+${raUsername && raToken ? `window.EJS_retroachievements = { username: ${JSON.stringify(raUsername)}, apiKey: ${JSON.stringify(raToken)}, hardcore: false };` : "// RetroAchievements not configured"}
 window.EJS_rewindEnabled = true;
 window.EJS_rewindGranularity = 2;
 window.EJS_fastForwardSpeed = 3;

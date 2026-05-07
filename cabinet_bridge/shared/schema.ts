@@ -42,6 +42,8 @@ export const uploadedRoms = sqliteTable("uploaded_roms", {
   publisher: text("publisher"),
   genre: text("genre"),
   players: text("players"),
+  romHash: text("rom_hash"),
+  minutesPlayed: integer("minutes_played").notNull().default(0),
   createdAt: integer("created_at").notNull(),
 });
 
@@ -115,6 +117,8 @@ export const integrationSettingsSchema = z.object({
   kioskMode: z.boolean().default(false),
   kioskPin: z.string().max(8).default(""),
   kioskCollectionId: z.number().int().nullable().default(null),
+  raUsername: z.string().max(256).default(""),
+  raToken: z.string().max(256).default(""),
 });
 
 export type IntegrationSettings = z.infer<typeof integrationSettingsSchema>;
@@ -129,4 +133,6 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   kioskMode: false,
   kioskPin: "",
   kioskCollectionId: null,
+  raUsername: "",
+  raToken: "",
 };

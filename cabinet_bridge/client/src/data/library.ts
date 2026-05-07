@@ -63,6 +63,8 @@ export interface Game {
   slug: string;
   /** Backend ROM id when this library item came from an uploaded ROM. */
   romId?: number;
+  /** MD5 hash of the ROM file, for verification. */
+  romHash?: string | null;
   /** Last-played epoch ms (0 if never). */
   lastPlayed?: number;
   /** Total minutes played. */
@@ -261,6 +263,7 @@ export function uploadedRomToGame(rom: UploadedRom): Game {
     romId: rom.id,
     lastPlayed: rom.lastPlayed ?? 0,
     minutesPlayed: rom.playCount ? rom.playCount * 5 : 0,
+    romHash: rom.romHash ?? null,
     favorite: rom.favorite,
   };
 }

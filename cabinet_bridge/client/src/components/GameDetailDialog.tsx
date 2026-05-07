@@ -107,6 +107,11 @@ export function GameDetailDialog({
                     {game.publisher && <span><span className="uppercase tracking-wider">Pub</span> · {game.publisher}</span>}
                   </div>
                 )}
+                {game.romHash && (
+                  <div className="font-mono text-[10px] text-muted-foreground/60 mt-1 select-all" title="MD5 hash — click to select">
+                    <span className="uppercase tracking-wider">MD5</span> · {game.romHash}
+                  </div>
+                )}
               </div>
             )}
 

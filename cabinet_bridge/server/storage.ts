@@ -82,6 +82,8 @@ for (const statement of [
   "ALTER TABLE uploaded_roms ADD COLUMN publisher TEXT",
   "ALTER TABLE uploaded_roms ADD COLUMN genre TEXT",
   "ALTER TABLE uploaded_roms ADD COLUMN players TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN rom_hash TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN minutes_played INTEGER NOT NULL DEFAULT 0",
 ]) {
   try {
     sqlite.exec(statement);

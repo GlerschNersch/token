@@ -17,6 +17,12 @@ import type { UploadedRom } from "@shared/schema";
 export default function Settings() {
   const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
   const [copied, setCopied] = useState<string | null>(null);
+  const [esImporting, setEsImporting] = useState(false);
+  const [esResult, setEsResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [esError, setEsError] = useState<string | null>(null);
+  const [esImporting, setEsImporting] = useState(false);
+  const [esResult, setEsResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [esError, setEsError] = useState<string | null>(null);
   const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({
     queryKey: ["/api/roms"],
   });
@@ -359,7 +365,159 @@ script:
           </Section>
 
           <Section
+            title="RetroAchievements (optional)"
+            description="Earn achievements for your classic games. Register for free at retroachievements.org. Requires a game supported by the RA database."
+          >
+            <Field label="RA Username" hint="Your retroachievements.org username.">
+              <Input
+                type="text"
+                value={config.raUsername ?? ""}
+                onChange={(e) => setConfig({ raUsername: e.target.value })}
+                placeholder="your_ra_username"
+                data-testid="input-ra-username"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="RA API Token" hint="Found under Settings → Keys on retroachievements.org.">
+              <Input
+                type="password"
+                value={config.raToken ?? ""}
+                onChange={(e) => setConfig({ raToken: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-ra-token"
+                autoComplete="off"
+              />
+            </Field>
+          </Section>
+
+          <Section
+            title="EmulationStation / Batocera import"
+            description="Import game metadata from a gamelist.xml file. Games are matched by filename or title to your uploaded ROMs."
+          >
+            <div className="rounded-md border border-border bg-background/40 p-3">
+              <Label className="text-sm font-medium">Upload gamelist.xml</Label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Select a gamelist.xml from EmulationStation, Batocera, or RetroPie.</p>
+              <input
+                type="file"
+                accept=".xml,text/xml,application/xml"
+                data-testid="input-es-xml"
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-sm file:font-mono file:uppercase file:tracking-wide file:cursor-pointer"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setEsImporting(true);
+                  setEsResult(null);
+                  setEsError(null);
+                  try {
+                    const buf = await file.arrayBuffer();
+                    const res = await fetch("/api/import/emulationstation", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/xml" },
+                      body: buf,
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message || "Import failed");
+                    setEsResult({ imported: data.imported, skipped: data.skipped });
+                    await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+                  } catch (err) {
+                    setEsError(String(err));
+                  } finally {
+                    setEsImporting(false);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              {esImporting && <p className="text-xs text-muted-foreground mt-2">Importing…</p>}
+              {esResult && (
+                <p className="text-xs text-status-online mt-2" data-testid="text-es-import-result">
+                  ✓ Imported {esResult.imported} game{esResult.imported !== 1 ? "s" : ""}, skipped {esResult.skipped}.
+                </p>
+              )}
+              {esError && (
+                <p className="text-xs text-destructive mt-2" data-testid="text-es-import-error">{esError}</p>
+              )}
+            </div>
+          </Section>
+
+          <Section
+            title="RetroAchievements (optional)"
+            description="Earn achievements for your classic games. Register for free at retroachievements.org. Requires a game supported by the RA database."
+          >
+            <Field label="RA Username" hint="Your retroachievements.org username.">
+              <Input
+                type="text"
+                value={config.raUsername ?? ""}
+                onChange={(e) => setConfig({ raUsername: e.target.value })}
+                placeholder="your_ra_username"
+                data-testid="input-ra-username"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="RA API Token" hint="Found under Settings → Keys on retroachievements.org.">
+              <Input
+                type="password"
+                value={config.raToken ?? ""}
+                onChange={(e) => setConfig({ raToken: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-ra-token"
+                autoComplete="off"
+              />
+            </Field>
+          </Section>
+
+          <Section
+            title="EmulationStation / Batocera import"
+            description="Import game metadata from a gamelist.xml file. Games are matched by filename or title to your uploaded ROMs."
+          >
+            <div className="rounded-md border border-border bg-background/40 p-3">
+              <Label className="text-sm font-medium">Upload gamelist.xml</Label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">Select a gamelist.xml from EmulationStation, Batocera, or RetroPie.</p>
+              <input
+                type="file"
+                accept=".xml,text/xml,application/xml"
+                data-testid="input-es-xml"
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-sm file:font-mono file:uppercase file:tracking-wide file:cursor-pointer"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setEsImporting(true);
+                  setEsResult(null);
+                  setEsError(null);
+                  try {
+                    const buf = await file.arrayBuffer();
+                    const res = await fetch("/api/import/emulationstation", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/xml" },
+                      body: buf,
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message || "Import failed");
+                    setEsResult({ imported: data.imported, skipped: data.skipped });
+                    await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+                  } catch (err) {
+                    setEsError(String(err));
+                  } finally {
+                    setEsImporting(false);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              {esImporting && <p className="text-xs text-muted-foreground mt-2">Importing…</p>}
+              {esResult && (
+                <p className="text-xs text-status-online mt-2" data-testid="text-es-import-result">
+                  ✓ Imported {esResult.imported} game{esResult.imported !== 1 ? "s" : ""}, skipped {esResult.skipped}.
+                </p>
+              )}
+              {esError && (
+                <p className="text-xs text-destructive mt-2" data-testid="text-es-import-error">{esError}</p>
+              )}
+            </div>
+          </Section>
+
+          <Section
             title="Kiosk / Arcade mode"
+
+
             description="Lock the UI to a specific collection, hide upload and settings, and optionally require a PIN to exit. Useful for shared arcade cabinets."
           >
             <div className="flex items-start gap-3 rounded-md border border-border bg-background/40 p-3">
