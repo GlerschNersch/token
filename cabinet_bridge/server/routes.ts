@@ -5,6 +5,7 @@ import { dataPath } from "./data-dir";
 import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
+import zlib from "node:zlib";
 import {
   insertGameCollectionSchema,
   insertRomSaveSlotSchema,
@@ -358,6 +359,52 @@ export async function registerRoutes(
   });
 
   app.post(
+
+/** 
+ * Minimal ZIP extractor using Node's built-in zlib.
+ * Returns { buffer, fileName } for the first entry whose extension matches
+ * allowedExtensions, or null if no matching entry is found.
+ */
+async function extractFirstRomFromZip(
+  zipBuffer: Buffer,
+  allowedExtensions: string[],
+): Promise<{ buffer: Buffer; fileName: string } | null> {
+  let offset = 0;
+  while (offset + 30 < zipBuffer.length) {
+    const sig = zipBuffer.readUInt32LE(offset);
+    if (sig !== 0x04034b50) break; // not a local file header
+
+    const compressionMethod = zipBuffer.readUInt16LE(offset + 8);
+    const compressedSize   = zipBuffer.readUInt32LE(offset + 18);
+    const fileNameLength   = zipBuffer.readUInt16LE(offset + 26);
+    const extraLength      = zipBuffer.readUInt16LE(offset + 28);
+    const fileName         = zipBuffer.slice(offset + 30, offset + 30 + fileNameLength).toString("utf8");
+    const dataStart        = offset + 30 + fileNameLength + extraLength;
+    const dataEnd          = dataStart + compressedSize;
+
+    const ext = path.extname(fileName).toLowerCase();
+    if (allowedExtensions.includes(ext) && !fileName.startsWith("__MACOSX")) {
+      const compressed = zipBuffer.slice(dataStart, dataEnd);
+      try {
+        const buffer =
+          compressionMethod === 0
+            ? compressed // stored
+            : await new Promise<Buffer>((resolve, reject) => {
+                zlib.inflateRaw(compressed, (err, result) => {
+                  err ? reject(err) : resolve(result);
+                });
+              });
+        return { buffer, fileName: path.basename(fileName) };
+      } catch {
+        // try next entry
+      }
+    }
+
+    offset = dataEnd;
+  }
+  return null;
+}
+
     "/api/roms/upload",
     express.raw({ type: "*/*", limit: MAX_UPLOAD_BYTES }),
     async (req, res) => {
@@ -369,14 +416,28 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Choose a supported console before uploading." });
       }
 
-      const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      let body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
       if (body.length === 0) {
         return res.status(400).json({ message: "Upload a ROM file before submitting." });
       }
 
-      const originalName = decodeURIComponent(
+      let originalName = decodeURIComponent(
         String(req.header("x-rom-filename") ?? "uploaded.rom"),
       );
+
+      // Auto-extract ZIPs — find the first matching ROM inside
+      const rawExt = path.extname(originalName).toLowerCase();
+      if (rawExt === ".zip" && body.readUInt32LE(0) === 0x04034b50) {
+        const extracted = await extractFirstRomFromZip(body, allowedExtensions);
+        if (!extracted) {
+          return res.status(400).json({
+            message: `The ZIP archive doesn't contain any supported ${system.toUpperCase()} ROM file. Allowed extensions: ${allowedExtensions.join(", ")}`,
+          });
+        }
+        body = extracted.buffer;
+        originalName = extracted.fileName;
+      }
+
       const extension = path.extname(originalName).toLowerCase();
       if (!allowedExtensions.includes(extension)) {
         return res.status(400).json({
@@ -406,7 +467,11 @@ export async function registerRoutes(
       await fs.mkdir(systemDir, { recursive: true });
       await fs.writeFile(filePath, body);
 
-      const scraped = await findLibretroBoxArt(system, title);
+      // Try ScreenScraper first (rich metadata + art), fall back to Libretro art only
+      const settings = await storage.getIntegrationSettings();
+      const ssMeta = await fetchScreenScraperMeta(system, safeName, title, settings.ssUserId, settings.ssPassword);
+      const libretroArt = ssMeta?.artUrl ? null : await findLibretroBoxArt(system, title);
+
       const rom = insertUploadedRomSchema.parse({
         title,
         system,
@@ -416,9 +481,15 @@ export async function registerRoutes(
         filePath,
         size: body.length,
         mimeType: req.header("content-type") ?? "application/octet-stream",
-        artUrl: scraped.url,
-        scrapeStatus: scraped.url ? "matched" : "not_found",
-        scrapeMessage: scraped.message,
+        artUrl: ssMeta?.artUrl ?? libretroArt?.url ?? null,
+        scrapeStatus: ssMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found"),
+        scrapeMessage: ssMeta?.scrapeMessage ?? libretroArt?.message ?? "",
+        description: ssMeta?.description ?? null,
+        releaseYear: ssMeta?.releaseYear ?? null,
+        developer: ssMeta?.developer ?? null,
+        publisher: ssMeta?.publisher ?? null,
+        genre: ssMeta?.genre ?? null,
+        players: ssMeta?.players ?? null,
         favorite,
         rating: 0,
         lastPlayed: 0,
@@ -486,13 +557,76 @@ export async function registerRoutes(
       return res.status(404).json({ message: "Uploaded ROM not found." });
     }
 
-    const scraped = await findLibretroBoxArt(rom.system, rom.title);
-    const updated = await storage.updateUploadedRomArt(id, {
-      artUrl: scraped.url,
-      scrapeStatus: scraped.url ? "matched" : "not_found",
-      scrapeMessage: scraped.message,
+    const settings = await storage.getIntegrationSettings();
+    const ssMeta = await fetchScreenScraperMeta(rom.system, rom.fileName, rom.title, settings.ssUserId, settings.ssPassword);
+    const libretroArt = ssMeta?.artUrl ? null : await findLibretroBoxArt(rom.system, rom.title);
+
+    const updated = await storage.updateUploadedRomMetadata(id, {
+      artUrl: ssMeta?.artUrl ?? libretroArt?.url ?? null,
+      scrapeStatus: ssMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found"),
+      scrapeMessage: ssMeta?.scrapeMessage ?? libretroArt?.message ?? "",
+      description: ssMeta?.description ?? undefined,
+      releaseYear: ssMeta?.releaseYear ?? undefined,
+      developer: ssMeta?.developer ?? undefined,
+      publisher: ssMeta?.publisher ?? undefined,
+      genre: ssMeta?.genre ?? undefined,
+      players: ssMeta?.players ?? undefined,
     });
     res.json(updated);
+  });
+
+  // Kiosk mode config — public so the client can read it before auth
+  app.get("/api/kiosk", async (_req, res) => {
+    const settings = await storage.getIntegrationSettings();
+    res.json({
+      enabled: settings.kioskMode,
+      collectionId: settings.kioskCollectionId,
+      hasPin: !!settings.kioskPin,
+    });
+  });
+
+  app.post("/api/kiosk/verify-pin", express.json(), async (req, res) => {
+    const { pin } = z.object({ pin: z.string() }).parse(req.body);
+    const settings = await storage.getIntegrationSettings();
+    res.json({ valid: !settings.kioskPin || pin === settings.kioskPin });
+  });
+
+  // Fire a Home Assistant event when a game starts/ends in the browser player
+  app.post("/api/roms/:id/play-session", express.json(), async (req, res) => {
+    const id = Number(req.params.id);
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+
+    const { event, durationSeconds } = z.object({
+      event: z.enum(["started", "ended"]),
+      durationSeconds: z.number().int().min(0).optional(),
+    }).parse(req.body);
+
+    const settings = await storage.getIntegrationSettings();
+    if (settings.haBaseUrl && settings.haToken) {
+      const eventType = event === "started" ? "cabinet_bridge_game_started" : "cabinet_bridge_game_ended";
+      const payload = {
+        game: rom.title,
+        system: rom.system,
+        rom_id: rom.id,
+        ...(durationSeconds !== undefined ? { duration_seconds: durationSeconds } : {}),
+      };
+      try {
+        await fetch(`${settings.haBaseUrl}/api/events/${eventType}`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${settings.haToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(4000),
+        });
+      } catch {
+        // HA event failure is non-fatal
+      }
+    }
+
+    res.json({ ok: true });
   });
 
   return httpServer;
@@ -542,6 +676,123 @@ async function getCachedSystemImage(
   throw lastError instanceof Error
     ? lastError
     : new Error("System image fetch failed.");
+}
+
+// ScreenScraper system IDs: https://www.screenscraper.fr/api2/systemesListe.php
+const SCREENSCRAPER_SYSTEM_IDS: Record<string, number> = {
+  nes: 3,
+  snes: 4,
+  n64: 14,
+  gba: 12,
+  genesis: 1,
+  ps1: 57,
+  ps2: 58,
+  arcade: 75,
+};
+
+interface ScreenScraperMeta {
+  artUrl: string | null;
+  description: string | null;
+  releaseYear: number | null;
+  developer: string | null;
+  publisher: string | null;
+  genre: string | null;
+  players: string | null;
+  scrapeStatus: string;
+  scrapeMessage: string;
+}
+
+async function fetchScreenScraperMeta(
+  system: string,
+  romFileName: string,
+  title: string,
+  ssUserId: string,
+  ssPassword: string,
+): Promise<ScreenScraperMeta | null> {
+  const systemId = SCREENSCRAPER_SYSTEM_IDS[system];
+  if (!systemId) return null;
+
+  const params = new URLSearchParams({
+    devid: "cabinet_bridge",
+    devpassword: "cabinet_bridge",
+    softname: "cabinet_bridge",
+    output: "json",
+    systemeid: String(systemId),
+    romtype: "rom",
+    romfilename: romFileName,
+  });
+  if (ssUserId) params.set("ssid", ssUserId);
+  if (ssPassword) params.set("sspassword", ssPassword);
+
+  try {
+    const res = await fetch(`https://www.screenscraper.fr/api2/jeuInfos.php?${params}`, {
+      headers: { "User-Agent": "CabinetBridge/0.1" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+
+    const json = await res.json() as Record<string, unknown>;
+    const jeu = (json?.response as Record<string, unknown>)?.jeu as Record<string, unknown> | undefined;
+    if (!jeu) return null;
+
+    // Description: prefer English, fall back to first available
+    let description: string | null = null;
+    const synopses = jeu.synopsis as Array<{ langue: string; text: string }> | undefined;
+    if (Array.isArray(synopses)) {
+      const en = synopses.find((s) => s.langue === "en");
+      description = (en ?? synopses[0])?.text ?? null;
+    }
+
+    // Release year: prefer world/us region
+    let releaseYear: number | null = null;
+    const dates = jeu.dates as Array<{ region: string; text: string }> | undefined;
+    if (Array.isArray(dates)) {
+      const preferred = dates.find((d) => ["wor", "us", "eu"].includes(d.region)) ?? dates[0];
+      const y = preferred?.text ? parseInt(preferred.text.slice(0, 4), 10) : NaN;
+      if (!isNaN(y)) releaseYear = y;
+    }
+
+    const developer = (jeu.developpeur as { text?: string })?.text ?? null;
+    const publisher = (jeu.editeur as { text?: string })?.text ?? null;
+
+    let genre: string | null = null;
+    const genres = jeu.genres as Array<{ noms: Array<{ langue: string; text: string }> }> | undefined;
+    if (Array.isArray(genres) && genres.length > 0) {
+      const names = genres.map((g) => {
+        const en = (g.noms ?? []).find((n) => n.langue === "en");
+        return (en ?? g.noms?.[0])?.text;
+      }).filter(Boolean) as string[];
+      genre = names.slice(0, 2).join(", ") || null;
+    }
+
+    const players = (jeu.joueurs as { text?: string })?.text ?? null;
+
+    // Box art: prefer "box-2D" media in us/wor region
+    let artUrl: string | null = null;
+    const medias = jeu.medias as Array<{ type: string; region?: string; url?: string }> | undefined;
+    if (Array.isArray(medias)) {
+      const boxTypes = ["box-2D", "box-2D-side", "mixrbv1"];
+      for (const boxType of boxTypes) {
+        const candidates = medias.filter((m) => m.type === boxType);
+        const best = candidates.find((m) => ["us", "wor", "eu"].includes(m.region ?? "")) ?? candidates[0];
+        if (best?.url) { artUrl = best.url; break; }
+      }
+    }
+
+    return {
+      artUrl,
+      description,
+      releaseYear,
+      developer,
+      publisher,
+      genre,
+      players,
+      scrapeStatus: "matched",
+      scrapeMessage: "Metadata from ScreenScraper.fr",
+    };
+  } catch {
+    return null;
+  }
 }
 
 async function findLibretroBoxArt(system: string, title: string) {
@@ -935,6 +1186,30 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
           radial-gradient(circle at 12% 0%, rgba(236, 72, 153, 0.2), transparent 44%),
           rgba(255, 255, 255, 0.07);
       }
+      .cabinet-save-slot__thumb {
+        width: 100%;
+        aspect-ratio: 4/3;
+        border-radius: 10px;
+        overflow: hidden;
+        background: rgba(0,0,0,0.35);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .cabinet-save-slot__thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        image-rendering: pixelated;
+      }
+      .cabinet-save-slot__thumb--empty::after {
+        content: "NO SAVE";
+        color: rgba(248,250,252,0.2);
+        font: 800 8px ui-monospace, monospace;
+        letter-spacing: 0.2em;
+      }
       .cabinet-save-slot__eyebrow {
         color: rgba(248, 250, 252, 0.56);
         font: 800 9px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -986,6 +1261,39 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
       .cabinet-save-slot .danger:focus-visible {
         background: rgba(239, 68, 68, 0.28);
         border-color: rgba(239, 68, 68, 0.68);
+      }
+      .cabinet-aspect-btn {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.08);
+        color: #f8fafc;
+        cursor: pointer;
+        font: 800 9px ui-monospace,monospace;
+        letter-spacing: 0.12em;
+        min-height: 36px;
+        padding: 8px 6px;
+        text-transform: uppercase;
+      }
+      .cabinet-aspect-btn:hover,
+      .cabinet-aspect-btn:focus-visible,
+      .cabinet-aspect-btn[aria-checked="true"] {
+        background: rgba(236,72,153,0.34);
+        border-color: rgba(236,72,153,0.75);
+        outline: none;
+      }
+      #game canvas {
+        transition: filter 0.2s;
+      }
+      #game.cabinet-filter-crt canvas {
+        filter: contrast(1.1) brightness(0.95) saturate(1.1);
+      }
+      #game.cabinet-filter-crt canvas::after {
+        content: "";
+      }
+      #game.cabinet-filter-smooth canvas {
+        image-rendering: auto;
+        filter: blur(0.4px) brightness(1.02);
       }
       .cabinet-toast {
         position: fixed;
@@ -1278,7 +1586,40 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
           top: max(72px, calc(env(safe-area-inset-top) + 66px));
           width: auto;
         }
-        .cabinet-toast {
+        .cabinet-aspect-btn {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.08);
+        color: #f8fafc;
+        cursor: pointer;
+        font: 800 9px ui-monospace,monospace;
+        letter-spacing: 0.12em;
+        min-height: 36px;
+        padding: 8px 6px;
+        text-transform: uppercase;
+      }
+      .cabinet-aspect-btn:hover,
+      .cabinet-aspect-btn:focus-visible,
+      .cabinet-aspect-btn[aria-checked="true"] {
+        background: rgba(236,72,153,0.34);
+        border-color: rgba(236,72,153,0.75);
+        outline: none;
+      }
+      #game canvas {
+        transition: filter 0.2s;
+      }
+      #game.cabinet-filter-crt canvas {
+        filter: contrast(1.1) brightness(0.95) saturate(1.1);
+      }
+      #game.cabinet-filter-crt canvas::after {
+        content: "";
+      }
+      #game.cabinet-filter-smooth canvas {
+        image-rendering: auto;
+        filter: blur(0.4px) brightness(1.02);
+      }
+      .cabinet-toast {
           top: max(78px, calc(env(safe-area-inset-top) + 70px));
         }
         .cabinet-save-panel {
@@ -1449,6 +1790,12 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         <button type="button" id="cabinet-save-manager-open" data-testid="button-open-save-manager">Save Slots</button>
         <button type="button" id="cabinet-pad-toggle" aria-pressed="false" data-testid="button-toggle-gamepad">Gamepad</button>
         <button type="button" id="cabinet-controls" data-testid="button-show-controls">Controls</button>
+        <button type="button" id="cabinet-rewind-toggle" aria-pressed="false" data-testid="button-toggle-rewind">Rewind</button>
+        <button type="button" id="cabinet-ff-toggle" aria-pressed="false" data-testid="button-toggle-fastforward">Fast-Fwd</button>
+        <button type="button" id="cabinet-cheats" data-testid="button-cheats">Cheats</button>
+        <button type="button" id="cabinet-screenshot" data-testid="button-screenshot">Screenshot</button>
+        <button type="button" id="cabinet-display-open" data-testid="button-display-settings">Display</button>
+        <button type="button" id="cabinet-remap-open" data-testid="button-remap-controls">Remap Keys</button>
         <button type="button" class="danger" id="cabinet-exit" data-testid="button-exit-player">Exit Game</button>
       </div>
     </nav>
@@ -1461,6 +1808,47 @@ function renderEmulatorPage({ title, returnTo }: { title: string; returnTo: stri
         <button type="button" class="cabinet-save-close" id="cabinet-save-manager-close" aria-label="Close save-state manager" data-testid="button-close-save-manager">×</button>
       </div>
       <div class="cabinet-save-grid" id="cabinet-save-grid" data-testid="grid-save-slots"></div>
+    </section>
+    <section class="cabinet-save-panel" id="cabinet-display-panel" aria-label="Display settings" aria-hidden="true" data-testid="panel-display-settings">
+      <div class="cabinet-save-panel__header">
+        <div>
+          <p class="cabinet-save-title">Display</p>
+          <p class="cabinet-save-subtitle">Aspect ratio and visual filter</p>
+        </div>
+        <button type="button" class="cabinet-save-close" id="cabinet-display-close" aria-label="Close display settings" data-testid="button-close-display">×</button>
+      </div>
+      <div style="padding:14px 18px 18px;display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <div style="color:rgba(248,250,252,0.56);font:800 9px ui-monospace,monospace;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">Aspect Ratio</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;" id="cabinet-aspect-group" role="radiogroup" aria-label="Aspect ratio">
+            <button type="button" role="radio" aria-checked="true" data-aspect="4:3" data-testid="button-aspect-4-3" class="cabinet-aspect-btn">4:3</button>
+            <button type="button" role="radio" aria-checked="false" data-aspect="16:9" data-testid="button-aspect-16-9" class="cabinet-aspect-btn">16:9</button>
+            <button type="button" role="radio" aria-checked="false" data-aspect="pixel" data-testid="button-aspect-pixel" class="cabinet-aspect-btn">Pixel</button>
+            <button type="button" role="radio" aria-checked="false" data-aspect="stretch" data-testid="button-aspect-stretch" class="cabinet-aspect-btn">Fill</button>
+          </div>
+        </div>
+        <div>
+          <div style="color:rgba(248,250,252,0.56);font:800 9px ui-monospace,monospace;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;">Visual Filter</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="cabinet-filter-group" role="radiogroup" aria-label="Visual filter">
+            <button type="button" role="radio" aria-checked="true" data-filter="none" data-testid="button-filter-none" class="cabinet-aspect-btn">None</button>
+            <button type="button" role="radio" aria-checked="false" data-filter="crt" data-testid="button-filter-crt" class="cabinet-aspect-btn">CRT</button>
+            <button type="button" role="radio" aria-checked="false" data-filter="smooth" data-testid="button-filter-smooth" class="cabinet-aspect-btn">Smooth</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="cabinet-save-panel" id="cabinet-remap-panel" aria-label="Key remapping" aria-hidden="true" data-testid="panel-remap">
+      <div class="cabinet-save-panel__header">
+        <div>
+          <p class="cabinet-save-title">Remap Keys</p>
+          <p class="cabinet-save-subtitle">Click a button, then press a key. Saved locally.</p>
+        </div>
+        <button type="button" class="cabinet-save-close" id="cabinet-remap-close" aria-label="Close key remapping" data-testid="button-close-remap">×</button>
+      </div>
+      <div id="cabinet-remap-grid" style="padding:14px 18px 18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow-y:auto;max-height:calc(min(86vh,720px)-94px);"></div>
+      <div style="padding:0 18px 14px;display:flex;gap:8px;">
+        <button type="button" id="cabinet-remap-reset" style="appearance:none;border:1px solid rgba(239,68,68,0.5);border-radius:12px;background:rgba(239,68,68,0.12);color:#f8fafc;cursor:pointer;font:800 9px ui-monospace,monospace;letter-spacing:0.12em;padding:10px 16px;text-transform:uppercase;">Reset to Defaults</button>
+      </div>
     </section>
     <div class="cabinet-toast" id="cabinet-toast" role="status" aria-live="polite"></div>
     <div id="game">
@@ -1732,6 +2120,30 @@ async function cabinetFetchSaveSlots() {
   }
   cabinetRenderSaveSlots();
 }
+function cabinetCaptureThumb(slot) {
+  try {
+    var canvas = document.querySelector("#game canvas");
+    if (!canvas) return;
+    var thumb = document.createElement("canvas");
+    var scale = Math.min(1, 160 / canvas.width);
+    thumb.width = Math.round(canvas.width * scale);
+    thumb.height = Math.round(canvas.height * scale);
+    var ctx = thumb.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(canvas, 0, 0, thumb.width, thumb.height);
+    var dataUrl = thumb.toDataURL("image/jpeg", 0.72);
+    var key = "cabinet_thumb_" + (window.EJS_gameID || "game") + "_" + slot;
+    try { localStorage.setItem(key, dataUrl); } catch (_e) {}
+  } catch (_e) {}
+}
+function cabinetGetThumb(slot) {
+  var key = "cabinet_thumb_" + (window.EJS_gameID || "game") + "_" + slot;
+  try { return localStorage.getItem(key) || null; } catch (_e) { return null; }
+}
+function cabinetDeleteThumb(slot) {
+  var key = "cabinet_thumb_" + (window.EJS_gameID || "game") + "_" + slot;
+  try { localStorage.removeItem(key); } catch (_e) {}
+}
 function cabinetRenderSaveSlots() {
   var grid = document.querySelector("#cabinet-save-grid");
   if (!grid) return;
@@ -1742,10 +2154,15 @@ function cabinetRenderSaveSlots() {
     card.className = "cabinet-save-slot";
     card.setAttribute("data-filled", state ? "true" : "false");
     card.setAttribute("data-testid", "card-save-slot-" + slot);
+    var thumb = cabinetGetThumb(slot);
+    var thumbHtml = state && thumb
+      ? '<div class="cabinet-save-slot__thumb"><img src="' + thumb + '" alt="Save slot ' + slot + ' preview" loading="lazy"></div>'
+      : '<div class="cabinet-save-slot__thumb cabinet-save-slot__thumb--empty"></div>';
     card.innerHTML =
+      thumbHtml +
       '<div class="cabinet-save-slot__eyebrow">Slot ' + slot + '</div>' +
       '<div class="cabinet-save-slot__label">' + (state ? cabinetEscapeText(state.label || ("Slot " + slot)) : "Empty") + '</div>' +
-      '<div class="cabinet-save-slot__meta">' + (state ? cabinetRelativeTime(state.updatedAt) : "No save metadata yet") + '</div>' +
+      '<div class="cabinet-save-slot__meta">' + (state ? cabinetRelativeTime(state.updatedAt) : "No save data yet") + '</div>' +
       '<div class="cabinet-save-slot__actions">' +
       '<button type="button" data-save-action="save" data-slot="' + slot + '" data-testid="button-save-slot-' + slot + '">Save</button>' +
       '<button type="button" data-save-action="load" data-slot="' + slot + '" data-testid="button-load-slot-' + slot + '"' + (state ? "" : " disabled") + ">Load</button>" +
@@ -1819,6 +2236,7 @@ function cabinetQuickSaveSlot(slot) {
     cabinetSendInput(24, "1");
     saved = true;
   }
+  cabinetCaptureThumb(slot);
   cabinetRecordSaveSlot(slot)
     .then(function () {
       cabinetToast("Saved state to slot " + slot);
@@ -1866,6 +2284,7 @@ function cabinetDeleteLocalSaveSlot(slot) {
       try { FS.unlink(pathsToTry[i]); } catch (_error) {}
     }
   }
+  cabinetDeleteThumb(slot);
   cabinetDeleteSaveSlotMetadata(slot).then(function () {
     cabinetToast("Deleted slot " + slot);
   });
@@ -2014,15 +2433,17 @@ document.addEventListener("click", function (event) {
   }
   if (target.id === "cabinet-exit") {
     var returnTo = window.CABINET_RETURN_TO || "";
-    if (returnTo) {
-      window.location.href = returnTo;
-      return;
-    }
-    if (window.opener) {
-      window.close();
-      return;
-    }
-    window.location.href = "/";
+    var duration = cabinetSessionStart ? Math.round((Date.now() - cabinetSessionStart) / 1000) : 0;
+    var doExit = function () {
+      if (returnTo) { window.location.href = returnTo; return; }
+      if (window.opener) { window.close(); return; }
+      window.location.href = "/";
+    };
+    fetch("./play-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event: "ended", durationSeconds: duration }),
+    }).catch(function () {}).finally(doExit);
   }
   if (target.id === "cabinet-save") {
     cabinetQuickSaveSlot(cabinetCurrentSaveSlot);
@@ -2061,9 +2482,267 @@ document.addEventListener("click", function (event) {
     cabinetSetMenuOpen(false);
     var isPsx = window.CABINET_CORE === "psx" || window.CABINET_CORE === "pcsx2";
     cabinetToast(isPsx
-      ? "PS1/PS2: Cross Z, Circle X, Square A, Triangle S, L1 Q, R1 W, L2 E, R2 R, L3 Tab, R3 C. Save 1, Load 2."
-      : "Keyboard and pad: arrows, A/B/X/Y, Start Enter, Select Shift, L1 Q, R1 W. Save 1, Load 2.");
+      ? "PS1/PS2: Cross Z, Circle X, Square A, Triangle S, L1 Q, R1 W, L2 E, R2 R, L3 Tab, R3 C. Save 1, Load 2. Rewind Backspace."
+      : "Keyboard and pad: arrows, A/B/X/Y, Start Enter, Select Shift, L1 Q, R1 W. Save 1, Load 2. Rewind Backspace.");
   }
+  if (target.id === "cabinet-rewind-toggle") {
+    var rewindOn = target.getAttribute("aria-pressed") === "true";
+    cabinetSetMenuOpen(false);
+    cabinetSetRewind(!rewindOn);
+  }
+  if (target.id === "cabinet-ff-toggle") {
+    var ffOn = target.getAttribute("aria-pressed") === "true";
+    cabinetSetMenuOpen(false);
+    cabinetSetFastForward(!ffOn);
+  }
+  if (target.id === "cabinet-cheats") {
+    cabinetOpenCheats();
+  }
+  if (target.id === "cabinet-screenshot") {
+    cabinetTakeScreenshot();
+  }
+  if (target.id === "cabinet-display-open") {
+    cabinetSetDisplayPanel(true);
+  }
+  if (target.id === "cabinet-display-close") {
+    cabinetSetDisplayPanel(false);
+  }
+  if (target.id === "cabinet-remap-open") {
+    cabinetSetRemapPanel(true);
+  }
+  if (target.id === "cabinet-remap-close") {
+    cabinetSetRemapPanel(false);
+  }
+  if (target.id === "cabinet-remap-reset") {
+    try { localStorage.removeItem(cabinetRemapStorageKey()); } catch (_e) {}
+    cabinetRemapTarget = null;
+    cabinetRenderRemapGrid();
+    cabinetToast("Controls reset to defaults");
+  }
+  if (target.hasAttribute && target.hasAttribute("data-remap-index")) {
+    var remapIndex = parseInt(target.getAttribute("data-remap-index"), 10);
+    cabinetRemapTarget = { index: remapIndex };
+    cabinetRenderRemapGrid();
+  }
+  if (target.dataset && target.dataset.aspect) {
+    cabinetApplyAspect(target.dataset.aspect);
+  }
+  if (target.dataset && target.dataset.filter) {
+    cabinetApplyFilter(target.dataset.filter);
+  }
+});
+function cabinetSetRewind(enabled) {
+  var btn = document.querySelector("#cabinet-rewind-toggle");
+  if (btn) btn.setAttribute("aria-pressed", String(enabled));
+  var emulator = window.EJS_emulator;
+  if (emulator && emulator.toggleRewind) {
+    emulator.toggleRewind(enabled);
+  } else if (emulator && emulator.gameManager) {
+    // Fallback: set the rewind flag directly
+    window.EJS_rewindEnabled = enabled;
+  }
+  cabinetToast(enabled ? "Rewind ON — hold Backspace" : "Rewind OFF");
+}
+function cabinetSetFastForward(enabled) {
+  var btn = document.querySelector("#cabinet-ff-toggle");
+  if (btn) btn.setAttribute("aria-pressed", String(enabled));
+  var emulator = window.EJS_emulator;
+  if (emulator && emulator.setFastForward) {
+    emulator.setFastForward(enabled);
+  } else if (emulator && emulator.gameManager && emulator.gameManager.Module) {
+    try { emulator.gameManager.Module.setFastForward(enabled ? 1 : 0); } catch (_e) {}
+  }
+  cabinetToast(enabled ? "Fast-forward ON (3×)" : "Fast-forward OFF");
+}
+function cabinetOpenCheats() {
+  cabinetSetMenuOpen(false);
+  var emulator = window.EJS_emulator;
+  if (emulator && emulator.openCheatMenu) {
+    emulator.openCheatMenu();
+  } else if (emulator && emulator.callEvent) {
+    emulator.callEvent("cheat");
+  } else {
+    cabinetToast("Cheat menu not available for this core");
+  }
+}
+function cabinetTakeScreenshot() {
+  cabinetSetMenuOpen(false);
+  var emulator = window.EJS_emulator;
+  var canvas = document.querySelector("#game canvas");
+  if (!canvas) {
+    cabinetToast("No game canvas found");
+    return;
+  }
+  try {
+    var dataUrl = canvas.toDataURL("image/png");
+    var a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = (window.EJS_gameName || "screenshot") + "-" + Date.now() + ".png";
+    a.click();
+    cabinetToast("Screenshot saved!");
+  } catch (_e) {
+    cabinetToast("Screenshot failed (cross-origin canvas)");
+  }
+}
+function cabinetSetDisplayPanel(open) {
+  var panel = document.querySelector("#cabinet-display-panel");
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  if (!panel || !backdrop) return;
+  if (open) cabinetSetMenuOpen(false);
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  panel.classList.toggle("is-open", open);
+  backdrop.classList.toggle("is-open", open);
+}
+function cabinetApplyAspect(aspect) {
+  var game = document.querySelector("#game");
+  if (!game) return;
+  var canvas = game.querySelector("canvas");
+  if (!canvas) return;
+  game.style.display = "flex";
+  game.style.alignItems = "center";
+  game.style.justifyContent = "center";
+  switch (aspect) {
+    case "4:3":
+      canvas.style.width = ""; canvas.style.height = "100%";
+      canvas.style.aspectRatio = "4/3"; canvas.style.maxWidth = "100%";
+      break;
+    case "16:9":
+      canvas.style.width = ""; canvas.style.height = "100%";
+      canvas.style.aspectRatio = "16/9"; canvas.style.maxWidth = "100%";
+      break;
+    case "pixel":
+      canvas.style.width = ""; canvas.style.height = "";
+      canvas.style.aspectRatio = ""; canvas.style.maxWidth = "100%";
+      canvas.style.imageRendering = "pixelated";
+      break;
+    case "stretch":
+      canvas.style.width = "100%"; canvas.style.height = "100%";
+      canvas.style.aspectRatio = ""; canvas.style.maxWidth = "";
+      break;
+  }
+  var btns = document.querySelectorAll("[data-aspect]");
+  btns.forEach(function (b) {
+    b.setAttribute("aria-checked", b.getAttribute("data-aspect") === aspect ? "true" : "false");
+  });
+  try { localStorage.setItem("cabinet_aspect", aspect); } catch (_e) {}
+}
+function cabinetApplyFilter(filter) {
+  var game = document.querySelector("#game");
+  if (!game) return;
+  game.classList.remove("cabinet-filter-crt", "cabinet-filter-smooth");
+  if (filter !== "none") game.classList.add("cabinet-filter-" + filter);
+  var btns = document.querySelectorAll("[data-filter]");
+  btns.forEach(function (b) {
+    b.setAttribute("aria-checked", b.getAttribute("data-filter") === filter ? "true" : "false");
+  });
+  try { localStorage.setItem("cabinet_filter", filter); } catch (_e) {}
+}
+function cabinetInitDisplay() {
+  try {
+    var aspect = localStorage.getItem("cabinet_aspect") || "4:3";
+    var filter = localStorage.getItem("cabinet_filter") || "none";
+    window.setTimeout(function () {
+      cabinetApplyAspect(aspect);
+      cabinetApplyFilter(filter);
+    }, 500);
+  } catch (_e) {}
+}
+// ── Per-game key remapping ─────────────────────────────────────────────────
+var cabinetRemapTarget = null; // { player, index, label }
+var CABINET_BUTTON_LABELS = [
+  "Cross / A", "Square / B", "Select", "Start",
+  "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+  "Circle / A2", "Triangle / B2", "L1", "R1", "L2", "R2", "L3", "R3",
+];
+function cabinetRemapStorageKey() {
+  return "cabinet_remap_" + (window.EJS_gameID || "game");
+}
+function cabinetLoadRemap() {
+  try {
+    var raw = localStorage.getItem(cabinetRemapStorageKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch (_e) { return null; }
+}
+function cabinetSaveRemap(mapping) {
+  try { localStorage.setItem(cabinetRemapStorageKey(), JSON.stringify(mapping)); } catch (_e) {}
+}
+function cabinetApplyRemap(mapping) {
+  if (!mapping) return;
+  var emulator = window.EJS_emulator;
+  if (!emulator) return;
+  Object.keys(mapping).forEach(function (indexStr) {
+    var index = parseInt(indexStr, 10);
+    var key = mapping[indexStr];
+    if (emulator.settings) {
+      emulator.settings["p1_" + index] = key;
+    }
+    if (typeof emulator.changeSettingOption === "function") {
+      try { emulator.changeSettingOption("p1_" + index, key); } catch (_e) {}
+    }
+    if (window.EJS_defaultControls && window.EJS_defaultControls[0]) {
+      if (!window.EJS_defaultControls[0][index]) window.EJS_defaultControls[0][index] = {};
+      window.EJS_defaultControls[0][index].value = key;
+    }
+  });
+}
+function cabinetSetRemapPanel(open) {
+  var panel = document.querySelector("#cabinet-remap-panel");
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  if (!panel || !backdrop) return;
+  if (open) { cabinetSetMenuOpen(false); cabinetRenderRemapGrid(); }
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  panel.classList.toggle("is-open", open);
+  backdrop.classList.toggle("is-open", open);
+  if (!open) cabinetRemapTarget = null;
+}
+function cabinetRenderRemapGrid() {
+  var grid = document.querySelector("#cabinet-remap-grid");
+  if (!grid) return;
+  var mapping = cabinetLoadRemap() || {};
+  var defaultControls = (window.EJS_defaultControls && window.EJS_defaultControls[0]) || {};
+  var labels = window.CABINET_CORE === "psx" || window.CABINET_CORE === "pcsx2"
+    ? ["Cross", "Square", "Select", "Start", "Up", "Down", "Left", "Right", "Circle", "Triangle", "L1", "R1", "L2", "R2", "L3", "R3"]
+    : CABINET_BUTTON_LABELS;
+  grid.innerHTML = "";
+  labels.forEach(function (label, index) {
+    var currentKey = mapping[index] || (defaultControls[index] && defaultControls[index].value) || "—";
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px;";
+    var nameEl = document.createElement("span");
+    nameEl.style.cssText = "color:rgba(248,250,252,0.7);font:700 9px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;";
+    nameEl.textContent = label;
+    var keyBtn = document.createElement("button");
+    keyBtn.type = "button";
+    keyBtn.setAttribute("data-remap-index", String(index));
+    keyBtn.style.cssText = "appearance:none;border:1px solid rgba(255,255,255,0.2);border-radius:10px;background:rgba(255,255,255,0.08);color:#f8fafc;cursor:pointer;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;min-width:72px;padding:8px 10px;text-transform:uppercase;";
+    keyBtn.textContent = currentKey;
+    if (cabinetRemapTarget && cabinetRemapTarget.index === index) {
+      keyBtn.style.borderColor = "rgba(236,72,153,0.9)";
+      keyBtn.style.background = "rgba(236,72,153,0.25)";
+      keyBtn.textContent = "Press key…";
+    }
+    row.appendChild(nameEl);
+    row.appendChild(keyBtn);
+    grid.appendChild(row);
+  });
+}
+document.addEventListener("keydown", function (e) {
+  if (!cabinetRemapTarget) return;
+  e.preventDefault();
+  e.stopPropagation();
+  var key = e.key.toLowerCase();
+  if (key === "escape") { cabinetRemapTarget = null; cabinetRenderRemapGrid(); return; }
+  var mapping = cabinetLoadRemap() || {};
+  mapping[cabinetRemapTarget.index] = key;
+  cabinetSaveRemap(mapping);
+  cabinetApplyRemap(mapping);
+  cabinetRemapTarget = null;
+  cabinetRenderRemapGrid();
+  cabinetToast("Mapped to " + key);
+}, true);
+// Apply saved remap when game starts
+window.addEventListener("EJS_emulator_ready", function () {
+  cabinetApplyRemap(cabinetLoadRemap());
 });
 cabinetSetupSystemMenu();
 cabinetSetupVirtualPad();
@@ -2071,8 +2750,16 @@ cabinetFetchSaveSlots();
 window.EJS_ready = function () {
   cabinetSetLaunchProgress(62, "Emulator ready. Loading game…", "Core ready");
 };
+var cabinetSessionStart = 0;
 window.EJS_onGameStart = function () {
   cabinetFinishLaunchProgress("Game ready");
+  cabinetInitDisplay();
+  cabinetSessionStart = Date.now();
+  fetch("./play-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "started" }),
+  }).catch(function () {});
 };
 window.EJS_player = "#game";
 window.EJS_core = ${JSON.stringify(core)};
@@ -2085,6 +2772,9 @@ ${discs.length > 1
 window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
 window.EJS_startOnLoaded = true;
 window.EJS_AdUrl = "";
+window.EJS_rewindEnabled = true;
+window.EJS_rewindGranularity = 2;
+window.EJS_fastForwardSpeed = 3;
 window.EJS_controlScheme = ${JSON.stringify(core)};
 window.EJS_defaultControls = {
   0: {

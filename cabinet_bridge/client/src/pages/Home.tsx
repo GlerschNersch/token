@@ -17,7 +17,7 @@ import { filterToPath } from "@/lib/filter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 
-type Sort = "title" | "year" | "recent" | "rating";
+type Sort = "title" | "year" | "recent" | "rating" | "plays";
 
 export default function Home({
   filter,
@@ -32,6 +32,7 @@ export default function Home({
   const goToFilter = (next: Filter) => navigate(filterToPath(next));
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("recent");
+  const [genreFilter, setGenreFilter] = useState<string>("");
   const [openGame, setOpenGame] = useState<Game | null>(null);
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
   const [ratingOverrides, setRatingOverrides] = useState<Record<string, number>>({});
@@ -42,6 +43,10 @@ export default function Home({
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({
     queryKey: ["/api/collections"],
   });
+  const { data: kiosk } = useQuery<{ enabled: boolean; collectionId: number | null; hasPin: boolean }>({
+    queryKey: ["/api/kiosk"],
+  });
+  const kioskMode = !!kiosk?.enabled;
   const rateUploadedRom = useMutation({
     mutationFn: async ({ game, rating }: { game: Game; rating: number }) => {
       if (!game.romId) return null;
@@ -99,19 +104,27 @@ export default function Home({
     }));
   }, [favOverrides, ratingOverrides, uploadedRoms]);
 
+  // In kiosk mode, auto-filter to the designated collection
+  const effectiveFilter = useMemo<Filter>(() => {
+    if (kioskMode && kiosk?.collectionId) {
+      return `collection:${kiosk.collectionId}` as Filter;
+    }
+    return filter;
+  }, [kioskMode, kiosk, filter]);
+
   const filtered = useMemo(() => {
     let list = games;
-    if (typeof filter === "string" && filter.startsWith("collection:")) {
-      const collectionId = Number(filter.replace("collection:", ""));
+    if (typeof effectiveFilter === "string" && effectiveFilter.startsWith("collection:")) {
+      const collectionId = Number(effectiveFilter.replace("collection:", ""));
       const collection = collections.find((item) => item.id === collectionId);
       const romIds = new Set(collection?.romIds ?? []);
       list = list.filter((g) => g.romId && romIds.has(g.romId));
-    } else if (filter === "favorites") {
+    } else if (effectiveFilter === "favorites") {
       list = list.filter((g) => g.favorite);
-    } else if (filter === "recent") {
+    } else if (effectiveFilter === "recent") {
       list = list.filter((g) => g.lastPlayed && g.lastPlayed > 0);
-    } else if (filter !== "all") {
-      list = list.filter((g) => g.system === (filter as SystemId));
+    } else if (effectiveFilter !== "all") {
+      list = list.filter((g) => g.system === (effectiveFilter as SystemId));
     }
     if (query.trim()) {
       const q = query.trim().toLowerCase();
@@ -122,6 +135,9 @@ export default function Home({
           g.system.toLowerCase().includes(q),
       );
     }
+    if (genreFilter) {
+      list = list.filter((g) => g.genre === genreFilter);
+    }
     list = [...list].sort((a, b) => {
       switch (sort) {
         case "title":
@@ -130,13 +146,36 @@ export default function Home({
           return a.year - b.year;
         case "rating":
           return b.rating - a.rating;
+        case "plays":
+          return (b.minutesPlayed ?? 0) - (a.minutesPlayed ?? 0);
         case "recent":
         default:
           return (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0);
       }
     });
     return list;
-  }, [collections, games, filter, query, sort]);
+  }, [collections, games, effectiveFilter, filter, query, sort, genreFilter]);
+
+  const availableGenres = useMemo(() => {
+    const seen = new Set<string>();
+    for (const g of games) {
+      if (!g.genre || g.genre === "Uploaded ROM") continue;
+      // Apply same filter/query logic but skip genre to get the pool
+      const inFilter = (() => {
+        if (typeof filter === "string" && filter.startsWith("collection:")) {
+          const cid = Number(filter.replace("collection:", ""));
+          const col = collections.find((c) => c.id === cid);
+          return !!(g.romId && col?.romIds.includes(g.romId));
+        }
+        if (filter === "favorites") return !!g.favorite;
+        if (filter === "recent") return !!(g.lastPlayed && g.lastPlayed > 0);
+        if (filter === "all") return true;
+        return g.system === filter;
+      })();
+      if (inFilter) seen.add(g.genre);
+    }
+    return Array.from(seen).sort();
+  }, [games, filter, collections]);
 
   const recentlyPlayed = useMemo(
     () =>
@@ -255,6 +294,38 @@ export default function Home({
           </div>
         </div>
 
+        {availableGenres.length > 0 && (
+          <div className="px-5 sm:px-8 py-2 border-b border-border flex items-center gap-2 overflow-x-auto scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setGenreFilter("")}
+              className={`shrink-0 px-3 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                !genreFilter
+                  ? "border-primary/60 bg-primary/15 text-primary"
+                  : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="button-genre-all"
+            >
+              All
+            </button>
+            {availableGenres.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGenreFilter(genreFilter === g ? "" : g)}
+                className={`shrink-0 px-3 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                  genreFilter === g
+                    ? "border-primary/60 bg-primary/15 text-primary"
+                    : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid={`button-genre-${g}`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto">
           {/* Hero — Continue Playing */}
           {showHero && pc.online && recentlyPlayed[0] ? (
@@ -265,7 +336,7 @@ export default function Home({
           ) : null}
 
           {/* Systems strip */}
-          {filter === "favorites" || filter === "all" ? (
+          {!kioskMode && (filter === "favorites" || filter === "all") ? (
             <section className="px-5 sm:px-8 pt-5 pb-1">
               <SectionHeading
                 title="Browse Systems"
@@ -323,7 +394,7 @@ export default function Home({
           ) : null}
 
           {/* Upload — pinned to current system on system pages, or generic with picker on All Games */}
-          {(systemFilter || filter === "all") && !query ? (
+          {!kioskMode && (systemFilter || filter === "all") && !query ? (
             <section className="px-5 sm:px-8 pt-5 pb-1" data-testid="section-rom-upload">
               <RomUpload system={systemFilter} variant="inline" />
             </section>
@@ -345,14 +416,16 @@ export default function Home({
               }
               action={
                 <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCreateCollection}
-                    className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                    data-testid="button-create-collection"
-                  >
-                    New collection
-                  </button>
+                  {!kioskMode && (
+                    <button
+                      type="button"
+                      onClick={handleCreateCollection}
+                      className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      data-testid="button-create-collection"
+                    >
+                      New collection
+                    </button>
+                  )}
                   <span
                     className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground"
                     data-testid="text-result-count"
@@ -446,6 +519,7 @@ function SortMenu({ sort, setSort }: { sort: Sort; setSort: (s: Sort) => void })
     { id: "title", label: "A–Z" },
     { id: "year", label: "Year" },
     { id: "rating", label: "Rating" },
+    { id: "plays", label: "Plays" },
   ];
   return (
     <div

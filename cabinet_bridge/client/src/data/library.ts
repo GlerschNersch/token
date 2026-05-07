@@ -51,6 +51,9 @@ export interface Game {
   year: number;
   genre: string;
   players: string;
+  description?: string | null;
+  developer?: string | null;
+  publisher?: string | null;
   rating: number; // 1-5
   /** Three HSL color stops for the cover art gradient. */
   art: [string, string, string];
@@ -245,9 +248,12 @@ export function uploadedRomToGame(rom: UploadedRom): Game {
     id: `uploaded-${rom.id}`,
     title: rom.title,
     system: rom.system as SystemId,
-    year: new Date(rom.createdAt).getFullYear(),
-    genre: "Uploaded ROM",
-    players: "1",
+    year: rom.releaseYear ?? new Date(rom.createdAt).getFullYear(),
+    genre: rom.genre ?? "Uploaded ROM",
+    players: rom.players ?? "1",
+    description: rom.description ?? null,
+    developer: rom.developer ?? null,
+    publisher: rom.publisher ?? null,
     rating: rom.rating ?? 0,
     art: [a, b, "42 96% 56%"],
     artUrl: rom.artUrl,

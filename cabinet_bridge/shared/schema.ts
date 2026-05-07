@@ -35,6 +35,13 @@ export const uploadedRoms = sqliteTable("uploaded_roms", {
   playCount: integer("play_count").notNull().default(0),
   discNumber: integer("disc_number"),
   discGroup: text("disc_group"),
+  // Rich metadata from ScreenScraper or other sources
+  description: text("description"),
+  releaseYear: integer("release_year"),
+  developer: text("developer"),
+  publisher: text("publisher"),
+  genre: text("genre"),
+  players: text("players"),
   createdAt: integer("created_at").notNull(),
 });
 
@@ -103,6 +110,11 @@ export const integrationSettingsSchema = z.object({
   haToken: z.string().max(4096).default(""),
   liveMode: z.boolean().default(false),
   endpoints: z.record(z.string(), z.string().max(2048)).default({}),
+  ssUserId: z.string().max(256).default(""),
+  ssPassword: z.string().max(256).default(""),
+  kioskMode: z.boolean().default(false),
+  kioskPin: z.string().max(8).default(""),
+  kioskCollectionId: z.number().int().nullable().default(null),
 });
 
 export type IntegrationSettings = z.infer<typeof integrationSettingsSchema>;
@@ -112,4 +124,9 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   haToken: "",
   liveMode: false,
   endpoints: {},
+  ssUserId: "",
+  ssPassword: "",
+  kioskMode: false,
+  kioskPin: "",
+  kioskCollectionId: null,
 };

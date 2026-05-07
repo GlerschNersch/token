@@ -150,6 +150,32 @@ export default function Settings() {
           </Section>
 
           <Section
+            title="ScreenScraper.fr (optional)"
+            description="When configured, Cabinet Bridge fetches game descriptions, release years, developers, publishers, and genres automatically on upload. Register for free at screenscraper.fr."
+          >
+            <Field label="ScreenScraper user ID" hint="Your screenscraper.fr username. Leave blank to skip metadata scraping.">
+              <Input
+                type="text"
+                value={config.ssUserId ?? ""}
+                onChange={(e) => setConfig({ ssUserId: e.target.value })}
+                placeholder="your_username"
+                data-testid="input-ss-userid"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="ScreenScraper password" hint="Your screenscraper.fr password.">
+              <Input
+                type="password"
+                value={config.ssPassword ?? ""}
+                onChange={(e) => setConfig({ ssPassword: e.target.value })}
+                placeholder="••••••••"
+                data-testid="input-ss-password"
+                autoComplete="off"
+              />
+            </Field>
+          </Section>
+
+          <Section
             title="Quick action endpoints"
             description="Override the default endpoint for any quick action. Leave blank to use the default."
           >
@@ -330,6 +356,38 @@ script:
             >
               Home Assistant Wake-on-LAN docs <ExternalLink className="size-3.5" />
             </a>
+          </Section>
+
+          <Section
+            title="Kiosk / Arcade mode"
+            description="Lock the UI to a specific collection, hide upload and settings, and optionally require a PIN to exit. Useful for shared arcade cabinets."
+          >
+            <div className="flex items-start gap-3 rounded-md border border-border bg-background/40 p-3">
+              <Switch
+                id="kiosk-mode"
+                checked={config.kioskMode ?? false}
+                onCheckedChange={(checked) => setConfig({ kioskMode: !!checked })}
+                data-testid="switch-kiosk-mode"
+              />
+              <div className="flex-1">
+                <Label htmlFor="kiosk-mode" className="font-medium text-sm">Enable kiosk mode</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Hides upload, settings, and management UI. Refresh the page for changes to take effect.
+                </p>
+              </div>
+            </div>
+            <Field label="Exit PIN (optional)" hint="4–8 digit PIN required to leave kiosk mode. Leave blank for no PIN.">
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={8}
+                value={config.kioskPin ?? ""}
+                onChange={(e) => setConfig({ kioskPin: e.target.value.replace(/\D/g, "") })}
+                placeholder="e.g. 1234"
+                data-testid="input-kiosk-pin"
+                autoComplete="off"
+              />
+            </Field>
           </Section>
 
           <Section title="Reset" description="Clear all overrides set in this session.">

@@ -31,6 +31,8 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
   const { pc } = useIntegration();
   const [location] = useLocation();
   const onSettingsRoute = location.startsWith("/settings");
+  const { data: kiosk } = useQuery<{ enabled: boolean }>({ queryKey: ["/api/kiosk"] });
+  const kioskMode = !!kiosk?.enabled;
   const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({
     queryKey: ["/api/roms"],
   });

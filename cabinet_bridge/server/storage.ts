@@ -76,6 +76,12 @@ for (const statement of [
   "ALTER TABLE uploaded_roms ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE uploaded_roms ADD COLUMN disc_number INTEGER",
   "ALTER TABLE uploaded_roms ADD COLUMN disc_group TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN description TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN release_year INTEGER",
+  "ALTER TABLE uploaded_roms ADD COLUMN developer TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN publisher TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN genre TEXT",
+  "ALTER TABLE uploaded_roms ADD COLUMN players TEXT",
 ]) {
   try {
     sqlite.exec(statement);
@@ -102,6 +108,10 @@ export interface IStorage {
   updateUploadedRomFavorite(id: number, favorite: boolean): Promise<UploadedRom | undefined>;
   markUploadedRomPlayed(id: number): Promise<UploadedRom | undefined>;
   listRomsByDiscGroup(discGroup: string): Promise<UploadedRom[]>;
+  updateUploadedRomMetadata(
+    id: number,
+    meta: Partial<Pick<InsertUploadedRom, "description" | "releaseYear" | "developer" | "publisher" | "genre" | "players" | "artUrl" | "scrapeStatus" | "scrapeMessage">>,
+  ): Promise<UploadedRom | undefined>;
   listCollections(): Promise<GameCollectionWithItems[]>;
   createCollection(collection: InsertGameCollection): Promise<GameCollection>;
   deleteCollection(id: number): Promise<boolean>;
@@ -148,6 +158,18 @@ export class DatabaseStorage implements IStorage {
 
   async createUploadedRom(rom: InsertUploadedRom): Promise<UploadedRom> {
     return db.insert(uploadedRoms).values(rom).returning().get();
+  }
+
+  async updateUploadedRomMetadata(
+    id: number,
+    meta: Partial<Pick<InsertUploadedRom, "description" | "releaseYear" | "developer" | "publisher" | "genre" | "players" | "artUrl" | "scrapeStatus" | "scrapeMessage">>,
+  ): Promise<UploadedRom | undefined> {
+    return db
+      .update(uploadedRoms)
+      .set(meta)
+      .where(eq(uploadedRoms.id, id))
+      .returning()
+      .get();
   }
 
   async deleteUploadedRom(id: number): Promise<UploadedRom | undefined> {
