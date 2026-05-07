@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.9
+
+- Fix: system logo `<img>` src now routed through `apiUrl()` — fixes 404s hitting HA's own API instead of the addon under Ingress
+- Fix: system hardware image URLs now routed through `apiUrl()` for the same reason
+- Fix: TypeScript error in Dashboard.tsx (`all` object typed as `Record<string,number>`; `uploadedRoms` prop removed from Sidebar call)
+- Fix: `system?.monogram` → `system?.mono` in Home.tsx
+- Debug: bootstrap.js now logs `[HomeArcade]` markers to browser console and shows `ERR` in the progress overlay if it fails to load — helps diagnose 0% game loading
+
 ## 0.3.8
 
 - Fix: service worker now uses a versioned cache name (`home-arcade-v0.3.8`) so stale JS is cleared on every addon update

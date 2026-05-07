@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ConsoleSilhouette } from "@/components/ConsoleSilhouette";
+import { apiUrl } from "@/lib/queryClient";
 
 /**
  * Official system logo, served through the same-origin /api/system-logos proxy
@@ -24,7 +25,7 @@ export function SystemLogo({ systemId }: { systemId: string }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center p-6">
       <img
-        src={`/api/system-logos/${systemId}`}
+        src={apiUrl(`/api/system-logos/${systemId}`)}
         alt=""
         className="w-full h-full object-contain"
         style={{

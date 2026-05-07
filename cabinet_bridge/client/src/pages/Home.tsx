@@ -579,7 +579,7 @@ function ListView({
               ) : (
                 <div className="w-full h-full flex items-center justify-center font-mono text-[9px] font-bold text-white/60"
                   style={{ background: `linear-gradient(135deg, hsl(${g.art[0]}), hsl(${g.art[1]}))` }}>
-                  {system?.monogram ?? g.system.slice(0, 3).toUpperCase()}
+                  {system?.mono ?? g.system.slice(0, 3).toUpperCase()}
                 </div>
               )}
             </div>

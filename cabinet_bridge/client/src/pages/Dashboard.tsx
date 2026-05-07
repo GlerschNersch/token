@@ -174,7 +174,7 @@ function StatusDonut({ counts, total }: { counts: Record<string, number>; total:
   ];
 
   const unset = total - Object.values(counts).reduce((s, v) => s + v, 0);
-  const all = { ...counts, unset };
+  const all: Record<string, number> = { ...counts, unset };
 
   // Build SVG donut
   const r = 40;
@@ -357,7 +357,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-dvh min-h-dvh overflow-hidden">
-      <Sidebar uploadedRoms={roms} />
+      <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
         {/* ── Continue Playing hero ── */}

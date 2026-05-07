@@ -1,6 +1,7 @@
 // Console definitions and uploaded-library helpers. The active game catalog is
 // intentionally empty by default; ROM uploads from the backend populate it.
 import type { UploadedRom } from "@shared/schema";
+import { apiUrl } from "@/lib/queryClient";
 import {
   SYSTEM_IMAGES,
   systemImageProxyPath,
@@ -49,7 +50,7 @@ export interface System {
 function systemImage(id: string): SystemImage | undefined {
   if (!isSystemImageId(id)) return undefined;
   const upstream = SYSTEM_IMAGES[id];
-  return { ...upstream, url: systemImageProxyPath(id) };
+  return { ...upstream, url: apiUrl(systemImageProxyPath(id)) };
 }
 
 export interface Game {

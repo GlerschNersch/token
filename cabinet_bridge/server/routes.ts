@@ -2379,14 +2379,26 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
     </div>
     <script>
       window.CABINET_RETURN_TO = ${safeReturnTo};
+      console.log("[HomeArcade] player HTML inline script ran, loading bootstrap.js");
     </script>
-    <script src="./bootstrap.js"></script>
+    <script src="./bootstrap.js" onerror="(function(){var p=document.querySelector('#cabinet-progress-percent');var s=document.querySelector('#cabinet-progress-stage');if(p)p.textContent='ERR';if(s)s.textContent='bootstrap.js blocked';console.error('[HomeArcade] bootstrap.js FAILED to load');})()"></script>
   </body>
 </html>`;
 }
 
 function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; }) {
   return `"use strict";
+// Diagnostic: immediately mark that this script is executing.
+// If the launch overlay stays at 0%, this script never ran.
+(function () {
+  var pct = document.querySelector("#cabinet-progress-percent");
+  var stage = document.querySelector("#cabinet-progress-stage");
+  var overlay = document.querySelector("#cabinet-launch-overlay");
+  if (pct) pct.textContent = "2%";
+  if (stage) stage.textContent = "Bootstrap";
+  if (overlay) overlay.classList.remove("is-hidden");
+  console.log("[HomeArcade] bootstrap.js executing for ROM ${romId} core=${JSON.stringify(core)}");
+})();
 function cabinetToast(message) {
   var toast = document.querySelector("#cabinet-toast");
   if (!toast) return;
