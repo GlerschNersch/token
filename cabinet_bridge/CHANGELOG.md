@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.7
+
+- Removed Quick action endpoints section from Settings
+- Removed Wiring guide section from Settings
+- Removed PC Status panel section from Settings
+
 ## 0.3.6
 
 - System logos now served through `/api/system-logos/:id` proxy — fixes CORS blocks under HA Ingress

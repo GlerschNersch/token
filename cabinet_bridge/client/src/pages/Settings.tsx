@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useIntegration } from "@/lib/integration";
-import { QUICK_ACTIONS, SYSTEMS, formatRomSize } from "@/data/library";
+import { SYSTEMS, formatRomSize } from "@/data/library";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { Link } from "wouter";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
 
 export default function Settings() {
-  const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
+  const { config, setConfig, resetConfig, saveStatus } = useIntegration();
   const [copied, setCopied] = useState<string | null>(null);
   const [activeTheme, setActiveTheme] = useState<AppTheme>(
     () => (localStorage.getItem("ha-theme") as AppTheme | null) ?? "default"
@@ -193,55 +193,6 @@ export default function Settings() {
             </Field>
           </Section>
 
-          <Section
-            title="Quick action endpoints"
-            description="Override the default endpoint for any quick action. Leave blank to use the default."
-          >
-            <ul className="space-y-3">
-              {QUICK_ACTIONS.map((qa) => {
-                const value = config.endpoints[qa.id] ?? "";
-                const placeholder = qa.defaultEndpoint;
-                return (
-                  <li
-                    key={qa.id}
-                    className="rounded-md border border-border bg-background/40 p-3"
-                    data-testid={`row-endpoint-${qa.id}`}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div>
-                        <div className="font-medium text-sm">{qa.label}</div>
-                        <div className="text-xs text-muted-foreground">{qa.description}</div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copy(placeholder, qa.id)}
-                        className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                        data-testid={`button-copy-${qa.id}`}
-                        aria-label={`Copy default endpoint for ${qa.label}`}
-                      >
-                        {copied === qa.id ? (
-                          <>
-                            <Check className="size-3" /> Copied
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="size-3" /> Copy
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    <Input
-                      value={value}
-                      onChange={(e) => setEndpoint(qa.id, e.target.value)}
-                      placeholder={placeholder}
-                      className="font-mono text-xs"
-                      data-testid={`input-endpoint-${qa.id}`}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </Section>
 
           <RomLibrarySection />
 
@@ -304,128 +255,7 @@ export default function Settings() {
             </p>
           </Section>
 
-          <Section
-            title="Wiring guide"
-            description="What to put on the Home Assistant side."
-          >
-            <ol className="space-y-3 text-sm">
-              <Step n={1} title="Create a Wake-on-LAN service">
-                Add the WoL integration in HA and configure a service for your emulator
-                PC's MAC address. Wrap it in a script:
-                <Code>
-                  {`# configuration.yaml
-script:
-  cabinet_wake_pc:
-    sequence:
-      - service: wake_on_lan.send_magic_packet
-        data:
-          mac: "AA:BB:CC:DD:EE:FF"`}
-                </Code>
-              </Step>
-              <Step n={2} title="Expose the script as a webhook">
-                Use an automation triggered by a webhook to call the script.
-                <Code>
-                  {`# automations.yaml
-- alias: Cabinet — Wake PC
-  trigger:
-    - platform: webhook
-      webhook_id: cabinet_wake_pc
-      allowed_methods: [POST]
-      local_only: true
-  action:
-    - service: script.cabinet_wake_pc`}
-                </Code>
-              </Step>
-              <Step n={3} title="Point HomeArcade at HA">
-                Fill the base URL above. HomeArcade will POST to
-                <code className="mx-1 font-mono text-[12px]">
-                  {"{base}/api/webhook/cabinet_wake_pc"}
-                </code>
-                with no body when you tap Wake PC.
-              </Step>
-              <Step n={4} title="Run commands on the PC">
-                For Start RetroBat / Sleep / Shutdown, use one of:
-                <ul className="list-disc list-inside ml-1 mt-1 space-y-1 text-muted-foreground">
-                  <li>HA Assist + an MQTT agent (e.g. <code>iot-link</code>) on the PC</li>
-                  <li>HA <code>shell_command</code> running PsExec / OpenSSH</li>
-                  <li>NUT or a smart plug for the brutal-but-effective hard cut</li>
-                </ul>
-              </Step>
-              <Step n={5} title="Embed this UI in Home Assistant">
-                Add a <code>panel_iframe</code> in <code>configuration.yaml</code>:
-                <Code>
-                  {`panel_iframe:
-  cabinet_bridge:
-    title: Cabinet
-    icon: mdi:gamepad-variant
-    url: https://home-arcade.example.com
-    require_admin: false`}
-                </Code>
-                Or use a Lovelace iframe card. HomeArcade does not store any data in
-                the browser, so it works inside HA's sandboxed iframe without warnings.
-              </Step>
-            </ol>
-            <a
-              href="https://www.home-assistant.io/integrations/wake_on_lan/"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 mt-4 text-sm text-primary hover:underline"
-              data-testid="link-ha-docs"
-            >
-              Home Assistant Wake-on-LAN docs <ExternalLink className="size-3.5" />
-            </a>
-          </Section>
 
-          <Section
-            title="PC Status panel (optional)"
-            description="Poll real Home Assistant entities to show live CPU, RAM, and online state in the right panel. Requires Live Mode on and an HA Long-Lived Access Token above. Works great with the System Bridge or HACS Frigate/System-monitor integrations."
-          >
-            <Field label="PC display name" hint="Shown as the hostname in the panel header.">
-              <Input
-                type="text"
-                value={config.pcHostname ?? ""}
-                onChange={(e) => setConfig({ pcHostname: e.target.value })}
-                placeholder="ARCADE-PC"
-                data-testid="input-pc-hostname"
-              />
-            </Field>
-            <Field label="Online entity" hint="e.g. binary_sensor.arcade_pc — must be on/off or true/false. Include the ip_address attribute for live IP display.">
-              <Input
-                type="text"
-                value={config.pcOnlineEntityId ?? ""}
-                onChange={(e) => setConfig({ pcOnlineEntityId: e.target.value })}
-                placeholder="binary_sensor.arcade_pc"
-                data-testid="input-pc-online-entity"
-              />
-            </Field>
-            <Field label="CPU % entity" hint="e.g. sensor.arcade_pc_cpu_percent — state should be a number 0-100.">
-              <Input
-                type="text"
-                value={config.pcCpuEntityId ?? ""}
-                onChange={(e) => setConfig({ pcCpuEntityId: e.target.value })}
-                placeholder="sensor.arcade_pc_cpu_percent"
-                data-testid="input-pc-cpu-entity"
-              />
-            </Field>
-            <Field label="RAM % entity" hint="e.g. sensor.arcade_pc_memory_percent — state should be a number 0-100.">
-              <Input
-                type="text"
-                value={config.pcRamEntityId ?? ""}
-                onChange={(e) => setConfig({ pcRamEntityId: e.target.value })}
-                placeholder="sensor.arcade_pc_memory_percent"
-                data-testid="input-pc-ram-entity"
-              />
-            </Field>
-            <Field label="Current app entity (optional)" hint="e.g. sensor.arcade_pc_foreground_app — state is shown as the running app name.">
-              <Input
-                type="text"
-                value={config.pcAppEntityId ?? ""}
-                onChange={(e) => setConfig({ pcAppEntityId: e.target.value })}
-                placeholder="sensor.arcade_pc_foreground_app"
-                data-testid="input-pc-app-entity"
-              />
-            </Field>
-          </Section>
 
           <Section
             title="RetroAchievements (optional)"
