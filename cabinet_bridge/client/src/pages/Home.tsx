@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronRight, SlidersHorizontal, LayoutGrid, LayoutList, Shuffle } from "lucide-react";
 import { useIntegration } from "@/lib/integration";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
@@ -725,13 +725,14 @@ function ContinueHero({
   game: Game;
   onOpen: (g: Game) => void;
 }) {
-  const { dispatch } = useIntegration();
-  const launch = () =>
-    dispatch({
-      actionId: `launch_game:${game.id}`,
-      label: `Launch ${game.title}`,
-      endpoint: `/api/webhook/cabinet_launch_${game.slug}`,
-    });
+  const launch = () => {
+    if (game.romId) {
+      const returnTo = encodeURIComponent(window.location.href);
+      window.location.href = apiUrl(`/api/roms/${game.romId}/player?return=${returnTo}`);
+    } else {
+      onOpen(game);
+    }
+  };
 
   return (
     <section className="px-5 sm:px-8 pt-5">
@@ -754,17 +755,16 @@ function ContinueHero({
             {game.title}
           </h2>
           <p className="text-sm text-white/80 max-w-sm">
-            Pick up where you left off — HomeArcade will tell Home Assistant to
-            wake the PC if needed and launch the emulator on your TV.
+            Pick up where you left off — your save state loads automatically.
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <Button
               size="lg"
-              onClick={() => void launch()}
+              onClick={launch}
               className="font-mono uppercase tracking-wider ring-neon"
               data-testid="button-hero-launch"
             >
-              Launch on Cabinet
+              Play
             </Button>
             <Button
               size="lg"
