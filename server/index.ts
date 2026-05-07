@@ -24,6 +24,20 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+// Home Assistant ingress (and a few similar reverse-proxy setups) sometimes
+// forward requests with the original ingress prefix still in the URL. Strip
+// any leading "/api/hassio_ingress/<token>" or "/api/ingress/<token>" so our
+// route table stays prefix-agnostic.
+const INGRESS_PREFIX_RE = /^\/api\/(?:hassio_)?ingress\/[^/]+/;
+app.use((req, _res, next) => {
+  const match = req.url.match(INGRESS_PREFIX_RE);
+  if (match) {
+    const stripped = req.url.slice(match[0].length) || "/";
+    req.url = stripped.startsWith("/") ? stripped : `/${stripped}`;
+  }
+  next();
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",

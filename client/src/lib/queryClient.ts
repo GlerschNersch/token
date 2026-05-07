@@ -1,9 +1,45 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
+// Detect the path prefix the app is served under, so absolute "/api/..." calls
+// resolve to the correct upstream when the SPA is mounted under a non-root
+// base path (e.g. Home Assistant ingress: "/api/hassio_ingress/<token>/").
+//
+// The SPA uses hash routing, so window.location.pathname is purely the deploy
+// base path — anything between the host and the hash. We trim a trailing
+// "index.html" and any trailing slash so we can prepend it to URLs that begin
+// with "/".
+function detectApiBase(): string {
+  const placeholder = "__PORT_5000__";
+  // The dev harness substitutes __PORT_5000__ at runtime; honour it when set.
+  if (!placeholder.startsWith("__")) return placeholder as string;
+
+  if (typeof window === "undefined") return "";
+
+  let pathname = window.location.pathname || "/";
+  // Strip a trailing index.html (some ingress proxies serve it explicitly).
+  pathname = pathname.replace(/\/index\.html?$/i, "/");
+  // Drop the trailing slash so we can safely concatenate with "/api/...".
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    pathname = pathname.slice(0, -1);
+  }
+  if (pathname === "/" || pathname === "") return "";
+  return pathname;
+}
+
+let cachedApiBase: string | null = null;
+
+export function getApiBase(): string {
+  if (cachedApiBase === null) cachedApiBase = detectApiBase();
+  return cachedApiBase;
+}
 
 export function apiUrl(url: string): string {
-  return `${API_BASE}${url}`;
+  const base = getApiBase();
+  if (!base) return url;
+  // Only rewrite root-relative paths; leave fully-qualified URLs alone.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("//")) return url;
+  if (url.startsWith("/")) return `${base}${url}`;
+  return `${base}/${url}`;
 }
 
 async function throwIfResNotOk(res: Response) {
