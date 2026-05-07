@@ -117,7 +117,7 @@ export function GameDetailDialog({
               <Stat
                 icon={<Star className="size-3.5" />}
                 label="Rating"
-                value={game.rating > 0 ? `${game.rating} / 5` : "Unrated"}
+                value={game.rating > 0 ? `${game.rating}/5` : "—"}
               />
               <Stat icon={<Users className="size-3.5" />} label="Players" value={game.players} />
               <Stat
@@ -127,8 +127,8 @@ export function GameDetailDialog({
               />
               <Stat
                 icon={<Play className="size-3.5" />}
-                label="Time played"
-                value={game.minutesPlayed ? `${Math.floor((game.minutesPlayed ?? 0) / 60)}h ${(game.minutesPlayed ?? 0) % 60}m` : "—"}
+                label="Play time"
+                value={(() => { const m = game.minutesPlayed ?? 0; if (!m) return "—"; const h = Math.floor(m/60); return h > 0 ? `${h}h ${m%60}m` : `${m}m`; })()}
               />
             </div>
 
@@ -306,12 +306,12 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-background/50 px-3 py-2">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
+    <div className="rounded-md border border-border bg-background/50 px-2.5 py-2">
+      <div className="flex items-center gap-1 text-muted-foreground">
         {icon}
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em]">{label}</span>
+        <span className="font-mono text-[9px] uppercase tracking-[0.12em] truncate">{label}</span>
       </div>
-      <div className="mt-1 font-mono text-sm font-semibold text-foreground">{value}</div>
+      <div className="mt-1 font-mono text-xs font-semibold text-foreground truncate">{value}</div>
     </div>
   );
 }

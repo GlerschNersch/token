@@ -1208,6 +1208,14 @@ function decodeHtml(value: string) {
 function titleFromFileName(fileName: string) {
   return path
     .basename(fileName, path.extname(fileName))
+    // Strip No-Intro / TOSEC region tags e.g. (U), (USA), (E), (Europe), (J), (Japan), (Germany), (Fr), etc.
+    .replace(/\s*\([A-Z][a-zA-Z,\s]*\)/g, "")
+    // Strip No-Intro verification flags e.g. [!], [a], [b], [t], [o], [f], [h], [T+...], [b2]
+    .replace(/\s*\[[^\]]*\]/g, "")
+    // Strip revision / version tags e.g. (Rev 1), (Rev A), (v1.1), (Beta), (Proto), (Demo)
+    .replace(/\s*\((Rev|v|Beta|Proto|Demo|Sample|Hack|Alt|Unl)[^)]*\)/gi, "")
+    // Strip disc/disk tags e.g. (Disc 1), (Disk A)
+    .replace(/\s*\(Dis[ck][^)]*\)/gi, "")
     .replace(/[._-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
