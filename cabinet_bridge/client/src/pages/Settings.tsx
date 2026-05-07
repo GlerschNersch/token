@@ -23,9 +23,6 @@ export default function Settings() {
   const [lbImporting, setLbImporting] = useState(false);
   const [lbResult, setLbResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [lbError, setLbError] = useState<string | null>(null);
-  const [esImporting, setEsImporting] = useState(false);
-  const [esResult, setEsResult] = useState<{ imported: number; skipped: number } | null>(null);
-  const [esError, setEsError] = useState<string | null>(null);
   const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({
     queryKey: ["/api/roms"],
   });
