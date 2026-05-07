@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.13
+
+- Fix: fast-forward button now calls Module.setFastForward() with fallback chain for different EmulatorJS builds
+- Fix: rewind changed from broken toggle to hold-to-rewind (mousedown/touchstart starts rewind, mouseup/touchend stops) — matches how RetroArch rewind actually works
+
 ## 0.3.12
 
 - Fix: ReferenceError in bootstrap.js diagnostic — `core` used as JS runtime variable instead of TS template interpolation; changed to `${core}` so it resolves server-side

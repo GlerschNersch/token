@@ -3121,11 +3121,7 @@ document.addEventListener("click", function (event) {
   if (target.id === "cabinet-controls-close") {
     cabinetSetControlsPanel(false);
   }
-  if (target.id === "cabinet-rewind-toggle") {
-    var rewindOn = target.getAttribute("aria-pressed") === "true";
-    cabinetSetMenuOpen(false);
-    cabinetSetRewind(!rewindOn);
-  }
+  // rewind is hold-to-rewind — handled via mousedown/up events, not click
   if (target.id === "cabinet-ff-toggle") {
     var ffOn = target.getAttribute("aria-pressed") === "true";
     cabinetSetMenuOpen(false);
@@ -3265,26 +3261,42 @@ function cabinetRenderControls() {
   rows.push(row("Rewind", "Backspace"));
   body.innerHTML = rows.join("");
 }
-function cabinetSetRewind(enabled) {
+function cabinetStartRewind() {
   var btn = document.querySelector("#cabinet-rewind-toggle");
-  if (btn) btn.setAttribute("aria-pressed", String(enabled));
+  if (btn) btn.setAttribute("aria-pressed", "true");
   var emulator = window.EJS_emulator;
-  if (emulator && emulator.toggleRewind) {
-    emulator.toggleRewind(enabled);
-  } else if (emulator && emulator.gameManager) {
-    // Fallback: set the rewind flag directly
-    window.EJS_rewindEnabled = enabled;
+  var gm = emulator && emulator.gameManager;
+  var M = gm && gm.Module;
+  if (M) {
+    if (typeof M.setRewind === "function") { try { M.setRewind(1); } catch (_e) {} }
+    else if (typeof M._RA_cmd_rewind_flush === "function") { try { M._RA_cmd_rewind_flush(); } catch (_e) {} }
   }
-  cabinetToast(enabled ? "Rewind ON — hold Backspace" : "Rewind OFF");
+}
+function cabinetStopRewind() {
+  var btn = document.querySelector("#cabinet-rewind-toggle");
+  if (btn) btn.setAttribute("aria-pressed", "false");
+  var emulator = window.EJS_emulator;
+  var gm = emulator && emulator.gameManager;
+  var M = gm && gm.Module;
+  if (M && typeof M.setRewind === "function") { try { M.setRewind(0); } catch (_e) {} }
 }
 function cabinetSetFastForward(enabled) {
   var btn = document.querySelector("#cabinet-ff-toggle");
   if (btn) btn.setAttribute("aria-pressed", String(enabled));
   var emulator = window.EJS_emulator;
-  if (emulator && emulator.setFastForward) {
-    emulator.setFastForward(enabled);
-  } else if (emulator && emulator.gameManager && emulator.gameManager.Module) {
-    try { emulator.gameManager.Module.setFastForward(enabled ? 1 : 0); } catch (_e) {}
+  var gm = emulator && emulator.gameManager;
+  var M = gm && gm.Module;
+  var ok = false;
+  if (M) {
+    if (typeof M.setFastForward === "function") {
+      try { M.setFastForward(enabled ? 1 : 0); ok = true; } catch (_e) {}
+    }
+    if (!ok && typeof M._RA_cmd_toggle_fastforward === "function") {
+      try { M._RA_cmd_toggle_fastforward(); ok = true; } catch (_e) {}
+    }
+  }
+  if (!ok && emulator && typeof emulator.setFastForward === "function") {
+    try { emulator.setFastForward(enabled); ok = true; } catch (_e) {}
   }
   cabinetToast(enabled ? "Fast-forward ON (3×)" : "Fast-forward OFF");
 }
@@ -3538,6 +3550,16 @@ document.addEventListener("keydown", function (e) {
 // Apply saved remap when game starts
 window.addEventListener("EJS_emulator_ready", function () {
   cabinetApplyRemap(cabinetLoadRemap());
+  // Wire up hold-to-rewind on the rewind button
+  var rewindBtn = document.querySelector("#cabinet-rewind-toggle");
+  if (rewindBtn) {
+    rewindBtn.addEventListener("mousedown", function (e) { e.preventDefault(); cabinetStartRewind(); });
+    rewindBtn.addEventListener("touchstart", function (e) { e.preventDefault(); cabinetStartRewind(); }, { passive: false });
+    rewindBtn.addEventListener("mouseup", cabinetStopRewind);
+    rewindBtn.addEventListener("mouseleave", cabinetStopRewind);
+    rewindBtn.addEventListener("touchend", cabinetStopRewind);
+    rewindBtn.addEventListener("touchcancel", cabinetStopRewind);
+  }
 });
 // ── Server-side save backup/restore ────────────────────────────────────────
 var cabinetServerBackups = [];
