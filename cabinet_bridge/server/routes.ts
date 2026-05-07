@@ -152,11 +152,95 @@ function getUserFromRequest(req: import("express").Request): { userId: string; u
   return { userId, userName };
 }
 
+
+// ---------------------------------------------------------------------------
+// Auto-configure HA panel_iframe so HomeArcade is accessible to all HA users.
+// Runs once at startup inside the HA add-on environment (SUPERVISOR_TOKEN set).
+// Writes a panel_iframe entry to /config/configuration.yaml if not already
+// present, then asks HA to reload integrations so the panel appears immediately.
+// ---------------------------------------------------------------------------
+async function ensurePanelIframe(): Promise<void> {
+  const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
+  if (!SUPERVISOR_TOKEN) return; // not running inside HA add-on
+
+  const CONFIG_PATH = "/config/configuration.yaml";
+  const MARKER = "# homearcade-panel-iframe-auto";
+
+  try {
+    // Ask the Supervisor for our own ingress URL
+    const infoRes = await fetch("http://supervisor/addons/self/info", {
+      headers: { Authorization: `Bearer ${SUPERVISOR_TOKEN}` },
+    });
+    if (!infoRes.ok) return;
+    const info = (await infoRes.json()) as { data?: { ingress_entry?: string } };
+    const ingressUrl = info.data?.ingress_entry;
+    if (!ingressUrl) return;
+
+    // Read the existing configuration.yaml
+    let configYaml: string;
+    try {
+      configYaml = await fs.readFile(CONFIG_PATH, "utf8");
+    } catch {
+      return; // /config not mounted or not accessible
+    }
+
+    // Already done on a previous startup
+    if (configYaml.includes(MARKER)) return;
+
+    // Build our panel_iframe entry block
+    const panelEntry = [
+      `  homearcade:`,
+      `    title: HomeArcade`,
+      `    url: "${ingressUrl}"`,
+      `    icon: mdi:gamepad-variant`,
+      `    require_admin: false`,
+    ].join("\n");
+
+    let updated: string;
+    if (/^panel_iframe:/m.test(configYaml)) {
+      // Slot our entry into the existing panel_iframe section
+      updated = configYaml.replace(
+        /^(panel_iframe:)/m,
+        `$1\n${panelEntry}`
+      );
+    } else {
+      // Append a brand-new panel_iframe section
+      updated =
+        configYaml.trimEnd() +
+        `\n\n${MARKER}\npanel_iframe:\n${panelEntry}\n`;
+    }
+
+    await fs.writeFile(CONFIG_PATH, updated, "utf8");
+
+    // Best-effort: ask HA to reload integrations immediately
+    await fetch(
+      "http://supervisor/homeassistant/api/services/homeassistant/reload_all",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPERVISOR_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      }
+    ).catch(() => {/* reload is best-effort */});
+
+    console.log(
+      "[HomeArcade] panel_iframe auto-configured — HomeArcade is now visible to all HA users"
+    );
+  } catch (err) {
+    console.error("[HomeArcade] panel_iframe auto-config error:", err);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  app.get("/api/settings/integration", async (_req, res) => {
+  // Auto-configure HA panel_iframe so all HA users can access HomeArcade
+  ensurePanelIframe().catch(() => {});
+
+    app.get("/api/settings/integration", async (_req, res) => {
     const settings = await storage.getIntegrationSettings();
     res.json(settings);
   });

@@ -1,5 +1,5 @@
 name: HomeArcade
-version: "0.3.19"
+version: "0.3.20"
 slug: cabinet_bridge
 description: HomeArcade — retro gaming frontend for Home Assistant. Manage ROMs, browse systems, and launch games from your TV.
 url: https://github.com/GlerschNersch/token
@@ -12,16 +12,13 @@ boot: auto
 ingress: true
 ingress_port: 5000
 ingress_stream: true
-ports:
-  5000/tcp: 7123
-ports_description:
-  5000/tcp: HomeArcade direct access (all users)
 panel_icon: mdi:gamepad-variant
 panel_title: HomeArcade
-hassio_api: false
+hassio_api: true
 homeassistant_api: false
 host_network: false
 map:
+  - config:rw
   - share:rw
 options:
   max_upload_mb: 2048
