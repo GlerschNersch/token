@@ -2,7 +2,6 @@ import { Link, useLocation } from "wouter";
 import { SYSTEMS, type SystemId, GAMES } from "@/data/library";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
-import { useIntegration } from "@/lib/integration";
 import { useQuery } from "@tanstack/react-query";
 import { filterToPath } from "@/lib/filter";
 import {
@@ -15,10 +14,6 @@ import {
   XCircle,
   Settings as SettingsIcon,
   Trophy,
-  Tv,
-  Wifi,
-  WifiOff,
-  Moon,
   Folder,
 } from "lucide-react";
 
@@ -33,7 +28,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarProps) {
-  const { pc } = useIntegration();
   const [location] = useLocation();
   const onSettingsRoute = location.startsWith("/settings");
   const { data: kiosk } = useQuery<{ enabled: boolean }>({ queryKey: ["/api/kiosk"] });
@@ -206,7 +200,6 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
           <SettingsIcon className="size-4" />
           Integration & Settings
         </Link>
-        <PcStatusPill pc={pc} />
       </div>
     </aside>
   );
@@ -261,63 +254,4 @@ function NavItem({
       ) : null}
     </Link>
   );
-}
-
-function PcStatusPill({
-  pc,
-}: {
-  pc: { online: boolean; state: string; hostname: string; currentApp: string | null };
-}) {
-  const tone =
-    pc.state === "online"
-      ? "text-status-online"
-      : pc.state === "starting"
-      ? "text-status-away"
-      : pc.state === "sleeping"
-      ? "text-status-away"
-      : "text-status-offline";
-
-  const Icon =
-    pc.state === "sleeping" ? Moon : pc.state === "online" ? Tv : pc.online ? Wifi : WifiOff;
-
-  return (
-    <div
-      className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-sidebar-border bg-background/40"
-      data-testid="status-pc-pill"
-    >
-      <Icon className={`size-4 ${tone}`} />
-      <div className="flex-1 min-w-0">
-        <div className="font-mono text-[11px] text-foreground truncate">{pc.hostname}</div>
-        <div className="font-mono text-[10px] text-muted-foreground truncate">
-          {labelForState(pc.state)}
-          {pc.currentApp ? ` · ${pc.currentApp}` : ""}
-        </div>
-      </div>
-      <span
-        className={`size-1.5 rounded-full ${
-          pc.state === "online"
-            ? "bg-status-online"
-            : pc.state === "starting" || pc.state === "sleeping"
-            ? "bg-status-away"
-            : "bg-status-offline"
-        }`}
-        aria-hidden
-      />
-    </div>
-  );
-}
-
-function labelForState(s: string) {
-  switch (s) {
-    case "online":
-      return "Online";
-    case "starting":
-      return "Booting";
-    case "sleeping":
-      return "Sleeping";
-    case "offline":
-      return "Offline";
-    default:
-      return s;
-  }
 }
