@@ -97,13 +97,23 @@ export function GameDetailDialog({
               >
                 {game.title}
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                Uploaded ROMs open in the browser player. External catalog items can
-                still launch through Home Assistant webhooks.
-              </DialogDescription>
+              {/* Developer / publisher line */}
+              {(game.developer || game.publisher) && (
+                <DialogDescription className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground flex flex-wrap gap-x-3">
+                  {game.developer && <span>{game.developer}</span>}
+                  {game.developer && game.publisher && <span>·</span>}
+                  {game.publisher && <span>{game.publisher}</span>}
+                </DialogDescription>
+              )}
+              {/* Description from ScreenScraper */}
+              {game.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mt-1">
+                  {game.description}
+                </p>
+              )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="grid grid-cols-4 gap-2 text-xs">
               <Stat
                 icon={<Star className="size-3.5" />}
                 label="Rating"
@@ -115,28 +125,14 @@ export function GameDetailDialog({
                 label="Last played"
                 value={game.lastPlayed ? formatRelative(game.lastPlayed) : "—"}
               />
+              <Stat
+                icon={<Play className="size-3.5" />}
+                label="Time played"
+                value={game.minutesPlayed ? `${Math.floor((game.minutesPlayed ?? 0) / 60)}h ${(game.minutesPlayed ?? 0) % 60}m` : "—"}
+              />
             </div>
 
-            {(game.description || game.developer || game.publisher) && (
-              <div className="rounded-md border border-border bg-background/50 p-3 space-y-2">
-                {game.description && (
-                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">
-                    {game.description}
-                  </p>
-                )}
-                {(game.developer || game.publisher) && (
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] text-muted-foreground">
-                    {game.developer && <span><span className="uppercase tracking-wider">Dev</span> · {game.developer}</span>}
-                    {game.publisher && <span><span className="uppercase tracking-wider">Pub</span> · {game.publisher}</span>}
-                  </div>
-                )}
-                {game.romHash && (
-                  <div className="font-mono text-[10px] text-muted-foreground/60 mt-1 select-all" title="MD5 hash — click to select">
-                    <span className="uppercase tracking-wider">MD5</span> · {game.romHash}
-                  </div>
-                )}
-              </div>
-            )}
+
 
             <div className="rounded-md border border-border bg-background/50 p-3">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
@@ -189,7 +185,6 @@ export function GameDetailDialog({
                 </div>
                 <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Play status" data-testid="group-play-status">
                   {([
-                    { id: "unset", label: "—" },
                     { id: "backlog", label: "Backlog" },
                     { id: "playing", label: "Playing" },
                     { id: "completed", label: "Completed" },
@@ -202,8 +197,8 @@ export function GameDetailDialog({
                         type="button"
                         role="radio"
                         aria-checked={active}
-                        onClick={() => onSetStatus(game, id)}
-                        className={`px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                        onClick={() => onSetStatus(game, active ? "unset" : id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                           active
                             ? "border-primary/60 bg-primary/15 text-primary"
                             : "border-border bg-background/70 text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -211,6 +206,7 @@ export function GameDetailDialog({
                         data-testid={`button-status-${id}`}
                       >
                         {label}
+                        {active && <span className="text-primary/70">×</span>}
                       </button>
                     );
                   })}
@@ -264,17 +260,7 @@ export function GameDetailDialog({
               </div>
             ) : null}
 
-            <div className="rounded-md border border-border bg-background/50 p-3">
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                {game.romId ? "Direct Player" : "HA Webhook"}
-              </div>
-              <code
-                className="font-mono text-[12px] text-foreground break-all"
-                data-testid="text-game-endpoint"
-              >
-                {game.romId ? `/api/roms/${game.romId}/player` : `POST ${endpoint}`}
-              </code>
-            </div>
+
 
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Button
