@@ -72,6 +72,50 @@ const LIBRETRO_PLAYLISTS: Record<string, string> = {
   dreamcast: "Sega - Dreamcast",
 };
 
+/**
+ * Minimal ZIP extractor using Node built-in zlib.
+ * Returns { buffer, fileName } for the first entry whose extension is in
+ * allowedExtensions, or null when no matching entry is found.
+ */
+async function extractFirstRomFromZip(
+  zipBuffer: Buffer,
+  allowedExtensions: string[],
+): Promise<{ buffer: Buffer; fileName: string } | null> {
+  let offset = 0;
+  while (offset + 30 < zipBuffer.length) {
+    const sig = zipBuffer.readUInt32LE(offset);
+    if (sig !== 0x04034b50) break;
+
+    const compressionMethod = zipBuffer.readUInt16LE(offset + 8);
+    const compressedSize    = zipBuffer.readUInt32LE(offset + 18);
+    const fileNameLength    = zipBuffer.readUInt16LE(offset + 26);
+    const extraLength       = zipBuffer.readUInt16LE(offset + 28);
+    const fileName          = zipBuffer.slice(offset + 30, offset + 30 + fileNameLength).toString("utf8");
+    const dataStart         = offset + 30 + fileNameLength + extraLength;
+    const dataEnd           = dataStart + compressedSize;
+
+    const ext = path.extname(fileName).toLowerCase();
+    if (allowedExtensions.includes(ext) && !fileName.startsWith("__MACOSX")) {
+      const compressed = zipBuffer.slice(dataStart, dataEnd);
+      try {
+        const buffer =
+          compressionMethod === 0
+            ? compressed
+            : await new Promise<Buffer>((resolve, reject) => {
+                zlib.inflateRaw(compressed, (err, result) => {
+                  err ? reject(err) : resolve(result);
+                });
+              });
+        return { buffer, fileName: path.basename(fileName) };
+      } catch {
+        // corrupt entry — try next
+      }
+    }
+    offset = dataEnd;
+  }
+  return null;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -359,52 +403,6 @@ export async function registerRoutes(
   });
 
   app.post(
-
-/** 
- * Minimal ZIP extractor using Node's built-in zlib.
- * Returns { buffer, fileName } for the first entry whose extension matches
- * allowedExtensions, or null if no matching entry is found.
- */
-async function extractFirstRomFromZip(
-  zipBuffer: Buffer,
-  allowedExtensions: string[],
-): Promise<{ buffer: Buffer; fileName: string } | null> {
-  let offset = 0;
-  while (offset + 30 < zipBuffer.length) {
-    const sig = zipBuffer.readUInt32LE(offset);
-    if (sig !== 0x04034b50) break; // not a local file header
-
-    const compressionMethod = zipBuffer.readUInt16LE(offset + 8);
-    const compressedSize   = zipBuffer.readUInt32LE(offset + 18);
-    const fileNameLength   = zipBuffer.readUInt16LE(offset + 26);
-    const extraLength      = zipBuffer.readUInt16LE(offset + 28);
-    const fileName         = zipBuffer.slice(offset + 30, offset + 30 + fileNameLength).toString("utf8");
-    const dataStart        = offset + 30 + fileNameLength + extraLength;
-    const dataEnd          = dataStart + compressedSize;
-
-    const ext = path.extname(fileName).toLowerCase();
-    if (allowedExtensions.includes(ext) && !fileName.startsWith("__MACOSX")) {
-      const compressed = zipBuffer.slice(dataStart, dataEnd);
-      try {
-        const buffer =
-          compressionMethod === 0
-            ? compressed // stored
-            : await new Promise<Buffer>((resolve, reject) => {
-                zlib.inflateRaw(compressed, (err, result) => {
-                  err ? reject(err) : resolve(result);
-                });
-              });
-        return { buffer, fileName: path.basename(fileName) };
-      } catch {
-        // try next entry
-      }
-    }
-
-    offset = dataEnd;
-  }
-  return null;
-}
-
     "/api/roms/upload",
     express.raw({ type: "*/*", limit: MAX_UPLOAD_BYTES }),
     async (req, res) => {
