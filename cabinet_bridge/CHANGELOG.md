@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6
+
+- System logos now served through `/api/system-logos/:id` proxy — fixes CORS blocks under HA Ingress
+- System hardware images return a dark SVG placeholder instead of a 404 when Wikimedia is unreachable
+- Removed `crossOrigin` attribute from logo img tags (no longer needed with same-origin proxy)
+
 ## 0.3.5
 
 - Controls button now opens a proper panel with the full keyboard layout for the active system (PS1/PS2, GBA, GB/GBC, N64, NDS, PSP, and generic)

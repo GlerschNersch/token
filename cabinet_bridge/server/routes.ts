@@ -70,6 +70,7 @@ const EMULATORJS_CORES: Record<string, string> = {
 const ROM_ROOT = path.resolve(dataPath("rom-storage"));
 const SAVE_BACKUP_DIR = path.resolve(dataPath("save-backups"));
 const SYSTEM_IMAGE_CACHE_DIR = path.resolve(dataPath("system-image-cache"));
+const SYSTEM_LOGO_CACHE_DIR  = path.resolve(dataPath("system-logo-cache"));
 const SYSTEM_IMAGE_FETCH_HEADERS: Record<string, string> = {
   "User-Agent":
     "CabinetBridge/0.2 (+https://github.com/anthropics/claude-code; mailto:noreply@anthropic.com) Mozilla/5.0",
@@ -566,9 +567,18 @@ export async function registerRoutes(
       res.setHeader("Cache-Control", "public, max-age=86400, immutable");
       res.sendFile(file);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to fetch image.";
-      res.status(404).json({ message });
+      // Return a subtle SVG placeholder instead of 404 so the UI degrades
+      // gracefully when Wikimedia is unreachable from the addon network.
+      const label = id.toUpperCase();
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480">
+  <rect width="640" height="480" fill="#1a1a2e"/>
+  <text x="320" y="248" font-family="ui-monospace,monospace" font-size="32" font-weight="700"
+        fill="rgba(248,250,252,0.15)" text-anchor="middle" dominant-baseline="middle"
+        letter-spacing="0.2em">${label}</text>
+</svg>`;
+      res.setHeader("Content-Type", "image/svg+xml");
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).send(svg);
     }
   });
 
@@ -587,6 +597,66 @@ export async function registerRoutes(
       res.status(502).json({ id, refreshed: false, message });
     }
   });
+
+  // ── System logo proxy (SVG) ────────────────────────────────────────────────
+  // Client loads logos through this same-origin proxy so HA Ingress CORS
+  // restrictions never block them (Wikimedia doesn't send CORS headers when
+  // fetched cross-origin through Ingress).
+  const SYSTEM_LOGOS: Record<string, string> = {
+    nes:       "https://commons.wikimedia.org/wiki/Special:FilePath/NES-logo.svg",
+    snes:      "https://commons.wikimedia.org/wiki/Special:FilePath/Super_Nintendo_Entertainment_System_logo.svg",
+    n64:       "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo_64_logo.svg",
+    gba:       "https://commons.wikimedia.org/wiki/Special:FilePath/Game_Boy_Advance_logo.svg",
+    genesis:   "https://commons.wikimedia.org/wiki/Special:FilePath/Sega-Genesis-Logo.svg",
+    ps1:       "https://commons.wikimedia.org/wiki/Special:FilePath/PlayStation_Logo.svg",
+    ps2:       "https://commons.wikimedia.org/wiki/Special:FilePath/PlayStation_2_logo.svg",
+    psp:       "https://commons.wikimedia.org/wiki/Special:FilePath/PlayStation_Portable_logo.svg",
+    dreamcast: "https://commons.wikimedia.org/wiki/Special:FilePath/Dreamcast_logo.svg",
+    gb:        "https://commons.wikimedia.org/wiki/Special:FilePath/Game_Boy_logo.svg",
+    gbc:       "https://commons.wikimedia.org/wiki/Special:FilePath/Game_Boy_Color_logo.svg",
+    nds:       "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo_DS_Logo.svg",
+    arcade:    "https://commons.wikimedia.org/wiki/Special:FilePath/MAME_Logo.svg",
+  };
+
+  app.get("/api/system-logos/:id", async (req, res) => {
+    const id = String(req.params.id);
+    const upstreamUrl = SYSTEM_LOGOS[id];
+    if (!upstreamUrl) {
+      return res.status(404).json({ message: "Unknown system logo id." });
+    }
+    await fs.mkdir(SYSTEM_LOGO_CACHE_DIR, { recursive: true });
+    const cachePath = path.join(SYSTEM_LOGO_CACHE_DIR, `${id}.svg`);
+    // Serve from disk cache if present
+    try {
+      const stat = await fs.stat(cachePath);
+      if (stat.size > 0) {
+        res.setHeader("Content-Type", "image/svg+xml");
+        res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+        return res.sendFile(cachePath);
+      }
+    } catch { /* cache miss */ }
+    // Fetch from Wikimedia server-side (avoids browser CORS entirely)
+    try {
+      const response = await fetch(upstreamUrl, {
+        headers: { "User-Agent": "HomeArcade/1.0 (home-assistant-addon; +https://github.com/GlerschNersch/token)" },
+        redirect: "follow",
+      });
+      if (!response.ok) throw new Error(\`Upstream \${response.status}\`);
+      const text = await response.text();
+      if (text.length > 0) {
+        await fs.writeFile(cachePath, text, "utf8");
+        res.setHeader("Content-Type", "image/svg+xml");
+        res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+        return res.send(text);
+      }
+      throw new Error("Empty SVG body");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to fetch logo.";
+      return res.status(502).json({ message: msg });
+    }
+  });
+
+
 
   app.post("/api/roms/:id/scrape-art", async (req, res) => {
     const id = Number(req.params.id);
