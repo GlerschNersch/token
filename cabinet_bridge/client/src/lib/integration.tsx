@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { apiRequest, apiUrl } from "./queryClient";
 
 /**
- * Cabinet Bridge integration layer.
+ * HomeArcade integration layer.
  *
  * In production this calls Home Assistant webhooks (see Settings page for the
  * endpoint URLs). For the prototype every action runs through `dispatch` which

@@ -1,8 +1,8 @@
-name: Cabinet Bridge
+name: HomeArcade
 version: "0.2.0"
 slug: cabinet_bridge
-description: Retro gaming frontend for Home Assistant — manage ROMs, browse systems, launch games via webhooks.
-url: https://github.com/anthropics/cabinet-bridge
+description: HomeArcade — retro gaming frontend for Home Assistant. Manage ROMs, browse systems, and launch games from your TV.
+url: https://github.com/GlerschNersch/token
 arch:
   - amd64
   - aarch64
@@ -13,7 +13,7 @@ ingress: true
 ingress_port: 5000
 ingress_stream: true
 panel_icon: mdi:gamepad-variant
-panel_title: Cabinet
+panel_title: HomeArcade
 hassio_api: false
 homeassistant_api: false
 host_network: false

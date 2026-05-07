@@ -62,9 +62,9 @@ export default function Settings() {
             Home Assistant integration
           </h1>
           <p className="text-sm text-muted-foreground max-w-prose">
-            Cabinet Bridge calls your Home Assistant instance, which in turn runs the
+            HomeArcade calls your Home Assistant instance, which in turn runs the
             scripts that wake, launch, or shut down the emulator PC. This panel records
-            the URLs Cabinet Bridge will hit. In the prototype, calls are simulated unless
+            the URLs HomeArcade will hit. In the prototype, calls are simulated unless
             you toggle Live mode below.
           </p>
 
@@ -99,7 +99,7 @@ export default function Settings() {
 
           <Section
             title="Connection"
-            description="Where Cabinet Bridge sends its requests. The base URL is only used when Live mode is on."
+            description="Where HomeArcade sends its requests. The base URL is only used when Live mode is on."
           >
             <Field label="Home Assistant base URL" hint="e.g. https://homeassistant.local:8123 or https://ha.example.com">
               <Input
@@ -160,7 +160,7 @@ export default function Settings() {
 
           <Section
             title="ScreenScraper.fr (optional)"
-            description="When configured, Cabinet Bridge fetches game descriptions, release years, developers, publishers, and genres automatically on upload. Register for free at screenscraper.fr."
+            description="When configured, HomeArcade fetches game descriptions, release years, developers, publishers, and genres automatically on upload. Register for free at screenscraper.fr."
           >
             <Field label="ScreenScraper user ID" hint="Your screenscraper.fr username. Leave blank to skip metadata scraping.">
               <Input
@@ -238,7 +238,7 @@ export default function Settings() {
 
           <Section
             title="Game launch endpoints"
-            description={`Cabinet Bridge derives launch URLs as /api/webhook/cabinet_launch_<slug>. These mappings come from your uploaded ROM library.`}
+            description={`HomeArcade derives launch URLs as /api/webhook/cabinet_launch_<slug>. These mappings come from your uploaded ROM library.`}
           >
             <div className="rounded-md border border-border bg-background/40 overflow-hidden">
               <table className="w-full text-sm" data-testid="table-launch-endpoints">
@@ -327,8 +327,8 @@ script:
     - service: script.cabinet_wake_pc`}
                 </Code>
               </Step>
-              <Step n={3} title="Point Cabinet Bridge at HA">
-                Fill the base URL above. Cabinet Bridge will POST to
+              <Step n={3} title="Point HomeArcade at HA">
+                Fill the base URL above. HomeArcade will POST to
                 <code className="mx-1 font-mono text-[12px]">
                   {"{base}/api/webhook/cabinet_wake_pc"}
                 </code>
@@ -349,10 +349,10 @@ script:
   cabinet_bridge:
     title: Cabinet
     icon: mdi:gamepad-variant
-    url: https://cabinet-bridge.example.com
+    url: https://home-arcade.example.com
     require_admin: false`}
                 </Code>
-                Or use a Lovelace iframe card. Cabinet Bridge does not store any data in
+                Or use a Lovelace iframe card. HomeArcade does not store any data in
                 the browser, so it works inside HA's sandboxed iframe without warnings.
               </Step>
             </ol>

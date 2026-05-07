@@ -1,5 +1,5 @@
 {
-  "name": "Cabinet Bridge",
+  "name": "HomeArcade",
   "short_name": "Cabinet",
   "description": "Retro gaming frontend for Home Assistant — browse systems, manage ROMs, launch games.",
   "start_url": "./",

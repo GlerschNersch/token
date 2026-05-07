@@ -1,5 +1,5 @@
-// Cabinet Bridge service worker — shell caching for offline/installable PWA
-const CACHE = "cabinet-bridge-v1";
+// HomeArcade service worker — shell caching for offline/installable PWA
+const CACHE = "home-arcade-v1";
 const SHELL = [
   "./",
   "./index.html",

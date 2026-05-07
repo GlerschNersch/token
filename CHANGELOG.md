@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Cabinet Bridge are documented here.
+All notable changes to HomeArcade are documented here.
 
 ---
 
@@ -113,7 +113,7 @@ All notable changes to Cabinet Bridge are documented here.
 ## [0.1.3] — 2026-05
 
 ### Add-on
-- Cabinet Bridge packaged as a Home Assistant add-on (Dockerfile, `config.yaml`, `run.sh`, `repository.yaml`)
+- HomeArcade packaged as a Home Assistant add-on (Dockerfile, `config.yaml`, `run.sh`, `repository.yaml`)
 - API calls corrected for the `/api/hassio_ingress/<token>/` prefix that HA Ingress prepends
 - Add-on build fixed by colocating source with the Dockerfile context
 

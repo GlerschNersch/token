@@ -1,4 +1,4 @@
-# Cabinet Bridge
+# HomeArcade
 
 Retro gaming frontend for Home Assistant. Runs as a Home Assistant add-on so the
 sidebar gains a **Cabinet** panel for browsing systems, launching games via HA
@@ -44,8 +44,8 @@ GitHub: <https://github.com/GlerschNersch/token>
    https://github.com/GlerschNersch/token
    ```
 
-3. Close the dialog, scroll to the **Cabinet Bridge Add-ons** section in the
-   store, and open **Cabinet Bridge**.
+3. Close the dialog, scroll to the **HomeArcade Add-ons** section in the
+   store, and open **HomeArcade**.
 4. Click **Install**. Home Assistant Supervisor will build the image (this can
    take several minutes on the first install).
 5. When the install finishes, click **Start**. With **Show in sidebar** enabled
@@ -62,7 +62,7 @@ itself at **Settings**, and are persisted to the add-on's SQLite database.
 
 ### PWA install
 
-Cabinet Bridge ships a web app manifest and service worker. On supported
+HomeArcade ships a web app manifest and service worker. On supported
 browsers (Chrome, Edge, Safari 16.4+) you can install it as a standalone app:
 
 - **Desktop (Chrome/Edge):** click the install icon (⊕) in the address bar.
@@ -79,10 +79,10 @@ the add-on to be running.
 
 1. **Settings → Add-ons → ⋮ → Check for updates** (top-right of the add-on
    store).
-2. Open **Cabinet Bridge**. If a newer version is available, an **Update**
+2. Open **HomeArcade**. If a newer version is available, an **Update**
    button appears at the top of the page — click it.
 3. If you don't see an update button but expect one, also try:
-   - **Settings → Add-ons → Cabinet Bridge → ⋮ → Rebuild** to force a fresh
+   - **Settings → Add-ons → HomeArcade → ⋮ → Rebuild** to force a fresh
      build of the current version.
    - Reload the page with a hard refresh (Ctrl/Cmd-Shift-R) so the browser
      drops cached JS/CSS from the previous version.
@@ -96,7 +96,7 @@ the add-on to be running.
 
 ## Persistent data
 
-Everything Cabinet Bridge needs to remember lives under `/data` inside the
+Everything HomeArcade needs to remember lives under `/data` inside the
 add-on container, which Home Assistant Supervisor persists across restarts,
 updates, and rebuilds:
 
@@ -152,11 +152,11 @@ Instead of uploading files one at a time you can bulk-import metadata from
 existing collection databases:
 
 - **EmulationStation** — drop a `gamelist.xml` in **Settings → Import ROMs →
-  EmulationStation**. Cabinet Bridge reads each `<game>` element and adds matched
+  EmulationStation**. HomeArcade reads each `<game>` element and adds matched
   entries to your library. The ROM files themselves are not copied; only the
   metadata (title, description, genre, developer, publisher, release date, player
   count) is imported.
-- **LaunchBox** — same flow with a LaunchBox XML export. Cabinet Bridge reads
+- **LaunchBox** — same flow with a LaunchBox XML export. HomeArcade reads
   `<Game>` elements from the file.
 
 Both importers return a count of how many entries were successfully added.
@@ -220,13 +220,13 @@ local-network play or fast connections.
 
 ## RetroAchievements
 
-Cabinet Bridge can display your RetroAchievements account stats and unlock
+HomeArcade can display your RetroAchievements account stats and unlock
 achievements as you play.
 
 ### Setup
 
 1. Create a free account at [retroachievements.org](https://retroachievements.org).
-2. In Cabinet Bridge **Settings → RetroAchievements**, enter your username and
+2. In HomeArcade **Settings → RetroAchievements**, enter your username and
    API token (found on your RA profile page under **Settings → Keys**).
 3. Save. The add-on stores the credentials in its database and injects them into
    the emulator at launch time.
@@ -247,7 +247,7 @@ connection is required.
 
 ## Metadata scraping (ScreenScraper)
 
-Cabinet Bridge can fetch box art, screenshots, descriptions, and other metadata
+HomeArcade can fetch box art, screenshots, descriptions, and other metadata
 from [ScreenScraper.fr](https://www.screenscraper.fr). Enter your ScreenScraper
 username and password in **Settings → ScreenScraper**, then use the
 **Refresh Art** action on any game to pull fresh data.
@@ -315,7 +315,7 @@ NODE_ENV=production node dist/index.cjs
 
 ### Running tests
 
-Cabinet Bridge includes a Vitest integration test suite that spins up an
+HomeArcade includes a Vitest integration test suite that spins up an
 in-process Express server and exercises the API endpoints end-to-end:
 
 ```bash

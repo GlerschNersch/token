@@ -123,7 +123,7 @@ export default function Player({ id }: { id: string }) {
       ) : (
         <section className="relative flex-1 min-h-[70vh] overflow-hidden rounded-lg border border-card-border bg-black shadow-2xl">
           <iframe
-            title={rom ? `Play ${rom.title}` : "Cabinet Bridge player"}
+            title={rom ? `Play ${rom.title}` : "HomeArcade player"}
             src={playerUrl}
             allow="gamepad; fullscreen; autoplay"
             className="absolute inset-0 h-full w-full border-0"

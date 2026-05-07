@@ -29,7 +29,7 @@ export function MobileTopBar({ active }: Props) {
           </button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border">
-          <SheetTitle className="sr-only">Cabinet Bridge navigation</SheetTitle>
+          <SheetTitle className="sr-only">HomeArcade navigation</SheetTitle>
           <div className="h-full flex">
             <SidebarMobileWrapper active={active} onNavigate={() => setOpen(false)} />
           </div>

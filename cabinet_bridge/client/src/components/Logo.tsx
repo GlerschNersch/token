@@ -1,5 +1,5 @@
 /**
- * Cabinet Bridge logo.
+ * HomeArcade logo.
  *
  * Concept: a stylised cabinet marquee — a CRT screen with two dot eyes (lit
  * pixels) and a control deck, framed by a rounded bezel. Single-shape mark,
@@ -25,7 +25,7 @@ export function Logo({
       fill="none"
       stroke="currentColor"
       role="img"
-      aria-label="Cabinet Bridge"
+      aria-label="HomeArcade"
       className={className}
     >
       <rect
@@ -79,7 +79,7 @@ export function Wordmark({ className = "" }: { className?: string }) {
       <Logo size={24} />
       <div className="leading-none">
         <div className="font-display text-[14px] font-semibold tracking-tight">
-          CABINET<span className="text-primary">.</span>BRIDGE
+          HOME<span className="text-primary">.</span>ARCADE
         </div>
         <div className="font-mono text-[9px] uppercase tracking-[0.13em] text-muted-foreground mt-1 whitespace-nowrap">
           Home Assistant ⇄ RetroBat

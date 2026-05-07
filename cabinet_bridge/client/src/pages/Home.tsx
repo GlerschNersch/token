@@ -496,7 +496,7 @@ export default function Home({
                 {favorites.length} favorited · {games.length} uploaded title{games.length === 1 ? "" : "s"}
               </span>
               <span>
-                Cabinet Bridge prototype · v0.1 ·{" "}
+                HomeArcade prototype · v0.1 ·{" "}
                 <a className="underline-offset-2 hover:underline" href="#/settings">
                   configure HA endpoints →
                 </a>
@@ -752,7 +752,7 @@ function ContinueHero({
             {game.title}
           </h2>
           <p className="text-sm text-white/80 max-w-sm">
-            Pick up where you left off — Cabinet Bridge will tell Home Assistant to
+            Pick up where you left off — HomeArcade will tell Home Assistant to
             wake the PC if needed and launch the emulator on your TV.
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
