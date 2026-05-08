@@ -12,11 +12,11 @@ import { SYSTEMS, formatRomSize } from "@/data/library";
 import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { Link } from "wouter";
-import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, RotateCcw, Zap, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, RotateCcw, Zap, CheckCircle2, XCircle, Loader2, UserCircle2, Plus, X } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ConsoleSilhouette } from "@/components/ConsoleSilhouette";
-import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
+import type { UploadedRom, GameCollectionWithItems, UserProfile } from "@shared/schema";
 
 // ── Control definitions ────────────────────────────────────────────────────
 
@@ -428,6 +428,8 @@ export default function Settings() {
                   ))}
                 </div>
               </Section>
+
+              <ProfilesSection />
 
               <Section title="Reset" description="Clear all locally saved settings.">
                 <Button variant="outline" onClick={() => resetConfig()} data-testid="button-reset-config">Reset to defaults</Button>
@@ -878,6 +880,88 @@ function RomLibrarySection() {
       </div>
       {deleteRom.isError && <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">{(deleteRom.error as Error).message}</div>}
       {deleteRom.isSuccess && <div className="rounded-md border border-status-online/40 bg-status-online/10 px-3 py-2 text-xs text-status-online">ROM removed.</div>}
+    </Section>
+  );
+}
+
+// ── Profiles section ──────────────────────────────────────────────────────
+const PROFILE_COLORS = ["#8b5cf6","#ec4899","#06b6d4","#10b981","#f59e0b","#ef4444","#6366f1","#84cc16"];
+
+function ProfilesSection() {
+  const { toast } = useToast();
+  const { data: profiles = [], refetch } = useQuery<UserProfile[]>({ queryKey: ["/api/profiles"] });
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(PROFILE_COLORS[0]);
+  const [adding, setAdding] = useState(false);
+
+  const createProfile = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    setAdding(true);
+    try {
+      await apiRequest("POST", "/api/profiles", { name, color: newColor });
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      setNewName("");
+      toast({ title: "Profile created", description: `"${name}" is ready to use.` });
+    } catch {
+      toast({ title: "Failed to create profile", variant: "destructive" });
+    } finally { setAdding(false); }
+  };
+
+  const deleteProfile = async (id: number) => {
+    if (id === 1) { toast({ title: "Cannot delete the default profile", variant: "destructive" }); return; }
+    try {
+      await apiRequest("DELETE", `/api/profiles/${id}`);
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      toast({ title: "Profile deleted" });
+    } catch {
+      toast({ title: "Failed to delete profile", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Section title="Player profiles" description="Create separate profiles to keep save states, cheats, and key remaps independent. Switch profiles from the library header.">
+      <div className="flex flex-col gap-2">
+        {profiles.map(p => (
+          <div key={p.id} className="flex items-center gap-3 rounded-md border border-border bg-background/40 px-3 py-2">
+            <span className="size-3 rounded-full shrink-0" style={{ background: p.color }} />
+            <UserCircle2 className="size-4 text-muted-foreground shrink-0" />
+            <span className="flex-1 font-mono text-sm">{p.name}</span>
+            {p.id === 1 && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">Default</span>}
+            {p.id !== 1 && (
+              <button type="button" onClick={() => deleteProfile(p.id)}
+                className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+                title="Delete profile">
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-end gap-2 mt-2">
+        <div className="flex-1 flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground font-mono uppercase tracking-wider">New profile name</label>
+          <Input value={newName} onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") void createProfile(); }}
+            placeholder="e.g. Player 2" className="font-mono text-sm" data-testid="input-new-profile-name" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Colour</label>
+          <div className="flex gap-1.5">
+            {PROFILE_COLORS.map(c => (
+              <button key={c} type="button" onClick={() => setNewColor(c)}
+                className="size-6 rounded-full border-2 transition-transform hover:scale-110"
+                style={{ background: c, borderColor: newColor === c ? "white" : "transparent" }}
+                title={c} />
+            ))}
+          </div>
+        </div>
+        <Button onClick={() => void createProfile()} disabled={!newName.trim() || adding}
+          className="gap-1.5" data-testid="button-create-profile">
+          {adding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+          Add
+        </Button>
+      </div>
     </Section>
   );
 }

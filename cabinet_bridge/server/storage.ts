@@ -102,6 +102,9 @@ for (const statement of [
   "ALTER TABLE rom_save_slots ADD COLUMN user_id TEXT NOT NULL DEFAULT \'default\'",
   "CREATE UNIQUE INDEX IF NOT EXISTS rom_save_slots_user_idx ON rom_save_slots (rom_id, user_id, slot)",
   "CREATE TABLE IF NOT EXISTS play_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, rom_title TEXT NOT NULL, rom_system TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER, duration_seconds INTEGER)",
+  "CREATE TABLE IF NOT EXISTS user_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#8b5cf6', created_at INTEGER NOT NULL)",
+  "INSERT OR IGNORE INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', " + String(Date.now()) + ")",
+  "CREATE TABLE IF NOT EXISTS game_cheat_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, profile_id INTEGER NOT NULL DEFAULT 1, description TEXT NOT NULL, code TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL)",
 ]) {
   try {
     sqlite.exec(statement);
@@ -147,6 +150,15 @@ export interface IStorage {
   deleteRomSaveSlot(romId: number, slot: number, userId: string): Promise<boolean>;
   getIntegrationSettings(): Promise<IntegrationSettings>;
   saveIntegrationSettings(settings: IntegrationSettings): Promise<IntegrationSettings>;
+  // Profiles
+  listProfiles(): Promise<import("../shared/schema").UserProfile[]>;
+  createProfile(name: string, color: string): Promise<import("../shared/schema").UserProfile>;
+  deleteProfile(id: number): Promise<boolean>;
+  // Cheats
+  listCheats(romId: number, profileId: number): Promise<import("../shared/schema").GameCheatCode[]>;
+  createCheat(cheat: import("../shared/schema").InsertGameCheatCode): Promise<import("../shared/schema").GameCheatCode>;
+  updateCheatEnabled(id: number, enabled: boolean): Promise<boolean>;
+  deleteCheat(id: number): Promise<boolean>;
 }
 
 const INTEGRATION_SETTINGS_KEY = "integration";
@@ -429,6 +441,44 @@ export class DatabaseStorage implements IStorage {
         .run();
     }
     return settings;
+  }
+
+  // ── Profiles ──────────────────────────────────────────────────────────────
+  async listProfiles() {
+    const { userProfiles } = await import("../shared/schema");
+    return db.select().from(userProfiles).all();
+  }
+  async createProfile(name: string, color: string) {
+    const { userProfiles } = await import("../shared/schema");
+    return db.insert(userProfiles).values({ name, color, createdAt: Date.now() }).returning().get();
+  }
+  async deleteProfile(id: number): Promise<boolean> {
+    if (id === 1) return false; // protect default
+    const { userProfiles } = await import("../shared/schema");
+    const result = db.delete(userProfiles).where(eq(userProfiles.id, id)).run();
+    return result.changes > 0;
+  }
+
+  // ── Cheats ────────────────────────────────────────────────────────────────
+  async listCheats(romId: number, profileId: number) {
+    const { gameCheatCodes } = await import("../shared/schema");
+    return db.select().from(gameCheatCodes)
+      .where(and(eq(gameCheatCodes.romId, romId), eq(gameCheatCodes.profileId, profileId)))
+      .all();
+  }
+  async createCheat(cheat: import("../shared/schema").InsertGameCheatCode) {
+    const { gameCheatCodes } = await import("../shared/schema");
+    return db.insert(gameCheatCodes).values(cheat).returning().get();
+  }
+  async updateCheatEnabled(id: number, enabled: boolean): Promise<boolean> {
+    const { gameCheatCodes } = await import("../shared/schema");
+    const result = db.update(gameCheatCodes).set({ enabled }).where(eq(gameCheatCodes.id, id)).run();
+    return result.changes > 0;
+  }
+  async deleteCheat(id: number): Promise<boolean> {
+    const { gameCheatCodes } = await import("../shared/schema");
+    const result = db.delete(gameCheatCodes).where(eq(gameCheatCodes.id, id)).run();
+    return result.changes > 0;
   }
 }
 

@@ -156,3 +156,30 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   pcAppEntityId: "",
   controlDefaults: {},
 };
+
+// ── User profiles (named, no passwords) ─────────────────────────────────────
+export const userProfiles = sqliteTable("user_profiles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#8b5cf6"),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const insertUserProfileSchema = createInsertSchema(userProfiles).omit({ id: true });
+export type InsertUserProfile = z.infer<typeof insertUserProfileSchema>;
+export type UserProfile = typeof userProfiles.$inferSelect;
+
+// ── Per-game cheat codes ─────────────────────────────────────────────────────
+export const gameCheatCodes = sqliteTable("game_cheat_codes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  romId: integer("rom_id").notNull(),
+  profileId: integer("profile_id").notNull().default(1),
+  description: text("description").notNull(),
+  code: text("code").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const insertGameCheatCodeSchema = createInsertSchema(gameCheatCodes).omit({ id: true });
+export type InsertGameCheatCode = z.infer<typeof insertGameCheatCodeSchema>;
+export type GameCheatCode = typeof gameCheatCodes.$inferSelect;

@@ -19,6 +19,7 @@ export function GameDetailDialog({
   onCreateCollection,
   onToggleCollection,
   onSetStatus,
+  profileId = 1,
 }: {
   game: Game | null;
   onClose: () => void;
@@ -28,6 +29,7 @@ export function GameDetailDialog({
   onCreateCollection: () => void;
   onToggleCollection: (collectionId: number, game: Game, selected: boolean) => void;
   onSetStatus?: (g: Game, status: string) => void;
+  profileId?: number;
 }) {
   const { dispatch, config } = useIntegration();
   const { toast } = useToast();
@@ -76,7 +78,7 @@ export function GameDetailDialog({
     if (romId) {
       setLaunching(true);
       const returnTo = encodeURIComponent(window.location.href);
-      const playerUrl = apiUrl(`/api/roms/${romId}/player?return=${returnTo}`);
+      const playerUrl = apiUrl(`/api/roms/${romId}/player?return=${returnTo}&profile=${profileId}`);
       try {
         const probe = await fetch(playerUrl, { method: "HEAD" });
         if (!probe.ok) {

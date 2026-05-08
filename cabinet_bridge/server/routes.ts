@@ -444,7 +444,10 @@ export async function registerRoutes(
     }
 
     const bootstrapSettings = await storage.getIntegrationSettings();
-    const { userId, userName } = getUserFromRequest(req);
+    const { userId: haUserId, userName } = getUserFromRequest(req);
+    // Profile override: ?profile=<id> lets client-side profiles silo saves
+    const profileParam = req.query.profile ? String(req.query.profile) : null;
+    const userId = profileParam ? `profile_${profileParam}` : haUserId;
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.send(renderEmulatorBootstrap({
       core,
@@ -458,6 +461,7 @@ export async function registerRoutes(
       controlDefaults: (bootstrapSettings.controlDefaults ?? {}) as Record<string, Record<number, string>>,
       userId,
       userName,
+      profileId: profileParam ?? "1",
     }));
   });
 
@@ -521,6 +525,51 @@ export async function registerRoutes(
     }
 
     res.json({ deleted: true, id: deleted.id, fileRemoved });
+  });
+
+  // ── Profiles ──────────────────────────────────────────────────────────────
+  app.get("/api/profiles", async (_req, res) => {
+    res.json(await storage.listProfiles());
+  });
+  app.post("/api/profiles", express.json(), async (req, res) => {
+    const { name, color } = req.body ?? {};
+    if (!name || typeof name !== "string") return res.status(400).json({ message: "name required" });
+    const profile = await storage.createProfile(String(name).trim().slice(0, 32), color || "#8b5cf6");
+    res.status(201).json(profile);
+  });
+  app.delete("/api/profiles/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    if (id === 1) return res.status(400).json({ message: "Cannot delete default profile" });
+    const ok = await storage.deleteProfile(id);
+    res.json({ ok });
+  });
+
+  // ── Cheats ────────────────────────────────────────────────────────────────
+  app.get("/api/roms/:id/cheats", async (req, res) => {
+    const romId = Number(req.params.id);
+    const profileId = Number(req.query.profileId ?? 1);
+    res.json(await storage.listCheats(romId, profileId));
+  });
+  app.post("/api/roms/:id/cheats", express.json(), async (req, res) => {
+    const romId = Number(req.params.id);
+    const { description, code, profileId } = req.body ?? {};
+    if (!code || !description) return res.status(400).json({ message: "code and description required" });
+    const cheat = await storage.createCheat({
+      romId, profileId: Number(profileId ?? 1),
+      description: String(description).slice(0, 128),
+      code: String(code).slice(0, 256),
+      enabled: true, createdAt: Date.now(),
+    });
+    res.status(201).json(cheat);
+  });
+  app.patch("/api/cheats/:id", express.json(), async (req, res) => {
+    const id = Number(req.params.id);
+    const { enabled } = req.body ?? {};
+    res.json({ ok: await storage.updateCheatEnabled(id, !!enabled) });
+  });
+  app.delete("/api/cheats/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    res.json({ ok: await storage.deleteCheat(id) });
   });
 
   app.get("/api/collections", async (_req, res) => {
@@ -2099,6 +2148,28 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         image-rendering: auto !important;
         filter: blur(0.5px) brightness(1.02) !important;
       }
+      #game.cabinet-filter-scanlines {
+        position: relative !important;
+      }
+      #game.cabinet-filter-scanlines canvas {
+        image-rendering: pixelated !important;
+        filter: contrast(1.1) brightness(0.85) !important;
+      }
+      #game.cabinet-filter-scanlines::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px, transparent 1px, transparent 3px);
+        pointer-events: none;
+        z-index: 999;
+      }
+      #game.cabinet-filter-lcd canvas {
+        image-rendering: pixelated !important;
+        filter: contrast(1.3) brightness(1.1) saturate(0.7) !important;
+      }
+      #game.cabinet-filter-phosphor canvas {
+        filter: contrast(1.1) brightness(0.95) saturate(0) sepia(1) hue-rotate(90deg) !important;
+      }
       /* Aspect ratio — !important overrides EmulatorJS inline width/height */
       #game.cabinet-aspect-4-3,
       #game.cabinet-aspect-16-9,
@@ -2458,6 +2529,28 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         image-rendering: auto !important;
         filter: blur(0.5px) brightness(1.02) !important;
       }
+      #game.cabinet-filter-scanlines {
+        position: relative !important;
+      }
+      #game.cabinet-filter-scanlines canvas {
+        image-rendering: pixelated !important;
+        filter: contrast(1.1) brightness(0.85) !important;
+      }
+      #game.cabinet-filter-scanlines::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 1px, transparent 1px, transparent 3px);
+        pointer-events: none;
+        z-index: 999;
+      }
+      #game.cabinet-filter-lcd canvas {
+        image-rendering: pixelated !important;
+        filter: contrast(1.3) brightness(1.1) saturate(0.7) !important;
+      }
+      #game.cabinet-filter-phosphor canvas {
+        filter: contrast(1.1) brightness(0.95) saturate(0) sepia(1) hue-rotate(90deg) !important;
+      }
       /* Aspect ratio — !important overrides EmulatorJS inline width/height */
       #game.cabinet-aspect-4-3,
       #game.cabinet-aspect-16-9,
@@ -2757,9 +2850,33 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
             <button type="button" role="radio" aria-checked="true" data-filter="none" data-testid="button-filter-none" class="cabinet-aspect-btn">None</button>
             <button type="button" role="radio" aria-checked="false" data-filter="crt" data-testid="button-filter-crt" class="cabinet-aspect-btn">CRT</button>
             <button type="button" role="radio" aria-checked="false" data-filter="smooth" data-testid="button-filter-smooth" class="cabinet-aspect-btn">Smooth</button>
+            <button type="button" role="radio" aria-checked="false" data-filter="scanlines" data-testid="button-filter-scanlines" class="cabinet-aspect-btn">Scanlines</button>
+            <button type="button" role="radio" aria-checked="false" data-filter="lcd" data-testid="button-filter-lcd" class="cabinet-aspect-btn">LCD</button>
+            <button type="button" role="radio" aria-checked="false" data-filter="phosphor" data-testid="button-filter-phosphor" class="cabinet-aspect-btn">Phosphor</button>
           </div>
         </div>
       </div>
+    </section>
+    <section class="cabinet-save-panel" id="cabinet-cheats-panel" aria-label="Cheat codes" aria-hidden="true" data-testid="panel-cheats">
+      <div class="cabinet-save-panel__header">
+        <div>
+          <p class="cabinet-save-title">Cheat Codes</p>
+          <p class="cabinet-save-subtitle" id="cabinet-cheats-subtitle">Manage cheat codes for this game.</p>
+        </div>
+        <button type="button" class="cabinet-save-close" id="cabinet-cheats-close" aria-label="Close cheat codes" data-testid="button-close-cheats">×</button>
+      </div>
+      <div style="padding:8px 18px 12px;display:flex;gap:6px;align-items:flex-end;">
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <label style="color:rgba(248,250,252,0.5);font:700 8px ui-monospace,monospace;letter-spacing:0.15em;text-transform:uppercase;">Description</label>
+          <input id="cabinet-cheat-desc" type="text" placeholder="e.g. Infinite lives" autocomplete="off" style="background:#1a1a2e;border:1px solid rgba(248,250,252,0.15);border-radius:8px;color:#f8fafc;font:600 11px ui-monospace,monospace;padding:7px 10px;width:100%;box-sizing:border-box;" />
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+          <label style="color:rgba(248,250,252,0.5);font:700 8px ui-monospace,monospace;letter-spacing:0.15em;text-transform:uppercase;">Code</label>
+          <input id="cabinet-cheat-code" type="text" placeholder="e.g. 7E0DBF63" autocomplete="off" style="background:#1a1a2e;border:1px solid rgba(248,250,252,0.15);border-radius:8px;color:#f8fafc;font:600 11px ui-monospace,monospace;padding:7px 10px;width:100%;box-sizing:border-box;font-family:ui-monospace,monospace;" />
+        </div>
+        <button type="button" id="cabinet-cheat-add" data-testid="button-cheat-add" style="appearance:none;border:1px solid rgba(99,179,100,0.4);border-radius:8px;background:rgba(99,179,100,0.15);color:#f8fafc;cursor:pointer;font:700 9px ui-monospace,monospace;letter-spacing:0.1em;padding:7px 12px;text-transform:uppercase;white-space:nowrap;">+ Add</button>
+      </div>
+      <div id="cabinet-cheats-list" style="padding:0 18px 16px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
     </section>
     <section class="cabinet-save-panel" id="cabinet-remap-panel" aria-label="Key remapping" aria-hidden="true" data-testid="panel-remap">
       <div class="cabinet-save-panel__header">
@@ -2918,7 +3035,7 @@ function buildEjsControls(
   return { 0: p1, 1: {}, 2: {}, 3: {} };
 }
 
-function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken, controlDefaults, userId, userName }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; controlDefaults: Record<string, Record<number, string>>; userId: string; userName: string; }) {
+function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken, controlDefaults, userId, userName, profileId }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; controlDefaults: Record<string, Record<number, string>>; userId: string; userName: string; profileId: string; }) {
   return `"use strict";
 // Diagnostic: immediately mark that this script is executing.
 // If the launch overlay stays at 0%, this script never ran.
@@ -3859,16 +3976,99 @@ function cabinetSetFastForward(enabled) {
   cabinetToast(enabled ? "Fast-forward ON (3×)" : "Fast-forward OFF");
 }
 function cabinetOpenCheats() {
-  cabinetSetMenuOpen(false);
-  var emulator = window.EJS_emulator;
-  if (emulator && emulator.openCheatMenu) {
-    emulator.openCheatMenu();
-  } else if (emulator && emulator.callEvent) {
-    emulator.callEvent("cheat");
-  } else {
-    cabinetToast("Cheat menu not available for this core");
-  }
+  cabinetSetPanelOpen("cabinet-cheats-panel", true);
+  cabinetLoadCheats();
 }
+function cabinetLoadCheats() {
+  var list = document.querySelector("#cabinet-cheats-list");
+  var subtitle = document.querySelector("#cabinet-cheats-subtitle");
+  if (!list) return;
+  list.innerHTML = '<div style="color:rgba(248,250,252,0.4);font:600 10px ui-monospace,monospace;text-align:center;padding:16px 0;">Loading…</div>';
+  fetch("../../roms/" + cabinetRomId + "/cheats?profileId=" + encodeURIComponent(window.CABINET_PROFILE_ID || "1"))
+    .then(function(r) { return r.json(); })
+    .then(function(cheats) {
+      cabinetRenderCheats(cheats);
+      if (subtitle) subtitle.textContent = cheats.length + " cheat" + (cheats.length !== 1 ? "s" : "") + " saved for this game.";
+    })
+    .catch(function() {
+      list.innerHTML = '<div style="color:rgba(239,68,68,0.8);font:600 10px ui-monospace,monospace;text-align:center;padding:16px 0;">Failed to load cheats.</div>';
+    });
+}
+function cabinetRenderCheats(cheats) {
+  var list = document.querySelector("#cabinet-cheats-list");
+  if (!list) return;
+  if (!cheats || cheats.length === 0) {
+    list.innerHTML = '<div style="color:rgba(248,250,252,0.35);font:600 10px ui-monospace,monospace;text-align:center;padding:24px 0;">No cheats yet. Add one above.</div>';
+    return;
+  }
+  list.innerHTML = "";
+  cheats.forEach(function(cheat) {
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:8px;background:rgba(248,250,252,0.05);border:1px solid rgba(248,250,252,0.1);border-radius:8px;padding:8px 10px;";
+    var toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.setAttribute("aria-pressed", cheat.enabled ? "true" : "false");
+    toggle.title = cheat.enabled ? "Disable" : "Enable";
+    toggle.style.cssText = "flex-shrink:0;width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;transition:background 0.2s;background:" + (cheat.enabled ? "hsl(322 92% 60%)" : "rgba(255,255,255,0.15)") + ";position:relative;";
+    var dot = document.createElement("span");
+    dot.style.cssText = "position:absolute;top:2px;width:12px;height:12px;background:#fff;border-radius:50%;transition:left 0.2s;left:" + (cheat.enabled ? "14px" : "2px") + ";";
+    toggle.appendChild(dot);
+    toggle.addEventListener("click", function() {
+      var wasEnabled = toggle.getAttribute("aria-pressed") === "true";
+      fetch("../../cheats/" + cheat.id, { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ enabled: !wasEnabled }) })
+        .then(function() { cabinetLoadCheats(); })
+        .catch(function() { cabinetToast("Failed to update cheat"); });
+    });
+    var info = document.createElement("div");
+    info.style.cssText = "flex:1;min-width:0;";
+    var desc = document.createElement("div");
+    desc.style.cssText = "color:#f8fafc;font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+    desc.textContent = cheat.description;
+    var code = document.createElement("div");
+    code.style.cssText = "color:rgba(248,250,252,0.45);font:500 9px ui-monospace,monospace;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+    code.textContent = cheat.code;
+    info.appendChild(desc);
+    info.appendChild(code);
+    var del = document.createElement("button");
+    del.type = "button";
+    del.title = "Delete";
+    del.style.cssText = "flex-shrink:0;appearance:none;border:1px solid rgba(239,68,68,0.3);border-radius:6px;background:rgba(239,68,68,0.1);color:rgba(239,68,68,0.8);cursor:pointer;font:700 10px ui-monospace,monospace;padding:3px 7px;";
+    del.textContent = "Del";
+    del.addEventListener("click", function() {
+      fetch("../../cheats/" + cheat.id, { method: "DELETE" })
+        .then(function() { cabinetLoadCheats(); cabinetToast("Cheat deleted"); })
+        .catch(function() { cabinetToast("Failed to delete cheat"); });
+    });
+    row.appendChild(toggle);
+    row.appendChild(info);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+(function cabinetInitCheatsPanel() {
+  document.addEventListener("DOMContentLoaded", function() {
+    var closeBtn = document.querySelector("#cabinet-cheats-close");
+    if (closeBtn) closeBtn.addEventListener("click", function() { cabinetSetPanelOpen("cabinet-cheats-panel", false); });
+    var addBtn = document.querySelector("#cabinet-cheat-add");
+    if (addBtn) addBtn.addEventListener("click", function() {
+      var desc = (document.querySelector("#cabinet-cheat-desc") || {}).value || "";
+      var code = (document.querySelector("#cabinet-cheat-code") || {}).value || "";
+      if (!desc.trim() || !code.trim()) { cabinetToast("Enter a description and code"); return; }
+      fetch("../../roms/" + cabinetRomId + "/cheats", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ description: desc.trim(), code: code.trim(), profileId: Number(window.CABINET_PROFILE_ID || 1) })
+      }).then(function() {
+        var d = document.querySelector("#cabinet-cheat-desc");
+        var c = document.querySelector("#cabinet-cheat-code");
+        if (d) d.value = "";
+        if (c) c.value = "";
+        cabinetLoadCheats();
+        cabinetToast("Cheat added");
+      }).catch(function() { cabinetToast("Failed to add cheat"); });
+    });
+  });
+})();
 function cabinetTakeScreenshot() {
   cabinetSetMenuOpen(false);
   var emulator = window.EJS_emulator;
@@ -3914,7 +4114,7 @@ function cabinetApplyAspect(aspect) {
 function cabinetApplyFilter(filter) {
   var game = document.querySelector("#game");
   if (!game) return;
-  game.classList.remove("cabinet-filter-crt", "cabinet-filter-smooth");
+  game.classList.remove("cabinet-filter-crt", "cabinet-filter-smooth", "cabinet-filter-scanlines", "cabinet-filter-lcd", "cabinet-filter-phosphor");
   if (filter !== "none") game.classList.add("cabinet-filter-" + filter);
   var btns = document.querySelectorAll("[data-filter]");
   btns.forEach(function (b) {
@@ -4396,6 +4596,7 @@ window.EJS_gameName = ${JSON.stringify(title)};
 window.EJS_gameID = ${JSON.stringify(userId + "_" + gameId)};
 window.CABINET_USER_ID = ${JSON.stringify(userId)};
 window.CABINET_USER_NAME = ${JSON.stringify(userName)};
+window.CABINET_PROFILE_ID = ${JSON.stringify(profileId)};
 (function () {
   var name = window.CABINET_USER_NAME || "";
   var el = document.getElementById("cabinet-save-user");
