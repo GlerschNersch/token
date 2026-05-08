@@ -336,8 +336,8 @@ export async function registerRoutes(
   // EmulatorJS CDN proxy — fetches EmulatorJS assets server-side so the
   // browser never needs to reach an external CDN through HA Ingress.
   // GET /api/emulatorjs/* → https://cdn.emulatorjs.org/stable/data/*
-  app.get("/api/emulatorjs/*", async (req: import("express").Request, res: import("express").Response) => {
-    const filePath = (req.params as Record<string, string>)[0] ?? "";
+  app.get("/api/emulatorjs/*path", async (req: import("express").Request, res: import("express").Response) => {
+    const filePath = Array.isArray(req.params.path) ? (req.params.path as string[]).join("/") : ((req.params as Record<string, string>).path ?? "");
     if (!filePath || filePath.includes("..")) {
       return res.status(400).send("Invalid path");
     }
