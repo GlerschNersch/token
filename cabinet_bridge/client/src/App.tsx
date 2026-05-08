@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
@@ -20,6 +20,36 @@ function PageFallback() {
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
+}
+
+/**
+ * Fades the route area in whenever the hash location changes.
+ * Uses the Web Animations API so we avoid adding a full animation library.
+ * The container never remounts — only the inner Switch swaps children.
+ */
+function PageTransition({ children }: { children: React.ReactNode }) {
+  const [loc] = useHashLocation();
+  const ref = useRef<HTMLDivElement>(null);
+  const prevLoc = useRef(loc);
+
+  useEffect(() => {
+    if (loc !== prevLoc.current && ref.current) {
+      prevLoc.current = loc;
+      ref.current.animate(
+        [
+          { opacity: 0, transform: "translateY(6px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        { duration: 180, easing: "ease-out", fill: "both" },
+      );
+    }
+  }, [loc]);
+
+  return (
+    <div ref={ref} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {children}
     </div>
   );
 }
@@ -93,7 +123,9 @@ function App() {
              * so content isn't hidden behind it.
              */}
             <div className="h-dvh min-h-dvh flex flex-col">
-              <AppRouter />
+              <PageTransition>
+                <AppRouter />
+              </PageTransition>
               <MobileBottomNav />
             </div>
           </Router>

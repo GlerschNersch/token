@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
@@ -23,6 +23,7 @@ import { filterToPath } from "@/lib/filter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
+import { useGridNav } from "@/lib/useGridNav";
 
 type Sort = "title" | "year" | "recent" | "rating" | "plays";
 
@@ -566,7 +567,7 @@ export default function Home({ filter }: { filter: Filter }) {
                 onResetFilter={() => goToFilter("all")}
               />
             ) : viewMode === "grid" ? (
-              <Grid games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} />
+              <Grid games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} disabled={openGame !== null} />
             ) : (
               <ListView games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} />
             )}
@@ -608,18 +609,30 @@ function Grid({
   games,
   onOpen,
   onToggleFav,
+  disabled,
 }: {
   games: Game[];
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
+  disabled?: boolean;
 }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const { focusedIndex } = useGridNav({
+    count: games.length,
+    gridRef,
+    disabled,
+    onActivate: (i) => { if (games[i]) onOpen(games[i]); },
+    onFav: (i) => { if (games[i]) onToggleFav(games[i]); },
+  });
+
   return (
     <div
+      ref={gridRef}
       className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4"
       data-testid="grid-games"
     >
-      {games.map((g) => (
-        <GameCard key={g.id} game={g} onOpen={onOpen} onToggleFav={onToggleFav} />
+      {games.map((g, i) => (
+        <GameCard key={g.id} game={g} onOpen={onOpen} onToggleFav={onToggleFav} focused={i === focusedIndex} />
       ))}
     </div>
   );

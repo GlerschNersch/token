@@ -8,10 +8,12 @@ export const GameCard = memo(function GameCard({
   game,
   onOpen,
   onToggleFav,
+  focused = false,
 }: {
   game: Game;
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
+  focused?: boolean;
 }) {
   const system = SYSTEMS.find((s) => s.id === game.system);
 
@@ -35,7 +37,12 @@ export const GameCard = memo(function GameCard({
       tabIndex={0}
       onClick={handleOpen}
       onKeyDown={handleKeyDown}
-      className="group relative rounded-lg overflow-hidden border border-card-border bg-card hover-elevate active-elevate-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className={[
+        "group relative rounded-lg overflow-hidden border bg-card hover-elevate active-elevate-2 focus:outline-none transition-[border-color,box-shadow] duration-100",
+        focused
+          ? "border-accent ring-2 ring-accent/60 ring-offset-1 ring-offset-background shadow-[0_0_12px_2px_hsl(var(--accent)/0.35)]"
+          : "border-card-border focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+      ].join(" ")}
       data-testid={`card-game-${game.id}`}
     >
       <div className="aspect-[16/10]">
