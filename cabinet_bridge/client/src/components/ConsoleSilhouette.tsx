@@ -21,6 +21,11 @@ export function ConsoleSilhouette({ systemId }: { systemId: string }) {
     case "gbc":       return <GameBoyColor />;
     case "nds":       return <NDS />;
     case "psp":       return <PSP />;
+    case "atari2600": return <Atari2600 />;
+    case "saturn":    return <Saturn />;
+    case "gamegear":  return <GameGear />;
+    case "sms":       return <MasterSystem />;
+    case "pce":       return <PCEngine />;
     default:          return null;
   }
 }
@@ -379,6 +384,147 @@ function PSP() {
         <rect x="150" y="16" width="40" height="12" rx="6" />
         {/* Home button */}
         <circle cx="100" cy="84" r="5" opacity="0.7" />
+      </g>
+    </svg>
+  );
+}
+
+/* ── Atari 2600 ──────────────────────────────────────────────────────── */
+function Atari2600() {
+  return (
+    <svg {...svgProps}>
+      <g opacity={S} fill="white">
+        {/* Cartridge slot ridge */}
+        <rect x="70" y="8" width="60" height="18" rx="4" />
+        {/* Main body */}
+        <rect x="20" y="22" width="160" height="70" rx="6" />
+        {/* Faceplate recess */}
+        <rect x="30" y="28" width="140" height="54" rx="4" fill="black" opacity="0.25" />
+        {/* Difficulty switches */}
+        <rect x="34" y="34" width="8" height="14" rx="3" />
+        <rect x="48" y="34" width="8" height="14" rx="3" />
+        {/* TV type & reset */}
+        <rect x="138" y="34" width="8" height="14" rx="3" />
+        <rect x="152" y="34" width="8" height="14" rx="3" />
+        {/* Select / Reset labels row */}
+        <rect x="80" y="38" width="18" height="6" rx="2" opacity="0.6" />
+        <rect x="104" y="38" width="18" height="6" rx="2" opacity="0.6" />
+        {/* Joystick port notches */}
+        <rect x="70" y="84" width="20" height="8" rx="2" />
+        <rect x="110" y="84" width="20" height="8" rx="2" />
+      </g>
+    </svg>
+  );
+}
+
+/* ── Sega Saturn ─────────────────────────────────────────────────────── */
+function Saturn() {
+  return (
+    <svg {...svgProps}>
+      <g opacity={S} fill="white">
+        {/* Main body */}
+        <rect x="15" y="18" width="170" height="78" rx="8" />
+        {/* CD lid */}
+        <rect x="25" y="22" width="110" height="50" rx="6" fill="black" opacity="0.3" />
+        <ellipse cx="80" cy="47" rx="42" ry="20" fill="black" opacity="0.2" />
+        {/* Lid open button */}
+        <rect x="140" y="30" width="10" height="10" rx="2" opacity="0.7" />
+        {/* Front face buttons */}
+        <circle cx="148" cy="82" r="7" opacity="0.85" />
+        <circle cx="162" cy="75" r="7" opacity="0.85" />
+        <circle cx="162" cy="89" r="7" opacity="0.85" />
+        <circle cx="176" cy="82" r="7" opacity="0.85" />
+        {/* D-pad */}
+        <rect x="24" y="77" width="24" height="7" rx="2" />
+        <rect x="31" y="70" width="7" height="22" rx="2" />
+        {/* Power / reset */}
+        <circle cx="100" cy="84" r="5" opacity="0.6" />
+        <circle cx="114" cy="84" r="4" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+/* ── Sega Game Gear ──────────────────────────────────────────────────── */
+function GameGear() {
+  return (
+    <svg {...svgProps}>
+      <g opacity={S} fill="white">
+        {/* Body */}
+        <rect x="10" y="20" width="180" height="80" rx="20" />
+        {/* Screen bezel */}
+        <rect x="52" y="28" width="96" height="60" rx="6" fill="black" opacity="0.35" />
+        {/* Screen */}
+        <rect x="58" y="34" width="84" height="48" rx="4" fill="black" opacity="0.2" />
+        {/* D-pad */}
+        <rect x="16" y="64" width="30" height="8" rx="3" />
+        <rect x="25" y="55" width="8" height="26" rx="3" />
+        {/* Buttons (1, 2, start) */}
+        <circle cx="158" cy="60" r="9" opacity="0.85" />
+        <circle cx="174" cy="60" r="9" opacity="0.85" />
+        <rect x="158" y="78" width="22" height="7" rx="3" opacity="0.7" />
+        {/* Speaker dots */}
+        <circle cx="20" cy="38" r="3" opacity="0.5" />
+        <circle cx="28" cy="38" r="3" opacity="0.5" />
+        <circle cx="20" cy="46" r="3" opacity="0.5" />
+        <circle cx="28" cy="46" r="3" opacity="0.5" />
+      </g>
+    </svg>
+  );
+}
+
+/* ── Sega Master System ──────────────────────────────────────────────── */
+function MasterSystem() {
+  return (
+    <svg {...svgProps}>
+      <g opacity={S} fill="white">
+        {/* Main body */}
+        <rect x="10" y="25" width="180" height="68" rx="4" />
+        {/* Cartridge slot */}
+        <rect x="30" y="22" width="60" height="8" rx="2" />
+        {/* Card slot */}
+        <rect x="100" y="22" width="36" height="8" rx="2" />
+        {/* Faceplate */}
+        <rect x="18" y="32" width="100" height="52" rx="3" fill="black" opacity="0.25" />
+        {/* Power LED */}
+        <circle cx="130" cy="44" r="5" opacity="0.8" />
+        {/* Reset button */}
+        <rect x="126" y="60" width="12" height="10" rx="3" opacity="0.7" />
+        {/* Port 1 */}
+        <rect x="148" y="38" width="24" height="16" rx="3" />
+        {/* Port 2 */}
+        <rect x="148" y="62" width="24" height="16" rx="3" />
+        {/* Red stripe accent */}
+        <rect x="18" y="64" width="100" height="8" rx="0" opacity="0.4" />
+      </g>
+    </svg>
+  );
+}
+
+/* ── TurboGrafx-16 / PC Engine ───────────────────────────────────────── */
+function PCEngine() {
+  return (
+    <svg {...svgProps}>
+      <g opacity={S} fill="white">
+        {/* Compact square body */}
+        <rect x="50" y="10" width="100" height="100" rx="8" />
+        {/* HuCard slot top */}
+        <rect x="62" y="6" width="76" height="8" rx="3" />
+        {/* Faceplate */}
+        <rect x="56" y="16" width="88" height="72" rx="5" fill="black" opacity="0.25" />
+        {/* Run / Select buttons */}
+        <circle cx="82" cy="96" r="6" opacity="0.8" />
+        <circle cx="100" cy="96" r="6" opacity="0.8" />
+        <circle cx="118" cy="96" r="6" opacity="0.8" />
+        {/* Power light */}
+        <circle cx="136" cy="24" r="4" opacity="0.7" />
+        {/* Speaker grille dots */}
+        <circle cx="64" cy="80" r="2.5" opacity="0.5" />
+        <circle cx="72" cy="80" r="2.5" opacity="0.5" />
+        <circle cx="64" cy="88" r="2.5" opacity="0.5" />
+        <circle cx="72" cy="88" r="2.5" opacity="0.5" />
+        {/* Controller port */}
+        <rect x="62" y="104" width="76" height="6" rx="2" />
       </g>
     </svg>
   );

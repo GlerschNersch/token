@@ -66,6 +66,15 @@ sqlite.exec(`
     value TEXT NOT NULL,
     updated_at INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS play_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rom_id INTEGER NOT NULL,
+    rom_title TEXT NOT NULL,
+    rom_system TEXT NOT NULL,
+    started_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    duration_seconds INTEGER
+  );
 `);
 for (const statement of [
   "ALTER TABLE uploaded_roms ADD COLUMN art_url TEXT",
@@ -90,6 +99,7 @@ for (const statement of [
   // Per-user save state isolation
   "ALTER TABLE rom_save_slots ADD COLUMN user_id TEXT NOT NULL DEFAULT \'default\'",
   "CREATE UNIQUE INDEX IF NOT EXISTS rom_save_slots_user_idx ON rom_save_slots (rom_id, user_id, slot)",
+  "CREATE TABLE IF NOT EXISTS play_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, rom_title TEXT NOT NULL, rom_system TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER, duration_seconds INTEGER)",
 ]) {
   try {
     sqlite.exec(statement);
@@ -118,6 +128,9 @@ export interface IStorage {
   listRomsByDiscGroup(discGroup: string): Promise<UploadedRom[]>;
   incrementRomMinutesPlayed(id: number, minutes: number): Promise<UploadedRom | undefined>;
   updateUploadedRomPlayStatus(id: number, status: string): Promise<UploadedRom | undefined>;
+  createPlaySession(romId: number, romTitle: string, romSystem: string, startedAt: number): Promise<number>;
+  endPlaySession(sessionId: number, endedAt: number, durationSeconds: number): Promise<void>;
+  listRecentSessions(limit?: number): Promise<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>>;
   updateUploadedRomMetadata(
     id: number,
     meta: Partial<Pick<InsertUploadedRom, "description" | "releaseYear" | "developer" | "publisher" | "genre" | "players" | "artUrl" | "scrapeStatus" | "scrapeMessage" | "communityScore" | "wheelArtUrl">>,
@@ -348,6 +361,34 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.userId, userId), eq(romSaveSlots.slot, slot)))
       .run();
     return result.changes > 0;
+  }
+
+  async createPlaySession(romId: number, romTitle: string, romSystem: string, startedAt: number): Promise<number> {
+    const result = sqlite.prepare(
+      "INSERT INTO play_sessions (rom_id, rom_title, rom_system, started_at) VALUES (?, ?, ?, ?)"
+    ).run(romId, romTitle, romSystem, startedAt);
+    return result.lastInsertRowid as number;
+  }
+
+  async endPlaySession(sessionId: number, endedAt: number, durationSeconds: number): Promise<void> {
+    sqlite.prepare(
+      "UPDATE play_sessions SET ended_at = ?, duration_seconds = ? WHERE id = ?"
+    ).run(endedAt, durationSeconds, sessionId);
+  }
+
+  async listRecentSessions(limit = 50): Promise<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>> {
+    const rows = sqlite.prepare(
+      "SELECT id, rom_id, rom_title, rom_system, started_at, ended_at, duration_seconds FROM play_sessions ORDER BY started_at DESC LIMIT ?"
+    ).all(limit) as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      id: r.id as number,
+      romId: r.rom_id as number,
+      romTitle: r.rom_title as string,
+      romSystem: r.rom_system as string,
+      startedAt: r.started_at as number,
+      endedAt: (r.ended_at ?? null) as number | null,
+      durationSeconds: (r.duration_seconds ?? null) as number | null,
+    }));
   }
 
   async getIntegrationSettings(): Promise<IntegrationSettings> {

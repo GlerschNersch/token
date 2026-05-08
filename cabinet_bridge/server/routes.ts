@@ -22,6 +22,8 @@ import { z } from "zod";
 
 // In-memory "now playing" state — tracks the game currently open in the browser player
 let nowPlayingRom: { id: number; title: string; system: string } | null = null;
+let activeSessionId: number | null = null;
+let activeSessionStart = 0;
 
 
 const ROM_EXTENSIONS: Record<string, string[]> = {
@@ -65,6 +67,11 @@ const EMULATORJS_CORES: Record<string, string> = {
   gbc: "gambatte",
   nds: "melonds",
   psp: "ppsspp",
+  atari2600: "stella2014",
+  saturn: "yabause",
+  gamegear: "smsgg",
+  sms: "smsgg",
+  pce: "pce",
 };
 
 const ROM_ROOT = path.resolve(dataPath("rom-storage"));
@@ -90,6 +97,11 @@ const LIBRETRO_PLAYLISTS: Record<string, string> = {
   gbc: "Nintendo - Game Boy Color",
   nds: "Nintendo - Nintendo DS",
   psp: "Sony - PlayStation Portable",
+  atari2600: "Atari - 2600",
+  saturn: "Sega - Saturn",
+  gamegear: "Sega - Game Gear",
+  sms: "Sega - Master System - Mark III",
+  pce: "NEC - PC Engine - TurboGrafx 16",
 };
 
 /**
@@ -724,6 +736,11 @@ export async function registerRoutes(
     gbc:       "https://commons.wikimedia.org/wiki/Special:FilePath/Game_Boy_Color_logo.svg",
     nds:       "https://commons.wikimedia.org/wiki/Special:FilePath/Nintendo_DS_Logo.svg",
     arcade:    "https://commons.wikimedia.org/wiki/Special:FilePath/MAME_Logo.svg",
+    atari2600: "https://commons.wikimedia.org/wiki/Special:FilePath/Atari-logo.svg",
+    saturn:    "https://commons.wikimedia.org/wiki/Special:FilePath/Sega_Saturn_logo.svg",
+    gamegear:  "https://commons.wikimedia.org/wiki/Special:FilePath/Sega_Game_Gear_logo.svg",
+    sms:       "https://commons.wikimedia.org/wiki/Special:FilePath/Sega_Master_System_logo.svg",
+    pce:       "https://commons.wikimedia.org/wiki/Special:FilePath/TurboGrafx16-logo.svg",
   };
 
   app.get("/api/system-logos/:id", async (req, res) => {
@@ -883,11 +900,19 @@ export async function registerRoutes(
       durationSeconds: z.number().int().min(0).optional(),
     }).parse(req.body);
 
-    // Track "now playing" in memory
+    // Track "now playing" in memory and log to play_sessions
     if (event === "started") {
       nowPlayingRom = { id: rom.id, title: rom.title, system: rom.system };
+      activeSessionStart = Date.now();
+      activeSessionId = await storage.createPlaySession(rom.id, rom.title, rom.system, activeSessionStart).catch(() => null);
     } else {
       nowPlayingRom = null;
+      if (activeSessionId) {
+        const endedAt = Date.now();
+        const dur = durationSeconds ?? Math.round((endedAt - activeSessionStart) / 1000);
+        await storage.endPlaySession(activeSessionId, endedAt, dur).catch(() => {});
+        activeSessionId = null;
+      }
     }
 
     const settings = await storage.getIntegrationSettings();
@@ -935,6 +960,16 @@ export async function registerRoutes(
     }
 
     res.json({ ok: true });
+  });
+
+  // Recent play session history
+  app.get("/api/sessions", async (_req, res) => {
+    try {
+      const sessions = await storage.listRecentSessions(100);
+      res.json(sessions);
+    } catch {
+      res.json([]);
+    }
   });
 
   // Current "now playing" state — polled by the Lovelace card and HA REST sensor
@@ -1211,6 +1246,11 @@ const SCREENSCRAPER_SYSTEM_IDS: Record<string, number> = {
   gbc: 10,
   nds: 15,
   psp: 61,
+  atari2600: 26,
+  saturn: 22,
+  gamegear: 21,
+  sms: 2,
+  pce: 31,
 };
 
 interface ScreenScraperMeta {
@@ -2411,6 +2451,7 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         <button type="button" id="cabinet-gamepad-test-open" data-testid="button-gamepad-tester">Test Pad</button>
         <button type="button" id="cabinet-netplay-open" data-testid="button-netplay">Netplay</button>
         <button type="button" id="cabinet-sleep-open" data-testid="button-sleep-timer">Sleep Timer</button>
+        <button type="button" id="cabinet-crt-toggle" aria-pressed="false" data-testid="button-crt-filter">CRT Filter</button>
         <div class="cabinet-menu-divider" role="separator"></div>
         <button type="button" class="danger" id="cabinet-exit" data-testid="button-exit-player">Exit Game</button>
       </div>
@@ -3398,6 +3439,13 @@ document.addEventListener("click", function (event) {
   if (target.id === "cabinet-screenshot") {
     cabinetTakeScreenshot();
   }
+  if (target.id === "cabinet-crt-toggle") {
+    var _game = document.querySelector("#game");
+    var _crtOn = _game && _game.classList.contains("cabinet-filter-crt");
+    cabinetApplyFilter(_crtOn ? "none" : "crt");
+    var _crtBtn = document.querySelector("#cabinet-crt-toggle");
+    if (_crtBtn) { _crtBtn.setAttribute("aria-pressed", _crtOn ? "false" : "true"); _crtBtn.textContent = _crtOn ? "CRT Filter" : "CRT On"; }
+  }
   if (target.id === "cabinet-display-open") {
     cabinetSetDisplayPanel(true);
   }
@@ -3655,6 +3703,13 @@ function cabinetInitDisplay() {
     window.setTimeout(function () {
       cabinetApplyAspect(aspect);
       cabinetApplyFilter(filter);
+      // Sync the CRT quick-toggle button label
+      var _crtBtn = document.querySelector("#cabinet-crt-toggle");
+      if (_crtBtn) {
+        var _on = filter === "crt";
+        _crtBtn.setAttribute("aria-pressed", _on ? "true" : "false");
+        _crtBtn.textContent = _on ? "CRT On" : "CRT Filter";
+      }
     }, 500);
   } catch (_e) {}
 }
@@ -4076,6 +4131,37 @@ window.EJS_onGameStart = function () {
       try { window.EJS_emulator.saveState(0); } catch (e) { /* ignore */ }
     }
   });
+  // Auto-save when tab is hidden (mobile app-switch, screen lock, background)
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") {
+      try {
+        window.EJS_emulator.saveState(0);
+        cabinetCaptureThumb("auto");
+        localStorage.setItem("cabinet_autosave_" + (window.EJS_gameID || ""), String(Date.now()));
+      } catch (_e) {}
+    }
+  });
+  // iOS Safari fires pagehide instead of beforeunload when navigating away
+  window.addEventListener("pagehide", function () {
+    if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") {
+      try { window.EJS_emulator.saveState(0); } catch (_e) {}
+    }
+  });
+  // Restore auto-save from previous session (if tab was hidden mid-game)
+  var _autoKey = "cabinet_autosave_" + (window.EJS_gameID || "");
+  var _autoTs = null;
+  try { _autoTs = localStorage.getItem(_autoKey); } catch (_e) {}
+  if (_autoTs) {
+    try { localStorage.removeItem(_autoKey); } catch (_e) {}
+    var _autoMins = Math.round((Date.now() - Number(_autoTs)) / 60000);
+    var _autoLabel = _autoMins < 1 ? "just now" : _autoMins + " min ago";
+    setTimeout(function () {
+      cabinetToast("Resuming auto-save from " + _autoLabel + "…");
+      if (window.EJS_emulator && typeof window.EJS_emulator.loadState === "function") {
+        try { window.EJS_emulator.loadState(0); } catch (_e) {}
+      }
+    }, 2500);
+  }
 };
 window.EJS_player = "#game";
 window.EJS_core = ${JSON.stringify(core)};

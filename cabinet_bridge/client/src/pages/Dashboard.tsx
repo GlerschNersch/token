@@ -13,7 +13,7 @@ import { apiUrl } from "@/lib/queryClient";
 import { formatRelative } from "@/lib/integration";
 import { useGameDialogState } from "@/lib/useGameDialogState";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
-import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap } from "lucide-react";
+import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap, History } from "lucide-react";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function fmtHours(minutes: number) {
@@ -316,6 +316,10 @@ function ActivityBar({
 // ─── main page ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { data: roms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
+  const { data: sessions = [] } = useQuery<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>>({
+    queryKey: ["/api/sessions"],
+    staleTime: 30_000,
+  });
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({
     queryKey: ["/api/collections"],
   });
@@ -684,6 +688,40 @@ export default function Dashboard() {
                   </div>
                 ))}
               </HorizontalShelf>
+            </section>
+          )}
+
+          {/* ── Recent Activity ── */}
+          {sessions.length > 0 && (
+            <section>
+              <SectionHeader title="Recent activity" />
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                {sessions.slice(0, 12).map((s, i) => {
+                  const system = SYSTEMS.find((sys) => sys.id === s.romSystem);
+                  const dur = s.durationSeconds
+                    ? s.durationSeconds < 60
+                      ? `${s.durationSeconds}s`
+                      : `${Math.round(s.durationSeconds / 60)}m`
+                    : null;
+                  const when = formatRelative(s.startedAt);
+                  return (
+                    <div
+                      key={s.id}
+                      className={`flex items-center gap-3 px-4 py-2.5 ${i < sessions.slice(0, 12).length - 1 ? "border-b border-border" : ""}`}
+                    >
+                      <History className="size-3.5 text-muted-foreground shrink-0" />
+                      <span className="flex-1 min-w-0 font-medium text-sm truncate">{s.romTitle}</span>
+                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                        {system?.shortName ?? s.romSystem}
+                      </span>
+                      {dur && (
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{dur}</span>
+                      )}
+                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground/60">{when}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </section>
           )}
 
