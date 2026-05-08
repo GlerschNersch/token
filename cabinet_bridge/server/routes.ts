@@ -353,8 +353,8 @@ export async function registerRoutes(
       const ct = upstream.headers.get("Content-Type") ?? "application/octet-stream";
       res.setHeader("Content-Type", ct);
       res.setHeader("Cache-Control", "public, max-age=604800"); // 7 days
-      const cl = upstream.headers.get("Content-Length");
-      if (cl) res.setHeader("Content-Length", cl);
+      // NOTE: Do NOT forward Content-Length — Node fetch decompresses gzip bodies
+      // so the CDN's compressed Content-Length would be wrong, truncating the script.
       const { Readable } = await import("stream");
       Readable.fromWeb(upstream.body as import("stream/web").ReadableStream).pipe(res);
     } catch {
