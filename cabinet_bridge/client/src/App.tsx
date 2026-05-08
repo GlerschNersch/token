@@ -8,7 +8,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { IntegrationProvider } from "@/lib/integration";
 import { parseFilter, parseCollectionFilter, DEFAULT_FILTER } from "@/lib/filter";
 import { MobileBottomNav } from "@/components/MobileNav";
-// Critical path — loaded eagerly
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/not-found";
@@ -88,4 +87,20 @@ function App() {
           <Toaster />
           <Router hook={useHashLocation}>
             {/*
-             * Root container — f
+             * Root container — fills the viewport.
+             * MobileBottomNav is fixed-position so it doesn't affect layout,
+             * but pages must add pb-20 lg:pb-0 to their scroll containers
+             * so content isn't hidden behind it.
+             */}
+            <div className="h-dvh min-h-dvh flex flex-col">
+              <AppRouter />
+              <MobileBottomNav />
+            </div>
+          </Router>
+        </TooltipProvider>
+      </IntegrationProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

@@ -862,3 +862,15 @@ function ContinueHero({ game, onOpen }: { game: Game; onOpen: (g: Game) => void 
             <Button
               size="lg"
               variant="outline"
+              onClick={() => onOpen(game)}
+              className="bg-black/70 border-white/35 text-white hover:bg-black/85 shadow-sm"
+              data-testid="button-hero-details"
+            >
+              Details
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

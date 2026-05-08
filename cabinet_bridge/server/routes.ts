@@ -53,7 +53,7 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 const EMULATORJS_CORES: Record<string, string> = {
   nes: "nes",
-  snes: "bsnes",
+  snes: "snes",
   n64: "n64",
   gba: "gba",
   genesis: "segaMD",
@@ -801,7 +801,6 @@ export async function registerRoutes(
     const roms = await storage.listUploadedRoms();
     const targets = force ? roms : roms.filter((r) => r.scrapeStatus !== "matched");
 
-    // Set up SSE
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
@@ -4069,4 +4068,85 @@ window.CABINET_USER_NAME = ${JSON.stringify(userName)};
   var el = document.getElementById("cabinet-save-user");
   if (el) el.textContent = name || "you";
   var badge = document.getElementById("cabinet-user-badge");
-  if (badge && name && name !== "default") { badge.textContent = nam
+  if (badge && name && name !== "default") { badge.textContent = name; badge.removeAttribute("hidden"); }
+})();
+${discs.length > 1
+  ? `window.EJS_discs = ${JSON.stringify(discs.map((d) => ({ fileName: `../\${d.id}/file`, label: d.label })))};`
+  : `window.EJS_gameUrl = "./file";`}
+window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
+window.EJS_startOnLoaded = true;
+window.EJS_AdUrl = "";
+${raUsername && raToken ? `window.EJS_retroachievements = { username: ${JSON.stringify(raUsername)}, apiKey: ${JSON.stringify(raToken)}, hardcore: false };` : "// RetroAchievements not configured"}
+window.EJS_rewindEnabled = true;
+window.EJS_rewindGranularity = 2;
+window.EJS_fastForwardSpeed = 3;
+window.EJS_controlScheme = ${JSON.stringify(core)};
+window.EJS_defaultControls = ${JSON.stringify(buildEjsControls(core, controlDefaults))};
+window.EJS_defaultOptions = {
+  "save-state-location": "browser",
+  "save-state-slot": 1
+};
+window.EJS_Buttons = {
+  playPause: true,
+  restart: true,
+  mute: true,
+  settings: true,
+  fullscreen: true,
+  saveState: true,
+  loadState: true,
+  screenRecord: false,
+  gamepad: true,
+  cheat: true,
+  volume: true,
+  saveSavFiles: true,
+  loadSavFiles: true,
+  quickSave: true,
+  quickLoad: true,
+  screenshot: true,
+  cacheManager: true,
+  exitEmulation: true
+};
+var loader = document.createElement("script");
+loader.src = "https://cdn.emulatorjs.org/stable/data/loader.js";
+loader.onload = function () {
+  cabinetSetLaunchProgress(42, "Emulator loader downloaded…", "Loader");
+};
+loader.onerror = function () {
+  cabinetFailLaunchProgress("Emulator loader blocked. Try the standalone player or local Home Assistant add-on.");
+  var game = document.querySelector("#game");
+  if (game) game.innerHTML = '<div class="loading"><div>Emulator loader blocked</div><div class="hint">The preview frame could not load EmulatorJS from the CDN. The Home Assistant local add-on will avoid this by serving the emulator locally.</div></div>';
+};
+document.body.appendChild(loader);
+`;
+}
+
+function renderPlayerError(message: string) {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: #050507;
+        color: #f8fafc;
+        font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>${escapeHtml(message)}</body>
+</html>`;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

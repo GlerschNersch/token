@@ -205,4 +205,8 @@ function PixelGrid({ accent, dim = false }: { accent: string; dim?: boolean }) {
 function hashSeed(s: string) {
   let h = 0;
   for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s
+    h = (h << 5) - h + s.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}

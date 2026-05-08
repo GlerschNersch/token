@@ -42,14 +42,12 @@ export const GameCard = memo(function GameCard({
         <GameArt game={game} />
       </div>
 
-      {/* Top-left NEW badge */}
       {isNew && (
         <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30 pointer-events-none">
           New
         </div>
       )}
 
-      {/* Top-right favorite */}
       <button
         type="button"
         onClick={handleFav}
@@ -63,7 +61,6 @@ export const GameCard = memo(function GameCard({
         />
       </button>
 
-      {/* Hover-only details overlay */}
       <button
         type="button"
         onClick={handleOpen}
@@ -76,7 +73,6 @@ export const GameCard = memo(function GameCard({
         </span>
       </button>
 
-      {/* Meta footer below art */}
       <div className="px-3 py-2.5 flex items-center justify-between gap-2 text-[10px] 2xl:text-[11px] font-mono text-muted-foreground border-t border-card-border">
         <span className="truncate uppercase tracking-wider min-w-0" data-testid={`text-system-${game.id}`}>
           {system?.shortName ?? game.system}
@@ -89,7 +85,7 @@ export const GameCard = memo(function GameCard({
           ) : null}
           <span className="flex items-center gap-0.5 whitespace-nowrap" data-testid={`text-rating-${game.id}`}>
             <Star className="size-3 fill-current text-chart-3" />
-            {game.rating > 0 ? game.rating : "—"}
+            {game.rating > 0 ? game.rating : "\u2014"}
           </span>
         </div>
       </div>
