@@ -2,7 +2,7 @@
 
 > Retro gaming, right inside Home Assistant.
 
-HomeArcade is a Home Assistant add-on that turns your sidebar into a full retro game library. Upload ROMs, browse by system, launch games in an in-browser emulator, track play time, and earn RetroAchievements — all without leaving Home Assistant.
+HomeArcade is a Home Assistant App that turns your sidebar into a full retro game library. Upload ROMs, browse by system, launch games in an in-browser emulator, track play time, and earn RetroAchievements — all without leaving Home Assistant.
 
 **Current version: 0.3.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
@@ -16,7 +16,7 @@ HomeArcade is a Home Assistant add-on that turns your sidebar into a full retro 
 
 **1. Add the repository**
 
-In Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, paste:
+In Home Assistant: **Settings → Apps → Install app → ⋮ → Repositories**, paste:
 ```
 https://github.com/GlerschNersch/token
 ```
@@ -75,25 +75,25 @@ That's it. No port forwarding, no reverse proxy, no extra software.
 
 ### Requirements
 
-- Home Assistant OS or Supervised (add-on support required)
+- Home Assistant OS or Supervised (app support required)
 - `amd64` or `aarch64` host architecture
 - ~500 MB free space for the Docker image; more for ROMs
 
 ### Step-by-step
 
-1. **Settings → Add-ons → Add-on Store → ⋮ (three dots, top right) → Repositories**
+1. **Settings → Apps → App Store → ⋮ (three dots, top right) → Repositories**
 2. Paste `https://github.com/GlerschNersch/token` and click **Add**
 3. Close the dialog and scroll to find **HomeArcade** in the store
 4. Click **Install** — the first build takes 2–5 minutes (compiling native SQLite bindings)
 5. Once installed, click **Start**
-6. Toggle **Show in sidebar** on the add-on page
+6. Toggle **Show in sidebar** on the App page
 7. Click **Open Web UI** or select HomeArcade from the sidebar
 
-> The add-on runs on port 5000 internally and is exposed via HA Ingress — no firewall rules or reverse-proxy configuration needed.
+> The app runs on port 5000 internally and is exposed via HA Ingress — no firewall rules or reverse-proxy configuration needed.
 
 ### Updating
 
-When a new version is available, an **Update** button appears at the top of the HomeArcade add-on page. Click it — your ROMs, save states, and settings are preserved (they live in the Supervisor-managed `/data` volume, which is never touched by an update).
+When a new version is available, an **Update** button appears at the top of the HomeArcade app page. Click it — your ROMs, save states, and settings are preserved (they live in the Supervisor-managed `/data` volume, which is never touched by an update).
 
 > **Rebuild vs Update:** "Rebuild" re-compiles the currently installed version from HA's local cache. "Update" pulls the latest code from GitHub and rebuilds — use this to get new features and bug fixes.
 
@@ -101,7 +101,7 @@ When a new version is available, an **Update** button appears at the top of the 
 
 ## Uploading ROMs
 
-ROMs are stored in `/data/rom-storage/` inside the add-on and tracked in a SQLite database — both survive updates and restarts.
+ROMs are stored in `/data/rom-storage/` inside the app and tracked in a SQLite database — both survive updates and restarts.
 
 **How to upload:**
 1. Click a system in the sidebar (e.g. "PlayStation 1")
@@ -222,24 +222,24 @@ Enable in **Settings → Kiosk**. Hides settings/system management pages and opt
 
 ### Game loads to 0% and stalls
 - Hard-refresh the page (`Ctrl`+`Shift`+`R`) to clear cached JS
-- Check the add-on log (**Settings → Add-ons → HomeArcade → Log**) for errors
+- Check the app log (**Settings → apps → HomeArcade → Log**) for errors
 - Make sure you're on the latest version (click **Update** if available)
 
 ### "Couldn't launch game" error
 - The ROM file may have been deleted from `/data/rom-storage/`. Re-upload the ROM.
-- The add-on may have restarted — wait a moment and try again.
+- The app may have restarted — wait a moment and try again.
 
 ### Upload returns 404 under HA Ingress
-- Make sure the add-on status is **Started** (not just installed)
+- Make sure the app status is **Started** (not just installed)
 - Hard-refresh the panel — the Ingress token rotates on restart
-- Check **Settings → Add-ons → HomeArcade → Log** for startup errors
+- Check **Settings → app → HomeArcade → Log** for startup errors
 
 ### Cover art scrape returns "No art found"
 - Rename the ROM file to exactly match the official title (e.g. `Super Mario World (USA).sfc`)
 - Check your ScreenScraper credentials in Settings
 - ScreenScraper has daily rate limits on free accounts — try again after midnight UTC
 
-### Add-on won't start after install
+### Apps won't start after install
 - Check the Log tab for build errors
 - If you see `better-sqlite3` errors, try **Rebuild** (this re-compiles the native module for your architecture)
 - On Raspberry Pi 4 (aarch64), the first build takes up to 10 minutes — be patient
@@ -249,7 +249,7 @@ Enable in **Settings → Kiosk**. Hides settings/system management pages and opt
 - To pull new code, wait for a version bump and click **Update** instead
 
 ### The sidebar shows "Cabinet" instead of "HomeArcade"
-- This is a leftover panel title from older installs — it's cosmetic only. Remove and re-add the add-on to get the correct title, or rename it in your HA dashboard settings.
+- This is a leftover panel title from older installs — it's cosmetic only. Remove and re-add the app to get the correct title, or rename it in your HA dashboard settings.
 
 ### Gamepad not detected
 - Plug in the controller **before** launching the emulator
@@ -281,9 +281,9 @@ npm run build     # production build (same as Docker)
 ```
 .
 ├── README.md
-├── repository.yaml          # HA add-on repository manifest
-└── cabinet_bridge/          # the add-on (Docker build context)
-    ├── config.yaml          # add-on manifest — bump version to ship updates
+├── repository.yaml          # HA app repository manifest
+└── cabinet_bridge/          # the app (Docker build context)
+    ├── config.yaml          # app manifest — bump version to ship updates
     ├── Dockerfile
     ├── run.sh
     ├── client/              # React + Vite SPA
