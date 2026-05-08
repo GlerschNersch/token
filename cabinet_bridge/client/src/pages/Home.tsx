@@ -503,7 +503,21 @@ export default function Home({ filter }: { filter: Filter }) {
           )}
 
           {/* Systems strip */}
-
+          {(filter === "favorites" || filter === "all") && !query ? (
+            <section className="px-4 sm:px-8 pt-5 pb-1">
+              <SectionHeading
+                title="Browse Systems"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => goToFilter("all")}
+                    className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                    data-testid="button-see-all-systems"
+                  >
+                    See all <ChevronRight className="inline size-3" />
+                  </button>
+                }
+              />
               <div
                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
                 data-testid="grid-systems"
