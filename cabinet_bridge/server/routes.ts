@@ -4446,6 +4446,32 @@ function cabinetGenerateRoomCode() {
   }
   return code;
 }
+var cabinetNetplayWs = null;
+var cabinetNetplayRole = null;
+
+function cabinetNetplayConnect(onOpen) {
+  if (cabinetNetplayWs && cabinetNetplayWs.readyState === WebSocket.OPEN) {
+    onOpen(cabinetNetplayWs);
+    return;
+  }
+  var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  var base = window.location.pathname.replace(/\/api\/roms\/\d+\/player.*/, "");
+  var url = proto + "//" + window.location.host + base + "/api/netplay";
+  var ws = new WebSocket(url);
+  ws.addEventListener("open", function () {
+    cabinetNetplayWs = ws;
+    onOpen(ws);
+  });
+  ws.addEventListener("error", function () {
+    cabinetToast("Netplay: connection failed");
+  });
+  ws.addEventListener("close", function () {
+    cabinetNetplayWs = null;
+    cabinetNetplayRole = null;
+  });
+  return ws;
+}
+
 function cabinetSetupNetplay() {
   var openBtn = document.querySelector("#cabinet-netplay-open");
   var closeBtn = document.querySelector("#cabinet-netplay-close");
@@ -4484,26 +4510,45 @@ function cabinetSetupNetplay() {
   if (closeBtn) closeBtn.addEventListener("click", closePanel);
 
   if (hostBtn) hostBtn.addEventListener("click", function () {
-    var code = cabinetGenerateRoomCode();
-    if (roomCodeEl) roomCodeEl.textContent = code;
+    setStatus("Connecting to netplay server…");
     showSection("host");
-    setStatus("Waiting for opponent to connect…");
-    // Wire up EmulatorJS netplay if available
-    try {
-      if (window.EJS_emulator && typeof window.EJS_emulator.startNetplay === "function") {
-        window.EJS_emulator.startNetplay(code);
-        setStatus("Room " + code + " open — share the code!");
-      } else {
-        setStatus("Room code generated. EmulatorJS netplay available once game is loaded.");
-      }
-    } catch (_e) {
-      setStatus("Room code generated — start the game first to activate netplay.");
-    }
+    if (roomCodeEl) roomCodeEl.textContent = "…";
+    cabinetNetplayRole = "host";
+    cabinetNetplayConnect(function (ws) {
+      ws.send(JSON.stringify({ type: "create-room" }));
+      ws.addEventListener("message", function onMsg(e) {
+        var msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === "room-created") {
+          var code = msg.room;
+          if (roomCodeEl) roomCodeEl.textContent = code;
+          setStatus("Share this code with your opponent.");
+          // Tell EmulatorJS netplay which server to use (already set via EJS_netplayUrl)
+          // and start hosting — try the built-in API if available
+          try {
+            var emu = window.EJS_emulator;
+            if (emu && emu.netplay && typeof emu.netplay.host === "function") {
+              emu.netplay.host(code);
+            } else if (emu && typeof emu.enableNetplay === "function") {
+              emu.enableNetplay(true, code, true);
+            }
+          } catch (_e) {}
+        } else if (msg.type === "peer-joined") {
+          setStatus("Opponent connected! Game syncing…");
+          cabinetToast("Netplay: opponent joined!");
+        } else if (msg.type === "peer-disconnected") {
+          setStatus("Opponent disconnected.");
+          cabinetToast("Netplay: opponent left");
+        } else if (msg.type === "error") {
+          setStatus("Error: " + msg.message);
+        }
+      });
+    });
   });
 
   if (roomCodeEl) roomCodeEl.addEventListener("click", function () {
     var code = roomCodeEl.textContent || "";
-    if (code && code !== "—") {
+    if (code && code !== "—" && code !== "…") {
       navigator.clipboard.writeText(code).then(function () { cabinetToast("Room code copied!"); }).catch(function () {});
     }
   });
@@ -4518,16 +4563,32 @@ function cabinetSetupNetplay() {
     var code = (codeInput ? codeInput.value : "").trim().toUpperCase();
     if (!code || code.length < 4) { setStatus("Please enter a valid room code."); return; }
     setStatus("Connecting to room " + code + "…");
-    try {
-      if (window.EJS_emulator && typeof window.EJS_emulator.joinNetplay === "function") {
-        window.EJS_emulator.joinNetplay(code);
-        setStatus("Connected to room " + code + "!");
-      } else {
-        setStatus("Joining room " + code + ". Start the game first to activate netplay.");
-      }
-    } catch (_e) {
-      setStatus("Could not connect — check the room code and try again.");
-    }
+    cabinetNetplayRole = "client";
+    cabinetNetplayConnect(function (ws) {
+      ws.send(JSON.stringify({ type: "join-room", room: code }));
+      ws.addEventListener("message", function onMsg(e) {
+        var msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === "room-joined") {
+          setStatus("Connected! Waiting for game sync…");
+          cabinetToast("Netplay: joined room " + code);
+          try {
+            var emu = window.EJS_emulator;
+            if (emu && emu.netplay && typeof emu.netplay.join === "function") {
+              emu.netplay.join(code);
+            } else if (emu && typeof emu.enableNetplay === "function") {
+              emu.enableNetplay(true, code, false);
+            }
+          } catch (_e) {}
+        } else if (msg.type === "peer-disconnected") {
+          setStatus("Host disconnected.");
+          cabinetToast("Netplay: host left");
+        } else if (msg.type === "error") {
+          setStatus("Error: " + msg.message);
+          cabinetToast("Netplay: " + msg.message);
+        }
+      });
+    });
   });
 }
 
@@ -4610,6 +4671,12 @@ ${discs.length > 1
 window.EJS_pathtodata = "../../emulatorjs/";
 window.EJS_startOnLoaded = true;
 window.EJS_AdUrl = "";
+// Derive netplay WebSocket URL from current page location (works under HA Ingress too)
+(function () {
+  var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  var base = window.location.pathname.replace(/\/api\/roms\/\d+\/player.*/, "");
+  window.EJS_netplayUrl = proto + "//" + window.location.host + base + "/api/netplay";
+})();
 ${raUsername && raToken ? `window.EJS_retroachievements = { username: ${JSON.stringify(raUsername)}, apiKey: ${JSON.stringify(raToken)}, hardcore: false };` : "// RetroAchievements not configured"}
 window.EJS_rewindEnabled = true;
 window.EJS_rewindGranularity = 2;
