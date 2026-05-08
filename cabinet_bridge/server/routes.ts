@@ -53,7 +53,7 @@ const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 const EMULATORJS_CORES: Record<string, string> = {
   nes: "nes",
-  snes: "snes",
+  snes: "bsnes",
   n64: "n64",
   gba: "gba",
   genesis: "segaMD",
