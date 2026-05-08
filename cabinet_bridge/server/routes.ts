@@ -924,13 +924,36 @@ export async function registerRoutes(
   });
 
   // Kiosk mode config — public so the client can read it before auth
-  app.get("/api/kiosk", async (_req, res) => {
+  app.get("/api/retroachievements/game-info/:id", async (req, res) => {
+    const id = Number(req.params.id);
     const settings = await storage.getIntegrationSettings();
-    res.json({
-      enabled: settings.kioskMode,
-      collectionId: settings.kioskCollectionId,
-      hasPin: !!settings.kioskPin,
-    });
+    if (!settings.raUsername || !settings.raToken) {
+      return res.status(401).json({ message: "RetroAchievements not configured." });
+    }
+    const url = `https://retroachievements.org/API/API_GetGame.php?z=${settings.raUsername}&y=${settings.raToken}&i=${id}`;
+    try {
+      const upstream = await fetch(url);
+      const data = await upstream.json();
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
+  });
+
+  app.get("/api/retroachievements/user-progress/:id", async (req, res) => {
+    const id = Number(req.params.id);
+    const settings = await storage.getIntegrationSettings();
+    if (!settings.raUsername || !settings.raToken) {
+      return res.status(401).json({ message: "RetroAchievements not configured." });
+    }
+    const url = `https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?z=${settings.raUsername}&y=${settings.raToken}&u=${settings.raUsername}&g=${id}`;
+    try {
+      const upstream = await fetch(url);
+      const data = await upstream.json();
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ message: String(err) });
+    }
   });
 
   app.post("/api/kiosk/verify-pin", express.json(), async (req, res) => {
@@ -978,6 +1001,9 @@ export async function registerRoutes(
         game: rom.title,
         system: rom.system,
         rom_id: rom.id,
+        players: rom.players ?? 1,
+        developer: rom.developer ?? "Unknown",
+        genre: rom.genre ?? "Action",
         ...(durationSeconds !== undefined ? { duration_seconds: durationSeconds } : {}),
       };
       try {
@@ -1104,6 +1130,41 @@ export async function registerRoutes(
     const { userId } = getUserFromRequest(req);
     const filePath = path.join(SAVE_BACKUP_DIR, userId, String(id), `slot-${slot}.state`);
     try { await fs.unlink(filePath); } catch { /* not found is fine */ }
+    res.json({ ok: true });
+  });
+
+  app.get("/api/roms/:id/save-thumb/:slot", async (req, res) => {
+    const id = Number(req.params.id);
+    const slot = req.params.slot; // can be "auto" or a number
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+    const { userId } = getUserFromRequest(req);
+    const filePath = path.join(SAVE_BACKUP_DIR, userId, String(id), `slot-${slot}.jpg`);
+    try {
+      await fs.access(filePath);
+      res.setHeader("Content-Type", "image/jpeg");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.sendFile(path.resolve(filePath));
+    } catch {
+      res.status(404).json({ message: "No thumbnail for this slot." });
+    }
+  });
+
+  app.put("/api/roms/:id/save-thumb/:slot", express.json({ limit: "2mb" }), async (req, res) => {
+    const id = Number(req.params.id);
+    const slot = req.params.slot;
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+    const { userId } = getUserFromRequest(req);
+    const { dataUrl } = req.body;
+    if (!dataUrl || !dataUrl.startsWith("data:image/jpeg;base64,")) {
+      return res.status(400).json({ message: "Invalid dataUrl." });
+    }
+    const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+    const dir = path.join(SAVE_BACKUP_DIR, userId, String(id));
+    await fs.mkdir(dir, { recursive: true });
+    const filePath = path.join(dir, `slot-${slot}.jpg`);
+    await fs.writeFile(filePath, base64Data, "base64");
     res.json({ ok: true });
   });
 
@@ -2986,7 +3047,7 @@ async function cabinetFetchSaveSlots() {
   }
   cabinetRenderSaveSlots();
 }
-function cabinetCaptureThumb(slot) {
+async function cabinetCaptureThumb(slot) {
   try {
     var canvas = document.querySelector("#game canvas");
     if (!canvas) return;
@@ -3000,6 +3061,13 @@ function cabinetCaptureThumb(slot) {
     var dataUrl = thumb.toDataURL("image/jpeg", 0.72);
     var key = "cabinet_thumb_" + (window.EJS_gameID || "game") + "_" + slot;
     try { localStorage.setItem(key, dataUrl); } catch (_e) {}
+    
+    // Upload to server
+    await fetch("./save-thumb/" + slot, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataUrl: dataUrl })
+    }).catch(function() {});
   } catch (_e) {}
 }
 function cabinetGetThumb(slot) {
@@ -3009,6 +3077,11 @@ function cabinetGetThumb(slot) {
 function cabinetDeleteThumb(slot) {
   var key = "cabinet_thumb_" + (window.EJS_gameID || "game") + "_" + slot;
   try { localStorage.removeItem(key); } catch (_e) {}
+}
+function cabinetGetThumbUrl(slot) {
+  var local = cabinetGetThumb(slot);
+  if (local) return local;
+  return "./save-thumb/" + slot + "?t=" + Date.now();
 }
 function cabinetRenderSaveSlots() {
   var grid = document.querySelector("#cabinet-save-grid");
@@ -3021,16 +3094,18 @@ function cabinetRenderSaveSlots() {
     card.className = "cabinet-save-slot";
     card.setAttribute("data-filled", state ? "true" : "false");
     card.setAttribute("data-testid", "card-save-slot-" + slot);
-    var thumb = cabinetGetThumb(slot);
-    var thumbHtml = state && thumb
-      ? '<div class="cabinet-save-slot__thumb"><img src="' + thumb + '" alt="Save slot ' + slot + ' preview" loading="lazy"></div>'
+    
+    var thumbUrl = (state || hasBackup) ? cabinetGetThumbUrl(slot) : null;
+    var thumbHtml = thumbUrl
+      ? '<div class="cabinet-save-slot__thumb"><img src="' + thumbUrl + '" alt="Save slot ' + slot + ' preview" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=\\\'cabinet-save-slot__thumb cabinet-save-slot__thumb--empty\\\'></div>\'"></div>'
       : '<div class="cabinet-save-slot__thumb cabinet-save-slot__thumb--empty"></div>';
+    
     var cloudBadge = hasBackup ? ' <span title="Server backup exists" style="font-size:10px;">&#9729;</span>' : "";
     card.innerHTML =
       thumbHtml +
       '<div class="cabinet-save-slot__eyebrow">Slot ' + slot + cloudBadge + '</div>' +
       '<div class="cabinet-save-slot__label">' + (state ? cabinetEscapeText(state.label || ("Slot " + slot)) : "Empty") + '</div>' +
-      '<div class="cabinet-save-slot__meta">' + (state ? cabinetRelativeTime(state.updatedAt) : (hasBackup ? "No local save — server backup available" : "No save data yet")) + '</div>' +
+      '<div class="cabinet-save-slot__meta">' + (state ? cabinetRelativeTime(state.updatedAt) : (hasBackup ? "No local save \u2014 server backup available" : "No save data yet")) + '</div>' +
       '<div class="cabinet-save-slot__actions">' +
       '<button type="button" data-save-action="save" data-slot="' + slot + '" data-testid="button-save-slot-' + slot + '">Save</button>' +
       '<button type="button" data-save-action="load" data-slot="' + slot + '" data-testid="button-load-slot-' + slot + '"' + (state ? "" : " disabled") + ">Load</button>" +
@@ -3203,10 +3278,14 @@ function cabinetQuickSaveSlot(slot) {
     cabinetSendInput(24, "1");
     saved = true;
   }
-  cabinetCaptureThumb(slot);
+  // Automatic sync: capture thumb and backup to server
+  cabinetCaptureThumb(slot).then(function() {
+    return cabinetBackupSlot(slot);
+  }).catch(function() {});
+
   cabinetRecordSaveSlot(slot)
     .then(function () {
-      cabinetToast("Saved state to slot " + slot);
+      cabinetToast("Saved state to slot " + slot + " \u2601");
     })
     .catch(function () {
       cabinetToast("Saved locally, but metadata could not update");

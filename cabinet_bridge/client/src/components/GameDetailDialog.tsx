@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { GameArt } from "@/components/GameArt";
@@ -28,12 +29,24 @@ export function GameDetailDialog({
   onToggleCollection: (collectionId: number, game: Game, selected: boolean) => void;
   onSetStatus?: (g: Game, status: string) => void;
 }) {
-  const { dispatch } = useIntegration();
+  const { dispatch, config } = useIntegration();
   const { toast } = useToast();
   const [launching, setLaunching] = useState(false);
   const [wheelArtError, setWheelArtError] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [scrapingArt, setScrapingArt] = useState(false);
+  const [selectedRomId, setSelectedRomId] = useState<number | null>(null);
+
+  const { data: raProgress, isLoading: loadingRa } = useQuery({
+    queryKey: ["ra-progress", game?.raGameId],
+    queryFn: async () => {
+      if (!game?.raGameId) return null;
+      const res = await fetch(`/api/retroachievements/user-progress/${game.raGameId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!game?.raGameId && !!config.raUsername && !!config.raToken,
+  });
 
   const refreshArt = useCallback(async () => {
     if (!game?.romId) return;
@@ -59,23 +72,24 @@ export function GameDetailDialog({
   const endpoint = gameLaunchEndpoint(game);
 
   const launch = async () => {
-    if (game.romId) {
+    const romId = selectedRomId || game.romId;
+    if (romId) {
       setLaunching(true);
       const returnTo = encodeURIComponent(window.location.href);
-      const playerUrl = apiUrl(`/api/roms/${game.romId}/player?return=${returnTo}`);
+      const playerUrl = apiUrl(`/api/roms/${romId}/player?return=${returnTo}`);
       try {
         const probe = await fetch(playerUrl, { method: "HEAD" });
         if (!probe.ok) {
           const msg = probe.status === 404
             ? "ROM file not found on the server. It may have been deleted."
             : `Server returned ${probe.status}. Try restarting the HomeArcade add-on.`;
-          toast({ title: "Couldn\'t launch game", description: msg, variant: "destructive" });
+          toast({ title: "Couldn't launch game", description: msg, variant: "destructive" });
           setLaunching(false);
           return;
         }
       } catch {
         toast({
-          title: "Couldn\'t reach server",
+          title: "Couldn't reach server",
           description: "HomeArcade server is not responding. Check that the add-on is running.",
           variant: "destructive",
         });
@@ -271,6 +285,55 @@ export function GameDetailDialog({
                 ) : null}
               </div>
             </div>
+
+            {/* RetroAchievements Progress */}
+            {raProgress && raProgress.NumAchievements > 0 && (
+              <div className="rounded-md border border-border bg-background/50 p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    RetroAchievements
+                  </div>
+                  <div className="font-mono text-[10px] text-primary">
+                    {raProgress.NumAwarded} / {raProgress.NumAchievements}
+                  </div>
+                </div>
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-500"
+                    style={{ width: `${(raProgress.NumAwarded / raProgress.NumAchievements) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Discs (Multi-Disc Set) */}
+            {game.isMultiDisc && game.discIds && (
+              <div className="rounded-md border border-border bg-background/50 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                  Discs in this set
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {game.discIds.map((id, index) => {
+                    const isSelected = (selectedRomId || game.romId) === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setSelectedRomId(id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                          isSelected
+                            ? "border-primary/60 bg-primary/15 text-primary"
+                            : "border-border bg-background/70 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                        }`}
+                        data-testid={`button-disc-${index + 1}`}
+                      >
+                        Disc {index + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Play Status */}
             {game.romId && onSetStatus ? (

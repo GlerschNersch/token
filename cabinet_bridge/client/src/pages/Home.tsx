@@ -127,7 +127,7 @@ export default function Home({ filter }: { filter: Filter }) {
   const games = useMemo<Game[]>(
     () => {
       const uploadedGames = uploadedRoms.map(uploadedRomToGame);
-      return [...uploadedGames, ...GAMES].map((g) => ({
+      const allGames = [...uploadedGames, ...GAMES].map((g) => ({
         ...g,
         favorite:
           favOverrides[g.id] !== undefined ? favOverrides[g.id] : !!g.favorite,
@@ -138,6 +138,37 @@ export default function Home({ filter }: { filter: Filter }) {
             ? statusOverrides[g.id]
             : (g.playStatus ?? "unset"),
       }));
+
+      // Group multi-disc games
+      const groups: Record<string, Game[]> = {};
+      const singletons: Game[] = [];
+      for (const g of allGames) {
+        if (g.discGroup) {
+          if (!groups[g.discGroup]) groups[g.discGroup] = [];
+          groups[g.discGroup].push(g);
+        } else {
+          singletons.push(g);
+        }
+      }
+
+      const merged: Game[] = [...singletons];
+      for (const [_, discs] of Object.entries(groups)) {
+        // Order by disc number
+        discs.sort((a, b) => (a.discNumber ?? 1) - (b.discNumber ?? 1));
+        // Find most recently played disc
+        const latest = [...discs].sort((a, b) => (b.lastPlayed ?? 0) - (a.lastPlayed ?? 0))[0];
+        // Use the first disc as the primary entry but with latest play info
+        const primary = {
+          ...discs[0],
+          lastPlayed: latest.lastPlayed,
+          playCount: discs.reduce((sum, d) => sum + (d.playCount ?? 0), 0),
+          minutesPlayed: discs.reduce((sum, d) => sum + (d.minutesPlayed ?? 0), 0),
+          discIds: discs.map(d => d.romId).filter(Boolean) as number[],
+          isMultiDisc: true,
+        };
+        merged.push(primary);
+      }
+      return merged;
     },
     [favOverrides, ratingOverrides, uploadedRoms],
   );
@@ -453,10 +484,26 @@ export default function Home({ filter }: { filter: Filter }) {
             <ContinueHero game={recentlyPlayed[0]} onOpen={setOpenGame} />
           ) : null}
 
-          {/* Systems strip */}
-          {!kioskMode && (filter === "favorites" || filter === "all") ? (
+          {/* Jump Back In — Continue Playing */}
+          {recentlyPlayed.length > 0 && (filter === "favorites" || filter === "all") && !query && (
             <section className="px-4 sm:px-8 pt-5 pb-1">
-              <SectionHeading title="Browse Systems" action={null} />
+              <SectionHeading title="Jump Back In" action={null} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {recentlyPlayed.slice(0, 6).map((g) => (
+                  <GameCard
+                    key={g.id}
+                    game={g}
+                    showSaveThumb={true}
+                    onOpen={setOpenGame}
+                    onToggleFav={toggleFav}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Systems strip */}
+
               <div
                 className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
                 data-testid="grid-systems"

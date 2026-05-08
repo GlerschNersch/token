@@ -97,6 +97,11 @@ export interface Game {
   wheelArtUrl?: string | null;
   videoUrl?: string | null;
   createdAt?: number;
+  discGroup?: string | null;
+  discNumber?: number | null;
+  isMultiDisc?: boolean;
+  discIds?: number[];
+  raGameId?: number | null;
 }
 
 export const SYSTEMS: System[] = [
@@ -463,6 +468,9 @@ export function uploadedRomToGame(rom: UploadedRom): Game {
     wheelArtUrl: rom.wheelArtUrl ?? null,
     videoUrl: (rom as Record<string, unknown>).videoUrl as string | null ?? null,
     createdAt: rom.createdAt,
+    discGroup: rom.discGroup,
+    discNumber: rom.discNumber,
+    raGameId: rom.raGameId,
   };
 }
 

@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, RotateCcw, Zap, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { ConsoleSilhouette } from "@/components/ConsoleSilhouette";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
 
 // ── Control definitions ────────────────────────────────────────────────────
@@ -207,116 +208,100 @@ function ControlsTab() {
     return () => window.removeEventListener("keydown", handler, { capture: true });
   }, [capturing, setKey]);
 
-  const hasCustom = Object.keys(saved).length > 0;
-
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Set default keyboard bindings for each console. These apply to every game launched on that
-        system. In-game remapping (per-game profiles) is still available from the player menu.
-      </p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1">
+          <h3 className="font-display text-lg font-bold">Input Mapping</h3>
+          <p className="text-sm text-muted-foreground">
+            Customise your global keyboard controls per system. These apply to the embedded player and Lovelace card.
+          </p>
+        </div>
 
-      {/* System selector */}
-      <div>
-        <Label className="text-sm font-medium mb-2 block">Console</Label>
         <div className="flex flex-wrap gap-2">
-          {SYSTEMS_WITH_CORES.map((s) => {
-            const hasOverride = Object.keys(config.controlDefaults?.[s.core] ?? {}).length > 0;
-            return (
-              <button
-                key={s.systemId}
-                onClick={() => { setSelectedSystem(s.systemId); setCapturing(null); }}
-                className={`px-2 py-1 sm:px-3 sm:py-1.5 rounded-md border text-[10px] sm:text-xs font-mono uppercase tracking-wide transition-all ${
-                  selectedSystem === s.systemId
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                {s.label}
-                {hasOverride && <span className="ml-1.5 size-1.5 inline-block rounded-full bg-primary align-middle" />}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Bindings table */}
-      <div className="rounded-md border border-border overflow-hidden">
-        <div className="px-3 py-2 bg-secondary/40 border-b border-border flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            {sys.label} — Game buttons
-          </span>
-          {hasCustom && (
+          {SYSTEMS_WITH_CORES.map((s) => (
             <button
-              onClick={resetCore}
-              className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-destructive"
+              key={s.systemId}
+              onClick={() => setSelectedSystem(s.systemId)}
+              className={`px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-all ${
+                selectedSystem === s.systemId
+                  ? "bg-primary/15 border-primary text-primary shadow-[0_0_8px_hsl(var(--primary)/0.3)]"
+                  : "bg-background/50 border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
+              }`}
             >
-              <RotateCcw className="size-3" /> Reset to defaults
+              {s.label}
             </button>
-          )}
-        </div>
-        <div className="divide-y divide-border">
-          {defs.map(({ index, label }) => {
-            const key = getKey(index);
-            const isCapturing = capturing === index;
-            const isCustom = !!saved[index];
-            return (
-              <div key={index} className="flex items-center justify-between px-2 sm:px-3 py-2 gap-2 sm:gap-3">
-                <span className="text-sm min-w-0 truncate">
-                  {label}
-                  {isCustom && <span className="ml-2 text-[10px] font-mono text-primary">custom</span>}
-                </span>
-                <button
-                  onClick={() => setCapturing(isCapturing ? null : index)}
-                  className={`shrink-0 min-w-[90px] rounded border px-2.5 py-1 font-mono text-[12px] text-center transition-all ${
-                    isCapturing
-                      ? "border-primary bg-primary/10 text-primary animate-pulse"
-                      : "border-border bg-background/60 text-foreground hover:border-primary/60"
-                  }`}
-                >
-                  {isCapturing ? "press a key…" : formatKeyLabel(key)}
-                </button>
-              </div>
-            );
-          })}
+          ))}
         </div>
       </div>
 
+      <div className="grid md:grid-cols-[240px_1fr] gap-6 p-4 rounded-xl border border-card-border bg-black/40 backdrop-blur-sm relative overflow-hidden">
+        {/* Silhouette background */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <ConsoleSilhouette systemId={selectedSystem} />
+        </div>
+
+        <div className="space-y-4 relative">
+          <div className="aspect-[4/3] rounded-lg border border-white/10 bg-black/40 p-4 flex items-center justify-center relative group">
+             <ConsoleSilhouette systemId={selectedSystem} />
+             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+             <div className="absolute bottom-3 left-3 font-mono text-[9px] uppercase tracking-widest text-white/40">
+               {sys.label} Silhouette
+             </div>
+          </div>
+          <Button variant="outline" size="sm" className="w-full font-mono text-[10px] uppercase tracking-wider" onClick={resetCore}>
+            <RotateCcw className="size-3 mr-2" /> Reset {sys.label}
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 relative">
+           {defs.map((d) => {
+             const key = getKey(d.index);
+             const active = capturing === d.index;
+             return (
+               <div key={d.index} className="space-y-1.5">
+                 <Label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{d.label}</Label>
+                 <button
+                   onClick={() => setCapturing(d.index)}
+                   className={`w-full h-10 px-3 rounded-md border font-mono text-xs text-left transition-all ${
+                     active
+                       ? "bg-accent/20 border-accent text-accent animate-pulse ring-2 ring-accent/30"
+                       : "bg-background/50 border-border text-foreground hover:border-primary/50"
+                   }`}
+                 >
+                   {active ? "Press a key..." : formatKeyLabel(key) || "Not bound"}
+                 </button>
+               </div>
+             );
+           })}
+        </div>
+      </div>
+      
       {/* Hotkeys */}
-      <div className="rounded-md border border-border overflow-hidden">
-        <div className="px-3 py-2 bg-secondary/40 border-b border-border">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Emulator hotkeys (shared across all systems)
-          </span>
-        </div>
-        <div className="divide-y divide-border">
-          {HOTKEY_DEFS.map(({ index, label }) => {
-            const key = getKey(index);
-            const isCapturing = capturing === index;
-            return (
-              <div key={index} className="flex items-center justify-between px-2 sm:px-3 py-2 gap-2 sm:gap-3">
-                <span className="text-sm">{label}</span>
-                <button
-                  onClick={() => setCapturing(isCapturing ? null : index)}
-                  className={`shrink-0 min-w-[90px] rounded border px-2.5 py-1 font-mono text-[12px] text-center transition-all ${
-                    isCapturing
-                      ? "border-primary bg-primary/10 text-primary animate-pulse"
-                      : "border-border bg-background/60 text-foreground hover:border-primary/60"
-                  }`}
-                >
-                  {isCapturing ? "press a key…" : formatKeyLabel(key)}
-                </button>
-              </div>
-            );
-          })}
+      <div className="space-y-3">
+        <h4 className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Emulator Hotkeys</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+           {HOTKEY_DEFS.map((d) => {
+             const key = getKey(d.index);
+             const active = capturing === d.index;
+             return (
+               <div key={d.index} className="space-y-1.5">
+                 <Label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{d.label}</Label>
+                 <button
+                   onClick={() => setCapturing(d.index)}
+                   className={`w-full h-10 px-3 rounded-md border font-mono text-xs text-left transition-all ${
+                     active
+                       ? "bg-accent/20 border-accent text-accent animate-pulse ring-2 ring-accent/30"
+                       : "bg-background/50 border-border text-foreground hover:border-primary/50"
+                   }`}
+                 >
+                   {active ? "Press a key..." : formatKeyLabel(key) || "Not bound"}
+                 </button>
+               </div>
+             );
+           })}
         </div>
       </div>
-
-      {capturing !== null && (
-        <p className="text-xs text-muted-foreground text-center">
-          Press any key to assign — <kbd className="font-mono">Esc</kbd> to cancel
-        </p>
-      )}
     </div>
   );
 }

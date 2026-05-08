@@ -9,16 +9,20 @@ export const GameCard = memo(function GameCard({
   onOpen,
   onToggleFav,
   focused = false,
+  showSaveThumb = false,
 }: {
   game: Game;
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
   focused?: boolean;
+  showSaveThumb?: boolean;
 }) {
   const system = SYSTEMS.find((s) => s.id === game.system);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
-  const showVideo = !!game.videoUrl && !videoFailed;
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const showVideo = !!game.videoUrl && !videoFailed && !showSaveThumb;
+  const saveThumbUrl = game.romId ? `/api/roms/${game.romId}/save-thumb/auto?t=${game.lastPlayed}` : null;
 
   const handleMouseEnter = useCallback(() => {
     if (videoRef.current) {
@@ -64,7 +68,21 @@ export const GameCard = memo(function GameCard({
       onMouseLeave={showVideo ? handleMouseLeave : undefined}
     >
       <div className="aspect-[16/10] relative">
-        <GameArt game={game} />
+        {showSaveThumb && saveThumbUrl && !thumbFailed ? (
+          <img
+            src={saveThumbUrl}
+            alt={`Last session of ${game.title}`}
+            onError={() => setThumbFailed(true)}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <GameArt game={game} />
+        )}
+        {game.isMultiDisc && (
+          <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-black/60 text-white border border-white/20 backdrop-blur-sm">
+            Multi-Disc
+          </div>
+        )}
         {showVideo && (
           <video
             ref={videoRef}
