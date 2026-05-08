@@ -4455,7 +4455,7 @@ function cabinetNetplayConnect(onOpen) {
     return;
   }
   var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  var base = window.location.pathname.replace(/\/api\/roms\/\d+\/player.*/, "");
+  var _np = window.location.pathname; var _ni = _np.indexOf("/api/roms/"); var base = _ni >= 0 ? _np.slice(0, _ni) : "";
   var url = proto + "//" + window.location.host + base + "/api/netplay";
   var ws = new WebSocket(url);
   ws.addEventListener("open", function () {
@@ -4674,7 +4674,9 @@ window.EJS_AdUrl = "";
 // Derive netplay WebSocket URL from current page location (works under HA Ingress too)
 (function () {
   var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  var base = window.location.pathname.replace(/\/api\/roms\/\d+\/player.*/, "");
+  var _p = window.location.pathname;
+  var _i = _p.indexOf("/api/roms/");
+  var base = _i >= 0 ? _p.slice(0, _i) : "";
   window.EJS_netplayUrl = proto + "//" + window.location.host + base + "/api/netplay";
 })();
 ${raUsername && raToken ? `window.EJS_retroachievements = { username: ${JSON.stringify(raUsername)}, apiKey: ${JSON.stringify(raToken)}, hardcore: false };` : "// RetroAchievements not configured"}
