@@ -1570,6 +1570,9 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         top: max(70px, calc(env(safe-area-inset-top) + 64px));
         left: max(12px, env(safe-area-inset-left));
         width: min(92vw, 360px);
+        max-height: min(82vh, calc(100dvh - 90px));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 22px;
         background: rgba(11, 11, 16, 0.84);
@@ -1581,6 +1584,7 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
         visibility: hidden;
         backdrop-filter: blur(18px);
+        overscroll-behavior: contain;
       }
       .cabinet-menu-panel.is-open,
       .cabinet-menu-backdrop.is-open {
@@ -1611,6 +1615,21 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         line-height: 1.5;
         text-transform: uppercase;
       }
+      .cabinet-menu-hash {
+        margin: 4px 0 0;
+        color: rgba(248, 250, 252, 0.28);
+        font: 600 9px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+        user-select: all;
+      }
+      .cabinet-menu-hash:hover { color: rgba(248, 250, 252, 0.55); }
+      .cabinet-menu-divider {
+        grid-column: 1 / -1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 2px 0;
+      }
       .cabinet-user-badge {
         font-size: 11px;
         font-weight: 600;
@@ -1635,7 +1654,7 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
-        padding: 8px 18px 18px;
+        padding: 8px 18px 24px;
       }
       .cabinet-menu-panel button {
         appearance: none;
@@ -2371,7 +2390,8 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
       <div class="cabinet-menu-panel__header">
         <div>
           <p class="cabinet-menu-title">${safeTitle}</p>
-          <p class="cabinet-menu-subtitle">Save, load, controls, exit${romHash ? ` · MD5: <span style="user-select:all;cursor:text;" title="MD5 hash — click to select">${romHash}</span>` : ""}</p>
+          <p class="cabinet-menu-subtitle">Save · Load · Controls · Exit</p>
+          ${romHash ? `<p class="cabinet-menu-hash" title="MD5: ${romHash}" id="cabinet-rom-hash" data-hash="${romHash}">MD5 ···${romHash.slice(-8)}</p>` : ""}
         </div>
         <span class="cabinet-user-badge" id="cabinet-user-badge" title="Saves are stored per user" hidden></span>
       </div>
@@ -2380,7 +2400,7 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         <button type="button" id="cabinet-save" data-testid="button-quick-save">Quick Save</button>
         <button type="button" id="cabinet-load" data-testid="button-quick-load">Quick Load</button>
         <button type="button" id="cabinet-save-manager-open" data-testid="button-open-save-manager">Save Slots</button>
-        <button type="button" id="cabinet-pad-toggle" aria-pressed="false" data-testid="button-toggle-gamepad">Gamepad</button>
+        <button type="button" id="cabinet-pad-toggle" aria-pressed="false" data-testid="button-toggle-gamepad">Show Pad</button>
         <button type="button" id="cabinet-controls" data-testid="button-show-controls">Controls</button>
         <button type="button" id="cabinet-rewind-toggle" aria-pressed="false" data-testid="button-toggle-rewind">Rewind</button>
         <button type="button" id="cabinet-ff-toggle" aria-pressed="false" data-testid="button-toggle-fastforward">Fast-Fwd</button>
@@ -2391,6 +2411,7 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
         <button type="button" id="cabinet-gamepad-test-open" data-testid="button-gamepad-tester">Test Pad</button>
         <button type="button" id="cabinet-netplay-open" data-testid="button-netplay">Netplay</button>
         <button type="button" id="cabinet-sleep-open" data-testid="button-sleep-timer">Sleep Timer</button>
+        <div class="cabinet-menu-divider" role="separator"></div>
         <button type="button" class="danger" id="cabinet-exit" data-testid="button-exit-player">Exit Game</button>
       </div>
     </nav>
@@ -3163,7 +3184,7 @@ function cabinetSetupVirtualPad() {
     pad.classList.toggle("is-visible", visible);
     document.body.classList.toggle("cabinet-pad-on", visible);
     toggle.setAttribute("aria-pressed", visible ? "true" : "false");
-    toggle.textContent = visible ? "Hide Pad" : "Gamepad";
+    toggle.textContent = visible ? "Hide Pad" : "Show Pad";
     if (announce) {
       cabinetToast(visible ? "Virtual gamepad shown" : "Virtual gamepad hidden");
     }
