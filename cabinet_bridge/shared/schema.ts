@@ -154,4 +154,5 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   pcCpuEntityId: "",
   pcRamEntityId: "",
   pcAppEntityId: "",
+  controlDefaults: {},
 };
