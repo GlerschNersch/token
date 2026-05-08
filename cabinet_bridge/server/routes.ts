@@ -2091,15 +2091,50 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
       #game canvas {
         transition: filter 0.2s;
       }
+      /* Filters — !important overrides EmulatorJS inline canvas styles */
       #game.cabinet-filter-crt canvas {
-        filter: contrast(1.1) brightness(0.95) saturate(1.1);
-      }
-      #game.cabinet-filter-crt canvas::after {
-        content: "";
+        filter: contrast(1.15) brightness(0.92) saturate(1.2) !important;
       }
       #game.cabinet-filter-smooth canvas {
+        image-rendering: auto !important;
+        filter: blur(0.5px) brightness(1.02) !important;
+      }
+      /* Aspect ratio — !important overrides EmulatorJS inline width/height */
+      #game.cabinet-aspect-4-3,
+      #game.cabinet-aspect-16-9,
+      #game.cabinet-aspect-pixel,
+      #game.cabinet-aspect-stretch {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden;
+      }
+      #game.cabinet-aspect-4-3 canvas {
+        width: auto !important;
+        height: 100% !important;
+        aspect-ratio: 4/3 !important;
+        max-width: 100% !important;
         image-rendering: auto;
-        filter: blur(0.4px) brightness(1.02);
+      }
+      #game.cabinet-aspect-16-9 canvas {
+        width: auto !important;
+        height: 100% !important;
+        aspect-ratio: 16/9 !important;
+        max-width: 100% !important;
+        image-rendering: auto;
+      }
+      #game.cabinet-aspect-pixel canvas {
+        width: auto !important;
+        height: auto !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        image-rendering: pixelated !important;
+        aspect-ratio: unset !important;
+      }
+      #game.cabinet-aspect-stretch canvas {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: unset !important;
       }
       .cabinet-toast {
         position: fixed;
@@ -2415,15 +2450,50 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
       #game canvas {
         transition: filter 0.2s;
       }
+      /* Filters — !important overrides EmulatorJS inline canvas styles */
       #game.cabinet-filter-crt canvas {
-        filter: contrast(1.1) brightness(0.95) saturate(1.1);
-      }
-      #game.cabinet-filter-crt canvas::after {
-        content: "";
+        filter: contrast(1.15) brightness(0.92) saturate(1.2) !important;
       }
       #game.cabinet-filter-smooth canvas {
+        image-rendering: auto !important;
+        filter: blur(0.5px) brightness(1.02) !important;
+      }
+      /* Aspect ratio — !important overrides EmulatorJS inline width/height */
+      #game.cabinet-aspect-4-3,
+      #game.cabinet-aspect-16-9,
+      #game.cabinet-aspect-pixel,
+      #game.cabinet-aspect-stretch {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: hidden;
+      }
+      #game.cabinet-aspect-4-3 canvas {
+        width: auto !important;
+        height: 100% !important;
+        aspect-ratio: 4/3 !important;
+        max-width: 100% !important;
         image-rendering: auto;
-        filter: blur(0.4px) brightness(1.02);
+      }
+      #game.cabinet-aspect-16-9 canvas {
+        width: auto !important;
+        height: 100% !important;
+        aspect-ratio: 16/9 !important;
+        max-width: 100% !important;
+        image-rendering: auto;
+      }
+      #game.cabinet-aspect-pixel canvas {
+        width: auto !important;
+        height: auto !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        image-rendering: pixelated !important;
+        aspect-ratio: unset !important;
+      }
+      #game.cabinet-aspect-stretch canvas {
+        width: 100% !important;
+        height: 100% !important;
+        aspect-ratio: unset !important;
       }
       .cabinet-toast {
           top: max(78px, calc(env(safe-area-inset-top) + 70px));
@@ -3830,30 +3900,11 @@ function cabinetSetDisplayPanel(open) {
 function cabinetApplyAspect(aspect) {
   var game = document.querySelector("#game");
   if (!game) return;
-  var canvas = game.querySelector("canvas");
-  if (!canvas) return;
-  game.style.display = "flex";
-  game.style.alignItems = "center";
-  game.style.justifyContent = "center";
-  switch (aspect) {
-    case "4:3":
-      canvas.style.width = ""; canvas.style.height = "100%";
-      canvas.style.aspectRatio = "4/3"; canvas.style.maxWidth = "100%";
-      break;
-    case "16:9":
-      canvas.style.width = ""; canvas.style.height = "100%";
-      canvas.style.aspectRatio = "16/9"; canvas.style.maxWidth = "100%";
-      break;
-    case "pixel":
-      canvas.style.width = ""; canvas.style.height = "";
-      canvas.style.aspectRatio = ""; canvas.style.maxWidth = "100%";
-      canvas.style.imageRendering = "pixelated";
-      break;
-    case "stretch":
-      canvas.style.width = "100%"; canvas.style.height = "100%";
-      canvas.style.aspectRatio = ""; canvas.style.maxWidth = "";
-      break;
-  }
+  // Remove all aspect classes then add the chosen one.
+  // CSS uses !important so it wins over EmulatorJS inline canvas styles.
+  game.classList.remove("cabinet-aspect-4-3", "cabinet-aspect-16-9", "cabinet-aspect-pixel", "cabinet-aspect-stretch");
+  var cls = { "4:3": "cabinet-aspect-4-3", "16:9": "cabinet-aspect-16-9", "pixel": "cabinet-aspect-pixel", "stretch": "cabinet-aspect-stretch" }[aspect];
+  if (cls) game.classList.add(cls);
   var btns = document.querySelectorAll("[data-aspect]");
   btns.forEach(function (b) {
     b.setAttribute("aria-checked", b.getAttribute("data-aspect") === aspect ? "true" : "false");
