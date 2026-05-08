@@ -86,7 +86,7 @@ const SYSTEM_IMAGE_CACHE_DIR = path.resolve(dataPath("system-image-cache"));
 const SYSTEM_LOGO_CACHE_DIR  = path.resolve(dataPath("system-logo-cache"));
 const SYSTEM_IMAGE_FETCH_HEADERS: Record<string, string> = {
   "User-Agent":
-    "CabinetBridge/0.2 (+https://github.com/anthropics/claude-code; mailto:noreply@anthropic.com) Mozilla/5.0",
+    "CabinetBridge/0.4 (+https://github.com/GlerschNersch/token; mailto:noreply@anthropic.com) Mozilla/5.0",
   Referer: "https://commons.wikimedia.org/",
   Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
 };

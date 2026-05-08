@@ -2,9 +2,9 @@
 
 > Retro gaming, right inside Home Assistant.
 
-HomeArcade is a Home Assistant App that turns your sidebar into a full retro game library. Upload ROMs, browse by system, launch games in an in-browser emulator, track play time, and earn RetroAchievements — all without leaving Home Assistant.
+HomeArcade is a Home Assistant Add-on that turns your sidebar into a full retro game library. Upload ROMs, browse by system, launch games in an in-browser emulator, track play time, and earn RetroAchievements — all without leaving Home Assistant.
 
-**Current version: 0.3.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 0.4.1** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -16,7 +16,7 @@ HomeArcade is a Home Assistant App that turns your sidebar into a full retro gam
 
 **1. Add the repository**
 
-In Home Assistant: **Settings → Apps → Install app → ⋮ → Repositories**, paste:
+In Home Assistant: **Settings → Apps → Add-ons → ⋮ → Repositories**, paste:
 ```
 https://github.com/GlerschNersch/token
 ```
@@ -81,7 +81,7 @@ That's it. No port forwarding, no reverse proxy, no extra software.
 
 ### Step-by-step
 
-1. **Settings → Apps → App Store → ⋮ (three dots, top right) → Repositories**
+1. **Settings → Apps → Add-on Store → ⋮ (three dots, top right) → Repositories**
 2. Paste `https://github.com/GlerschNersch/token` and click **Add**
 3. Close the dialog and scroll to find **HomeArcade** in the store
 4. Click **Install** — the first build takes 2–5 minutes (compiling native SQLite bindings)
@@ -93,7 +93,7 @@ That's it. No port forwarding, no reverse proxy, no extra software.
 
 ### Updating
 
-When a new version is available, an **Update** button appears at the top of the HomeArcade app page. Click it — your ROMs, save states, and settings are preserved (they live in the Supervisor-managed `/data` volume, which is never touched by an update).
+When a new version is available, an **Update** button appears at the top of the HomeArcade add-on page. Click it — your ROMs, save states, and settings are preserved (they live in the Supervisor-managed `/data` volume, which is never touched by an update).
 
 > **Rebuild vs Update:** "Rebuild" re-compiles the currently installed version from HA's local cache. "Update" pulls the latest code from GitHub and rebuilds — use this to get new features and bug fixes.
 
