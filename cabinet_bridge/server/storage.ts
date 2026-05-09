@@ -159,6 +159,13 @@ export interface IStorage {
   createCheat(cheat: import("../shared/schema").InsertGameCheatCode): Promise<import("../shared/schema").GameCheatCode>;
   updateCheatEnabled(id: number, enabled: boolean): Promise<boolean>;
   deleteCheat(id: number): Promise<boolean>;
+  // Per-profile game state
+  getProfileGameState(profileId: number, romId: number): Promise<import("../shared/schema").ProfileGameState | undefined>;
+  upsertProfileGameState(profileId: number, romId: number, patch: { favorite?: boolean; rating?: number; playStatus?: string }): Promise<import("../shared/schema").ProfileGameState>;
+  listProfileGameStates(profileId: number): Promise<import("../shared/schema").ProfileGameState[]>;
+  // Per-profile control bindings
+  getProfileControlBindings(profileId: number, core: string): Promise<Record<number, string>>;
+  setProfileControlBindings(profileId: number, core: string, bindings: Record<number, string>): Promise<void>;
 }
 
 const INTEGRATION_SETTINGS_KEY = "integration";
@@ -480,6 +487,77 @@ export class DatabaseStorage implements IStorage {
     const result = db.delete(gameCheatCodes).where(eq(gameCheatCodes.id, id)).run();
     return result.changes > 0;
   }
+
+  // ── Per-profile game state ───────────────────────────────────────────────
+  async getProfileGameState(profileId: number, romId: number) {
+    const row = sqlite.prepare(
+      "SELECT * FROM profile_game_state WHERE profile_id=? AND rom_id=?"
+    ).get(profileId, romId) as import("../shared/schema").ProfileGameState | undefined;
+    return row;
+  }
+  async upsertProfileGameState(profileId: number, romId: number, patch: { favorite?: boolean; rating?: number; playStatus?: string }) {
+    const now = Date.now();
+    const existing = await this.getProfileGameState(profileId, romId);
+    if (existing) {
+      const sets: string[] = ["updated_at=?"];
+      const vals: unknown[] = [now];
+      if (patch.favorite !== undefined) { sets.push("favorite=?"); vals.push(patch.favorite ? 1 : 0); }
+      if (patch.rating !== undefined) { sets.push("rating=?"); vals.push(patch.rating); }
+      if (patch.playStatus !== undefined) { sets.push("play_status=?"); vals.push(patch.playStatus); }
+      vals.push(existing.id);
+      sqlite.prepare(`UPDATE profile_game_state SET ${sets.join(",")} WHERE id=?`).run(...vals);
+    } else {
+      sqlite.prepare(
+        "INSERT INTO profile_game_state (profile_id, rom_id, favorite, rating, play_status, updated_at) VALUES (?,?,?,?,?,?)"
+      ).run(profileId, romId, patch.favorite !== undefined ? (patch.favorite ? 1 : 0) : null, patch.rating ?? null, patch.playStatus ?? null, now);
+    }
+    return (await this.getProfileGameState(profileId, romId))!;
+  }
+  async listProfileGameStates(profileId: number) {
+    return sqlite.prepare("SELECT * FROM profile_game_state WHERE profile_id=?").all(profileId) as import("../shared/schema").ProfileGameState[];
+  }
+
+  // ── Per-profile control bindings ─────────────────────────────────────────
+  async getProfileControlBindings(profileId: number, core: string): Promise<Record<number, string>> {
+    const row = sqlite.prepare("SELECT bindings FROM profile_control_bindings WHERE profile_id=? AND core=?").get(profileId, core) as { bindings: string } | undefined;
+    if (!row) return {};
+    try { return JSON.parse(row.bindings); } catch { return {}; }
+  }
+  async setProfileControlBindings(profileId: number, core: string, bindings: Record<number, string>): Promise<void> {
+    const now = Date.now();
+    sqlite.prepare(
+      "INSERT INTO profile_control_bindings (profile_id, core, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, core) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at"
+    ).run(profileId, core, JSON.stringify(bindings), now);
+  }
 }
 
 export const storage = new DatabaseStorage();
+
+// ── ProfileGameState + ProfileControlBindings (appended by v0.6.0) ───────────
+// Migrations run at the bottom of the existing migration block above via try/catch.
+// We call them here as a second-pass to ensure they exist even on fresh DBs.
+(function ensureV6Tables() {
+  const stmts = [
+    `CREATE TABLE IF NOT EXISTS profile_game_state (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      profile_id INTEGER NOT NULL,
+      rom_id INTEGER NOT NULL,
+      favorite INTEGER,
+      rating INTEGER,
+      play_status TEXT,
+      updated_at INTEGER NOT NULL,
+      UNIQUE(profile_id, rom_id)
+    )`,
+    `CREATE TABLE IF NOT EXISTS profile_control_bindings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      profile_id INTEGER NOT NULL,
+      core TEXT NOT NULL,
+      bindings TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE(profile_id, core)
+    )`,
+  ];
+  for (const stmt of stmts) {
+    try { sqlite.exec(stmt); } catch { /* already exists */ }
+  }
+})();

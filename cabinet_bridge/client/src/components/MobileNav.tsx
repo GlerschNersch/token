@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { Wordmark } from "@/components/Logo";
-import { Menu, LayoutDashboard, Gamepad2, Trophy, Settings } from "lucide-react";
+import { Menu, LayoutDashboard, Gamepad2, Trophy, Settings, History } from "lucide-react";
 
 interface Props {
   active?: Filter;
@@ -83,6 +83,7 @@ export function MobileBottomNav() {
   const tabs = [
     { href: "/", icon: LayoutDashboard, label: "Home" },
     { href: "/library", icon: Gamepad2, label: "Library" },
+    { href: "/history", icon: History, label: "History" },
     { href: "/achievements", icon: Trophy, label: "Awards" },
     { href: "/settings", icon: Settings, label: "Settings" },
   ] as const;

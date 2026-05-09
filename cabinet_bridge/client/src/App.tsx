@@ -15,6 +15,7 @@ import NotFound from "@/pages/not-found";
 const Settings = lazy(() => import("@/pages/Settings"));
 const Player = lazy(() => import("@/pages/Player"));
 const Achievements = lazy(() => import("@/pages/Achievements"));
+const History = lazy(() => import("@/pages/History"));
 
 function PageFallback() {
   return (
@@ -90,6 +91,9 @@ function AppRouter() {
       </Route>
       <Route path="/play/:id">
         {(params) => <Suspense fallback={<PageFallback />}><Player id={params.id} /></Suspense>}
+      </Route>
+      <Route path="/history">
+        <Suspense fallback={<PageFallback />}><History /></Suspense>
       </Route>
       <Route path="/achievements">
         <Suspense fallback={<PageFallback />}><Achievements /></Suspense>

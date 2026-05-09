@@ -458,7 +458,18 @@ export async function registerRoutes(
       romHash: rom.romHash ?? null,
       raUsername: bootstrapSettings.raUsername ?? "",
       raToken: bootstrapSettings.raToken ?? "",
-      controlDefaults: (bootstrapSettings.controlDefaults ?? {}) as Record<string, Record<number, string>>,
+      controlDefaults: await (async () => {
+        const global = (bootstrapSettings.controlDefaults ?? {}) as Record<string, Record<number, string>>;
+        const pId = profileParam ? Number(profileParam) : 1;
+        // Merge profile-specific overrides on top of global defaults per core
+        const merged: Record<string, Record<number, string>> = { ...global };
+        // Load all known cores used for this ROM's system (just preload the one core)
+        const profileBindings = await storage.getProfileControlBindings(pId, core);
+        if (Object.keys(profileBindings).length > 0) {
+          merged[core] = { ...(global[core] ?? {}), ...profileBindings };
+        }
+        return merged;
+      })(),
       userId,
       userName,
       profileId: profileParam ?? "1",
@@ -542,6 +553,57 @@ export async function registerRoutes(
     if (id === 1) return res.status(400).json({ message: "Cannot delete default profile" });
     const ok = await storage.deleteProfile(id);
     res.json({ ok });
+  });
+
+
+  // ── Per-profile game state ────────────────────────────────────────────────
+  // GET  /api/profiles/:profileId/game-states         → all states for profile
+  // GET  /api/profiles/:profileId/game-states/:romId  → single state
+  // PATCH /api/profiles/:profileId/game-states/:romId → upsert favorite/rating/playStatus
+  app.get("/api/profiles/:profileId/game-states", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    res.json(await storage.listProfileGameStates(profileId));
+  });
+  app.get("/api/profiles/:profileId/game-states/:romId", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const romId = Number(req.params.romId);
+    const state = await storage.getProfileGameState(profileId, romId);
+    res.json(state ?? null);
+  });
+  app.patch("/api/profiles/:profileId/game-states/:romId", express.json(), async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const romId = Number(req.params.romId);
+    const { favorite, rating, playStatus } = req.body ?? {};
+    const patch: { favorite?: boolean; rating?: number; playStatus?: string } = {};
+    if (favorite !== undefined) patch.favorite = Boolean(favorite);
+    if (rating !== undefined) patch.rating = Number(rating);
+    if (playStatus !== undefined) patch.playStatus = String(playStatus);
+    const state = await storage.upsertProfileGameState(profileId, romId, patch);
+    res.json(state);
+  });
+
+  // ── Per-profile control bindings ──────────────────────────────────────────
+  // GET  /api/profiles/:profileId/controls/:core  → { [buttonIndex]: keyName }
+  // PUT  /api/profiles/:profileId/controls/:core  → save bindings
+  // DELETE /api/profiles/:profileId/controls/:core → reset to global defaults
+  app.get("/api/profiles/:profileId/controls/:core", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const core = req.params.core;
+    res.json(await storage.getProfileControlBindings(profileId, core));
+  });
+  app.put("/api/profiles/:profileId/controls/:core", express.json(), async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const core = req.params.core;
+    const bindings = req.body as Record<number, string>;
+    if (typeof bindings !== "object" || bindings === null) return res.status(400).json({ message: "bindings must be an object" });
+    await storage.setProfileControlBindings(profileId, core, bindings);
+    res.json({ ok: true });
+  });
+  app.delete("/api/profiles/:profileId/controls/:core", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const core = req.params.core;
+    await storage.setProfileControlBindings(profileId, core, {});
+    res.json({ ok: true });
   });
 
   // ── Cheats ────────────────────────────────────────────────────────────────
@@ -744,8 +806,10 @@ export async function registerRoutes(
 
       // Try ScreenScraper first (rich metadata + art), fall back to Libretro art only
       const settings = await storage.getIntegrationSettings();
-      const ssMeta = await fetchScreenScraperMeta(system, safeName, title, settings.ssUserId, settings.ssPassword);
-      const libretroArt = ssMeta?.artUrl ? null : await findLibretroBoxArt(system, title);
+      const tgdbMeta = await fetchTheGamesDBMeta(system, title, settings.tgdbApiKey ?? "");
+      const ssMeta = tgdbMeta?.artUrl ? null : await fetchScreenScraperMeta(system, safeName, title, settings.ssUserId, settings.ssPassword);
+      const activeMeta = tgdbMeta ?? ssMeta;
+      const libretroArt = activeMeta?.artUrl ? null : await findLibretroBoxArt(system, title);
 
       const rom = insertUploadedRomSchema.parse({
         title,
@@ -756,18 +820,18 @@ export async function registerRoutes(
         filePath,
         size: body.length,
         mimeType: req.header("content-type") ?? "application/octet-stream",
-        artUrl: ssMeta?.artUrl ?? libretroArt?.url ?? null,
-        scrapeStatus: ssMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found"),
-        scrapeMessage: ssMeta?.scrapeMessage ?? libretroArt?.message ?? "",
-        description: ssMeta?.description ?? null,
-        releaseYear: ssMeta?.releaseYear ?? null,
-        developer: ssMeta?.developer ?? null,
-        publisher: ssMeta?.publisher ?? null,
-        genre: ssMeta?.genre ?? null,
-        players: ssMeta?.players ?? null,
-        communityScore: ssMeta?.communityScore ?? null,
-        wheelArtUrl: ssMeta?.wheelArtUrl ?? null,
-        videoUrl: ssMeta?.videoUrl ?? null,
+        artUrl: activeMeta?.artUrl ?? libretroArt?.url ?? null,
+        scrapeStatus: activeMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found"),
+        scrapeMessage: activeMeta?.scrapeMessage ?? libretroArt?.message ?? "",
+        description: activeMeta?.description ?? null,
+        releaseYear: activeMeta?.releaseYear ?? null,
+        developer: activeMeta?.developer ?? null,
+        publisher: activeMeta?.publisher ?? null,
+        genre: activeMeta?.genre ?? null,
+        players: activeMeta?.players ?? null,
+        communityScore: (activeMeta as any)?.communityScore ?? null,
+        wheelArtUrl: (activeMeta as any)?.wheelArtUrl ?? null,
+        videoUrl: (activeMeta as any)?.videoUrl ?? null,
         favorite,
         rating: 0,
         lastPlayed: 0,
@@ -918,8 +982,10 @@ export async function registerRoutes(
     }
 
     const settings = await storage.getIntegrationSettings();
-    const ssMeta = await fetchScreenScraperMeta(rom.system, rom.fileName, rom.title, settings.ssUserId, settings.ssPassword);
-    const libretroArt = ssMeta?.artUrl ? null : await findLibretroBoxArt(rom.system, rom.title);
+    const tgdbMeta = await fetchTheGamesDBMeta(rom.system, rom.title, settings.tgdbApiKey ?? "");
+    const ssMeta = tgdbMeta?.artUrl ? null : await fetchScreenScraperMeta(rom.system, rom.fileName, rom.title, settings.ssUserId, settings.ssPassword);
+    const activeMeta = tgdbMeta ?? ssMeta;
+    const libretroArt = activeMeta?.artUrl ? null : await findLibretroBoxArt(rom.system, rom.title);
 
     const updated = await storage.updateUploadedRomMetadata(id, {
       artUrl: ssMeta?.artUrl ?? libretroArt?.url ?? null,
@@ -966,23 +1032,25 @@ export async function registerRoutes(
       send({ type: "progress", index: i, id: rom.id, title: rom.title, total: targets.length });
 
       try {
-        const ssMeta = await fetchScreenScraperMeta(rom.system, rom.fileName, rom.title, settings.ssUserId, settings.ssPassword);
-        const libretroArt = ssMeta?.artUrl ? null : await findLibretroBoxArt(rom.system, rom.title);
-        const status = ssMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found");
+        const tgdbMeta = await fetchTheGamesDBMeta(rom.system, rom.title, settings.tgdbApiKey ?? "");
+        const ssMeta = tgdbMeta?.artUrl ? null : await fetchScreenScraperMeta(rom.system, rom.fileName, rom.title, settings.ssUserId, settings.ssPassword);
+        const activeMeta = tgdbMeta ?? ssMeta;
+        const libretroArt = activeMeta?.artUrl ? null : await findLibretroBoxArt(rom.system, rom.title);
+        const status = activeMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found");
 
         await storage.updateUploadedRomMetadata(rom.id, {
-          artUrl: ssMeta?.artUrl ?? libretroArt?.url ?? null,
+          artUrl: activeMeta?.artUrl ?? libretroArt?.url ?? null,
           scrapeStatus: status,
-          scrapeMessage: ssMeta?.scrapeMessage ?? libretroArt?.message ?? "",
-          description: ssMeta?.description ?? undefined,
-          releaseYear: ssMeta?.releaseYear ?? undefined,
-          developer: ssMeta?.developer ?? undefined,
-          publisher: ssMeta?.publisher ?? undefined,
-          genre: ssMeta?.genre ?? undefined,
-          players: ssMeta?.players ?? undefined,
-          communityScore: ssMeta?.communityScore ?? undefined,
-          wheelArtUrl: ssMeta?.wheelArtUrl ?? undefined,
-          videoUrl: ssMeta?.videoUrl ?? undefined,
+          scrapeMessage: activeMeta?.scrapeMessage ?? libretroArt?.message ?? "",
+          description: activeMeta?.description ?? undefined,
+          releaseYear: activeMeta?.releaseYear ?? undefined,
+          developer: activeMeta?.developer ?? undefined,
+          publisher: activeMeta?.publisher ?? undefined,
+          genre: activeMeta?.genre ?? undefined,
+          players: activeMeta?.players ?? undefined,
+          communityScore: (activeMeta as any)?.communityScore ?? undefined,
+          wheelArtUrl: (activeMeta as any)?.wheelArtUrl ?? undefined,
+          videoUrl: (activeMeta as any)?.videoUrl ?? undefined,
         });
 
         if (status === "matched") matched++;
@@ -1419,6 +1487,116 @@ async function getCachedSystemImage(
   throw lastError instanceof Error
     ? lastError
     : new Error("System image fetch failed.");
+}
+
+
+// ── TheGamesDB ────────────────────────────────────────────────────────────────
+// Platform IDs: https://api.thegamesdb.net/v1/Platforms
+const TGDB_PLATFORM_IDS: Record<string, number> = {
+  nes: 7, snes: 6, n64: 3, gba: 5, genesis: 36, ps1: 10, ps2: 11,
+  arcade: 23, dreamcast: 16, gb: 4, gbc: 41, nds: 8, psp: 13,
+  atari2600: 22, saturn: 17, gamegear: 35, sms: 35, pce: 34,
+  sega32x: 33, segacd: 21, neogeo: 24, virtualboy: 79, atari7800: 8051, lynx: 4924,
+};
+
+interface TGDBMeta {
+  artUrl: string | null;
+  description: string | null;
+  releaseYear: number | null;
+  developer: string | null;
+  publisher: string | null;
+  genre: string | null;
+  players: string | null;
+  scrapeStatus: string;
+  scrapeMessage: string;
+}
+
+async function fetchTheGamesDBMeta(system: string, title: string, apiKey: string): Promise<TGDBMeta | null> {
+  if (!apiKey) return null;
+  const platformId = TGDB_PLATFORM_IDS[system];
+  if (!platformId) return null;
+
+  try {
+    const params = new URLSearchParams({
+      apikey: apiKey,
+      name: title,
+      fields: "overview,genres,developers,publishers,players,rating",
+      include: "boxart",
+      "filter[platform]": String(platformId),
+    });
+    const res = await fetch(`https://api.thegamesdb.net/v1/Games/ByGameName?${params}`, {
+      headers: { "User-Agent": "CabinetBridge/0.6" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json() as Record<string, unknown>;
+
+    const games = (json?.data as Record<string, unknown>)?.games as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(games) || games.length === 0) return null;
+
+    // Pick closest title match
+    const titleLower = title.toLowerCase();
+    const game = games.find((g) => String(g.game_title ?? "").toLowerCase() === titleLower) ?? games[0];
+
+    const description = String(game.overview ?? "").trim() || null;
+    const players = game.players ? String(game.players) : null;
+
+    let releaseYear: number | null = null;
+    const relDate = game.release_date as string | undefined;
+    if (relDate) {
+      const y = parseInt(relDate.slice(0, 4), 10);
+      if (!isNaN(y)) releaseYear = y;
+    }
+
+    // Genres, developers, publishers are ID-based — look them up in include maps
+    const include = json?.include as Record<string, unknown> | undefined;
+
+    const genresMap = (include?.genres as Record<string, unknown>)?.data as Record<string, { name?: string }> | undefined;
+    const gameGenreIds = game.genres as number[] | undefined;
+    let genre: string | null = null;
+    if (genresMap && Array.isArray(gameGenreIds)) {
+      genre = gameGenreIds.slice(0, 2).map((id) => genresMap[id]?.name).filter(Boolean).join(", ") || null;
+    }
+
+    const devsMap = (include?.developers as Record<string, unknown>)?.data as Record<string, { name?: string }> | undefined;
+    const devIds = game.developers as number[] | undefined;
+    let developer: string | null = null;
+    if (devsMap && Array.isArray(devIds) && devIds.length > 0) {
+      developer = devsMap[devIds[0]]?.name ?? null;
+    }
+
+    const pubsMap = (include?.publishers as Record<string, unknown>)?.data as Record<string, { name?: string }> | undefined;
+    const pubIds = game.publishers as number[] | undefined;
+    let publisher: string | null = null;
+    if (pubsMap && Array.isArray(pubIds) && pubIds.length > 0) {
+      publisher = pubsMap[pubIds[0]]?.name ?? null;
+    }
+
+    // Box art
+    let artUrl: string | null = null;
+    const boxartData = (include?.boxart as Record<string, unknown>)?.data as Record<string, Array<{ side?: string; filename?: string }>> | undefined;
+    const baseUrl = ((include?.boxart as Record<string, unknown>)?.base_url as Record<string, string>)?.original ?? "https://cdn.thegamesdb.net/images/original/";
+    const gameId = String(game.id ?? "");
+    const artList = boxartData?.[gameId];
+    if (Array.isArray(artList)) {
+      const front = artList.find((a) => a.side === "front") ?? artList[0];
+      if (front?.filename) artUrl = baseUrl + front.filename;
+    }
+
+    return {
+      artUrl,
+      description,
+      releaseYear,
+      developer,
+      publisher,
+      genre,
+      players,
+      scrapeStatus: "matched",
+      scrapeMessage: "Metadata from TheGamesDB",
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ScreenScraper system IDs: https://www.screenscraper.fr/api2/systemesListe.php
@@ -2738,6 +2916,37 @@ function renderEmulatorPage({ title, returnTo, romHash }: { title: string; retur
       @media (max-width: 360px) {
         .virtual-pad__system button {
           min-width: 62px;
+        }
+      }
+      /* Landscape phone — compress pad height, keep game visible */
+      @media (max-height: 500px) and (orientation: landscape) {
+        body.cabinet-pad-mobile.cabinet-pad-on #game {
+          height: calc(100dvh - var(--cabinet-tray-height, 42vw)) !important;
+        }
+        body.cabinet-pad-mobile .virtual-pad {
+          height: var(--cabinet-tray-height, max(42vw, 140px));
+        }
+        .virtual-pad__dpad,
+        .virtual-pad__face {
+          --cabinet-pad-cell: clamp(36px, calc((100vw - 280px) / 6), 52px);
+          bottom: max(8px, env(safe-area-inset-bottom));
+        }
+        .virtual-pad__shoulders button,
+        .virtual-pad__system button {
+          min-height: 32px;
+          min-width: 60px;
+        }
+        .virtual-pad__shoulders,
+        .virtual-pad__system {
+          top: 26px;
+        }
+      }
+      /* Haptic feedback on supported devices — pulse animation on button press */
+      @supports (touch-action: manipulation) {
+        .virtual-pad button:active {
+          transform: scale(0.88);
+          opacity: 0.85;
+          transition: transform 60ms ease, opacity 60ms ease;
         }
       }
     </style>

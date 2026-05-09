@@ -125,6 +125,7 @@ export const integrationSettingsSchema = z.object({
   kioskCollectionId: z.number().int().nullable().default(null),
   raUsername: z.string().max(256).default(""),
   raToken: z.string().max(256).default(""),
+  tgdbApiKey: z.string().max(256).default(""),
   // PC status panel — HA entity IDs to poll for live stats
   pcHostname: z.string().max(256).default("ARCADE-PC"),
   pcOnlineEntityId: z.string().max(256).default(""),
@@ -149,6 +150,7 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   kioskCollectionId: null,
   raUsername: "",
   raToken: "",
+  tgdbApiKey: "",
   pcHostname: "ARCADE-PC",
   pcOnlineEntityId: "",
   pcCpuEntityId: "",
@@ -183,3 +185,29 @@ export const gameCheatCodes = sqliteTable("game_cheat_codes", {
 export const insertGameCheatCodeSchema = createInsertSchema(gameCheatCodes).omit({ id: true });
 export type InsertGameCheatCode = z.infer<typeof insertGameCheatCodeSchema>;
 export type GameCheatCode = typeof gameCheatCodes.$inferSelect;
+
+// ── Per-profile game state (favorites, ratings, play status) ─────────────────
+export const profileGameState = sqliteTable("profile_game_state", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull(),
+  romId: integer("rom_id").notNull(),
+  favorite: integer("favorite", { mode: "boolean" }),
+  rating: integer("rating"),
+  playStatus: text("play_status"),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const insertProfileGameStateSchema = createInsertSchema(profileGameState).omit({ id: true });
+export type InsertProfileGameState = z.infer<typeof insertProfileGameStateSchema>;
+export type ProfileGameState = typeof profileGameState.$inferSelect;
+
+// ── Per-profile key bindings ─────────────────────────────────────────────────
+export const profileControlBindings = sqliteTable("profile_control_bindings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull(),
+  core: text("core").notNull(),
+  bindings: text("bindings").notNull(), // JSON: { [buttonIndex]: keyName }
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export type ProfileControlBinding = typeof profileControlBindings.$inferSelect;

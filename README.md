@@ -4,7 +4,7 @@
 
 HomeArcade is a Home Assistant Add-on that turns your sidebar into a full retro game library. Upload ROMs, browse by system, launch games in an in-browser emulator, track play time, earn RetroAchievements, and manage multiple player profiles — all without leaving Home Assistant.
 
-**Current version: 0.5.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 0.6.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -73,9 +73,10 @@ Systems are listed in release-date order.
 - **Player profiles** — named profiles with separate save states, cheats, and key remaps; switch profiles from the library header
 - **Cheat codes** — add, toggle, and delete cheat codes per game per profile from the in-game Cheats panel
 - **Display shaders** — None, CRT, Smooth, Scanlines, LCD, and Phosphor — all applied with CSS `!important` so they reliably override EmulatorJS canvas styles
-- **Metadata scraping** — cover art, descriptions, and genres from [ScreenScraper.fr](https://www.screenscraper.fr) (free account)
+- **Metadata scraping** — cover art, descriptions, genre, developer, and publisher from [TheGamesDB](https://thegamesdb.net) (primary, free API key) with [ScreenScraper.fr](https://www.screenscraper.fr) and Libretro thumbnails as fallback
+- **Play History** — dedicated history page with sessions grouped by day, per-game playtime bar chart, and total playtime stats
 - **RetroAchievements** — live achievement unlocks and a dashboard with your stats
-- **Play time tracking** — minutes played per game, recently played shelf
+- **Play time tracking** — minutes played per game, recently played shelf; per-profile favorites, ratings, and play status
 - **Kiosk mode** — lock the UI with an optional PIN for shared or TV setups
 - **Collections** — create custom game lists
 - **Gamepad support** — plug in any USB or Bluetooth controller; test it live before playing
@@ -375,7 +376,30 @@ npm run build       # production build (same as Docker)
 
 ## Changelog
 
+### v0.6.0
+- **TheGamesDB scraper** — new primary metadata source (box art, descriptions, genre, developer, publisher); add your free API key in Settings → Services. Falls through to ScreenScraper then Libretro thumbnails if unmatched
+- **Play History page** — dedicated `/history` route showing all sessions grouped by day with per-game playtime bars, total playtime stat, and most-played game summary
+- **Per-profile favorites, ratings, and play status** — non-default profiles maintain their own favorites, star ratings, and backlog/playing/completed status independently of the global library
+- **Per-profile key bindings** — Settings → Controls now has a profile selector; each profile stores its own keyboard overrides on top of global defaults, loaded at game launch
+- **Mobile landscape mode** — on-screen pad compresses correctly in landscape orientation; button press feedback animation on touch devices
+- **Touch responsiveness** — `touch-action: manipulation` on game cards eliminates the 300 ms tap delay on iOS/Android; scroll containers use `overscroll-contain` for native feel
+
+### v0.5.3
+- ROM upload progress bar with per-file and overall percentage using `XMLHttpRequest`
+
+### v0.5.2 (hotfix)
+- Fixed `Unexpected token 'var'` crash caused by regex backslash consumption inside TypeScript template literals; replaced with `indexOf`/`slice` URL derivation
+
+### v0.5.1
+- Fixed netplay relay URL derivation behind HA Ingress prefix
+
 ### v0.5.0
+- **Named player profiles** — create profiles in Settings → Player Profiles; switch from the library header; save states, cheats, and key remaps are isolated per profile
+- **Cheat codes panel** — full slide-in panel to add, toggle, and delete cheat codes per game per profile
+- **Three new shader presets** — Scanlines, LCD (pixel-perfect), Phosphor (green glow)
+- **Netplay** — WebSocket relay server; create or join a room code to play with a friend
+
+### v0.4.12
 - **Named player profiles** — create profiles in Settings → Player profiles; switch from the library header; save states, cheats, and key remaps are isolated per profile
 - **Cheat codes panel** — full slide-in panel to add, toggle, and delete cheat codes per game per profile (replaces non-functional stub)
 - **Three new shader presets** — Scanlines (scanline overlay), LCD (pixel-perfect high-contrast), Phosphor (green monochrome glow)

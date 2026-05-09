@@ -16,6 +16,7 @@ import {
   Settings as SettingsIcon,
   Trophy,
   Folder,
+  History,
 } from "lucide-react";
 
 export type Filter = SystemId | `collection:${number}`;

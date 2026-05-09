@@ -46,6 +46,7 @@ export interface IntegrationConfig {
   /** RetroAchievements */
   raUsername?: string;
   raToken?: string;
+  tgdbApiKey?: string;
   /** PC status panel */
   pcHostname?: string;
   pcOnlineEntityId?: string;
@@ -99,6 +100,7 @@ const defaultConfig: IntegrationConfig = {
   kioskCollectionId: null,
   raUsername: "",
   raToken: "",
+  tgdbApiKey: "",
   haToken: "",
   liveMode: false,
   endpoints: {},
@@ -144,6 +146,7 @@ function normalizeConfig(raw: unknown): IntegrationConfig {
     kioskCollectionId: (typeof source.kioskCollectionId === "number" || source.kioskCollectionId === null) ? source.kioskCollectionId : null,
     raUsername: typeof source.raUsername === "string" ? source.raUsername : "",
     raToken: typeof source.raToken === "string" ? source.raToken : "",
+    tgdbApiKey: typeof source.tgdbApiKey === "string" ? source.tgdbApiKey : "",
     pcHostname: typeof source.pcHostname === "string" ? source.pcHostname : "ARCADE-PC",
     pcOnlineEntityId: typeof source.pcOnlineEntityId === "string" ? source.pcOnlineEntityId : "",
     pcCpuEntityId: typeof source.pcCpuEntityId === "string" ? source.pcCpuEntityId : "",

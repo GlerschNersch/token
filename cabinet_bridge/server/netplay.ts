@@ -24,7 +24,7 @@ const rooms = new Map<string, NetplayRoom>();
 // Prune stale rooms every 5 minutes (rooms older than 2 hours)
 setInterval(() => {
   const cutoff = Date.now() - 2 * 60 * 60 * 1000;
-  for (const [code, room] of rooms) {
+  for (const [code, room] of Array.from(rooms.entries())) {
     if (room.createdAt < cutoff) rooms.delete(code);
   }
 }, 5 * 60 * 1000);

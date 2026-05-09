@@ -23,7 +23,7 @@ import { useIntegration } from "@/lib/integration";
 import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { GameCollectionWithItems, UploadedRom, UserProfile } from "@shared/schema";
+import type { GameCollectionWithItems, UploadedRom, UserProfile, ProfileGameState } from "@shared/schema";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { useGridNav } from "@/lib/useGridNav";
 
@@ -63,6 +63,23 @@ export default function Home({ filter }: { filter: Filter }) {
   const { data: profiles = [] } = useQuery<UserProfile[]>({
     queryKey: ["/api/profiles"],
   });
+  const { data: profileGameStates = [] } = useQuery<ProfileGameState[]>({
+    queryKey: ["/api/profiles", currentProfileId, "game-states"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/profiles/${currentProfileId}/game-states`));
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: currentProfileId > 0,
+  });
+
+  // Build a quick lookup: romId -> profile override
+  const profileStateMap = useMemo(() => {
+    const m = new Map<number, ProfileGameState>();
+    for (const s of profileGameStates) m.set(s.romId, s);
+    return m;
+  }, [profileGameStates]);
+
   const { data: kiosk } = useQuery<{
     enabled: boolean;
     collectionId: number | null;
@@ -74,33 +91,49 @@ export default function Home({ filter }: { filter: Filter }) {
   const rateUploadedRom = useMutation({
     mutationFn: async ({ game, rating }: { game: Game; rating: number }) => {
       if (!game.romId) return null;
-      const res = await apiRequest("PATCH", `/api/roms/${game.romId}/rating`, { rating });
-      return (await res.json()) as UploadedRom;
+      if (currentProfileId !== 1) {
+        await apiRequest("PATCH", `/api/profiles/${currentProfileId}/game-states/${game.romId}`, { rating });
+      } else {
+        await apiRequest("PATCH", `/api/roms/${game.romId}/rating`, { rating });
+      }
+      return rating;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", currentProfileId, "game-states"] });
     },
   });
 
   const favoriteUploadedRom = useMutation({
     mutationFn: async ({ game, favorite }: { game: Game; favorite: boolean }) => {
       if (!game.romId) return null;
-      const res = await apiRequest("PATCH", `/api/roms/${game.romId}/favorite`, { favorite });
-      return (await res.json()) as UploadedRom;
+      // Write to profile-specific state if not default profile
+      if (currentProfileId !== 1) {
+        await apiRequest("PATCH", `/api/profiles/${currentProfileId}/game-states/${game.romId}`, { favorite });
+      } else {
+        await apiRequest("PATCH", `/api/roms/${game.romId}/favorite`, { favorite });
+      }
+      return favorite;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", currentProfileId, "game-states"] });
     },
   });
 
   const setStatusMutation = useMutation({
     mutationFn: async ({ game, playStatus }: { game: Game; playStatus: string }) => {
       if (!game.romId) return null;
-      const res = await apiRequest("PATCH", `/api/roms/${game.romId}/play-status`, { playStatus });
-      return (await res.json()) as UploadedRom;
+      if (currentProfileId !== 1) {
+        await apiRequest("PATCH", `/api/profiles/${currentProfileId}/game-states/${game.romId}`, { playStatus });
+      } else {
+        await apiRequest("PATCH", `/api/roms/${game.romId}/play-status`, { playStatus });
+      }
+      return playStatus;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", currentProfileId, "game-states"] });
     },
   });
 
@@ -139,13 +172,20 @@ export default function Home({ filter }: { filter: Filter }) {
       const allGames = [...uploadedGames, ...GAMES].map((g) => ({
         ...g,
         favorite:
-          favOverrides[g.id] !== undefined ? favOverrides[g.id] : !!g.favorite,
+          favOverrides[g.id] !== undefined ? favOverrides[g.id] :
+          (g.romId && profileStateMap.get(g.romId)?.favorite !== undefined && currentProfileId !== 1
+            ? !!profileStateMap.get(g.romId)!.favorite
+            : !!g.favorite),
         rating:
-          ratingOverrides[g.id] !== undefined ? ratingOverrides[g.id] : g.rating,
+          ratingOverrides[g.id] !== undefined ? ratingOverrides[g.id] :
+          (g.romId && profileStateMap.get(g.romId)?.rating !== undefined && currentProfileId !== 1
+            ? profileStateMap.get(g.romId)!.rating!
+            : g.rating),
         playStatus:
-          statusOverrides[g.id] !== undefined
-            ? statusOverrides[g.id]
-            : (g.playStatus ?? "unset"),
+          statusOverrides[g.id] !== undefined ? statusOverrides[g.id] :
+          (g.romId && profileStateMap.get(g.romId)?.playStatus !== undefined && currentProfileId !== 1
+            ? profileStateMap.get(g.romId)!.playStatus!
+            : (g.playStatus ?? "unset")),
       }));
 
       // Group multi-disc games
@@ -529,7 +569,7 @@ export default function Home({ filter }: { filter: Filter }) {
         )}
 
         {/* ── Scrollable content area — pb-20 reserves space for mobile bottom nav ── */}
-        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0 overscroll-y-contain scroll-smooth">
           {/* Hero — Continue Playing */}
           {showHero && pc.online && recentlyPlayed[0] ? (
             <ContinueHero game={recentlyPlayed[0]} onOpen={setOpenGame} profileId={currentProfileId} />
@@ -669,7 +709,7 @@ export default function Home({ filter }: { filter: Filter }) {
               }
             />
             {romsLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                 {Array.from({ length: 12 }).map((_, i) => <GameCardSkeleton key={i} />)}
               </div>
             ) : filtered.length === 0 ? (
@@ -741,7 +781,7 @@ function Grid({
   return (
     <div
       ref={gridRef}
-      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4"
+      className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4"
       data-testid="grid-games"
     >
       {games.map((g, i) => (

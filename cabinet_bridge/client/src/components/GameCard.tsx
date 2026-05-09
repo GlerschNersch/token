@@ -58,7 +58,7 @@ export const GameCard = memo(function GameCard({
       onClick={handleOpen}
       onKeyDown={handleKeyDown}
       className={[
-        "group relative rounded-lg overflow-hidden border bg-card hover-elevate active-elevate-2 focus:outline-none transition-[border-color,box-shadow] duration-100",
+        "group relative rounded-lg overflow-hidden border bg-card hover-elevate active-elevate-2 focus:outline-none transition-[border-color,box-shadow] duration-100 [touch-action:manipulation]",
         focused
           ? "border-accent ring-2 ring-accent/60 ring-offset-1 ring-offset-background shadow-[0_0_12px_2px_hsl(var(--accent)/0.35)]"
           : "border-card-border focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -106,6 +106,7 @@ export const GameCard = memo(function GameCard({
       <button
         type="button"
         onClick={handleFav}
+        style={{ touchAction: "manipulation" }}
         className="absolute top-2 right-2 size-8 rounded-md bg-black/50 backdrop-blur-sm border border-white/10 flex items-center justify-center text-white hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         aria-label={game.favorite ? "Remove from favorites" : "Add to favorites"}
         aria-pressed={!!game.favorite}

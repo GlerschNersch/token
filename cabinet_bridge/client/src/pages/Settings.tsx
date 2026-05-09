@@ -173,25 +173,57 @@ function ControlsTab() {
   const { config, setConfig } = useIntegration();
   const [selectedSystem, setSelectedSystem] = useState(SYSTEMS_WITH_CORES[0].systemId);
   const [capturing, setCapturing] = useState<number | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<number>(1);
+  const { toast } = useToast();
+
+  const { data: profiles = [] } = useQuery<UserProfile[]>({ queryKey: ["/api/profiles"] });
 
   const sys = SYSTEMS_WITH_CORES.find((s) => s.systemId === selectedSystem)!;
   const core = sys.core;
   const defs = BUTTON_DEFS[core] ?? [];
   const saved = config.controlDefaults?.[core] ?? {};
 
-  const getKey = (index: number) => saved[index] ?? DEFAULT_KEYS[index] ?? "";
+  // Profile-specific bindings override global
+  const { data: profileBindings = {} } = useQuery<Record<number, string>>({
+    queryKey: ["/api/profiles", selectedProfileId, "controls", core],
+    queryFn: async () => {
+      if (selectedProfileId === 1) return {};
+      const res = await fetch(`/api/profiles/${selectedProfileId}/controls/${core}`);
+      if (!res.ok) return {};
+      return res.json();
+    },
+    enabled: selectedProfileId > 1,
+  });
 
-  const setKey = useCallback((index: number, key: string) => {
-    const current = config.controlDefaults ?? {};
-    const coreMap = { ...(current[core] ?? {}), [index]: key };
-    setConfig({ controlDefaults: { ...current, [core]: coreMap } });
-  }, [config.controlDefaults, core, setConfig]);
+  const getKey = (index: number) => {
+    if (selectedProfileId !== 1 && profileBindings[index] !== undefined) return profileBindings[index];
+    return saved[index] ?? DEFAULT_KEYS[index] ?? "";
+  };
 
-  const resetCore = () => {
-    const current = config.controlDefaults ?? {};
-    const next = { ...current };
-    delete next[core];
-    setConfig({ controlDefaults: next });
+  const setKey = useCallback(async (index: number, key: string) => {
+    if (selectedProfileId !== 1) {
+      // Save to profile-specific bindings
+      const updated = { ...profileBindings, [index]: key };
+      await apiRequest("PUT", `/api/profiles/${selectedProfileId}/controls/${core}`, updated);
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core] });
+    } else {
+      const current = config.controlDefaults ?? {};
+      const coreMap = { ...(current[core] ?? {}), [index]: key };
+      setConfig({ controlDefaults: { ...current, [core]: coreMap } });
+    }
+  }, [config.controlDefaults, core, selectedProfileId, profileBindings, setConfig]);
+
+  const resetCore = async () => {
+    if (selectedProfileId !== 1) {
+      await apiRequest("DELETE", `/api/profiles/${selectedProfileId}/controls/${core}`);
+      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core] });
+      toast({ title: "Reset", description: `${sys.label} bindings reset for this profile.` });
+    } else {
+      const current = config.controlDefaults ?? {};
+      const next = { ...current };
+      delete next[core];
+      setConfig({ controlDefaults: next });
+    }
   };
 
   // Key capture listener
@@ -214,9 +246,30 @@ function ControlsTab() {
         <div className="space-y-1">
           <h3 className="font-display text-lg font-bold">Input Mapping</h3>
           <p className="text-sm text-muted-foreground">
-            Customise your global keyboard controls per system. These apply to the embedded player and Lovelace card.
+            Customise keyboard controls per system and per profile. Profile overrides take precedence over global defaults.
           </p>
         </div>
+
+        {/* Profile selector */}
+        {profiles.length > 1 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Profile:</span>
+            {[{ id: 1, name: "Global (all profiles)", color: "#6b7280" }, ...profiles].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedProfileId(p.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-all ${
+                  selectedProfileId === p.id
+                    ? "bg-primary/15 border-primary text-primary"
+                    : "bg-background/50 border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="size-2 rounded-full" style={{ backgroundColor: (p as any).color ?? "#6b7280" }} />
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {SYSTEMS_WITH_CORES.map((s) => (
@@ -540,8 +593,16 @@ export default function Settings() {
 
             {/* ── Services ─────────────────────────────────────────────── */}
             <TabsContent value="services" className="space-y-8">
+              <Section title="TheGamesDB (recommended)"
+                description="Primary metadata source — box art, descriptions, genre, developer, and publisher. Free API key at thegamesdb.net (sign up → API Key).">
+                <Field label="TheGamesDB API Key" hint="Register at thegamesdb.net to get a free key.">
+                  <Input type="password" value={config.tgdbApiKey ?? ""} onChange={(e) => setConfig({ tgdbApiKey: e.target.value })}
+                    placeholder="••••••••" autoComplete="off" />
+                </Field>
+              </Section>
+
               <Section title="ScreenScraper.fr (optional)"
-                description="Fetches game descriptions, release years, developers, publishers, and genres on upload. Register free at screenscraper.fr.">
+                description="Fallback metadata source. Excellent retro coverage. Register free at screenscraper.fr.">
                 <Field label="ScreenScraper user ID" hint="Your screenscraper.fr username.">
                   <Input type="text" value={config.ssUserId ?? ""} onChange={(e) => setConfig({ ssUserId: e.target.value })}
                     placeholder="your_username" data-testid="input-ss-userid" autoComplete="off" />
