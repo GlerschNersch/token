@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.6.0
+
+- Feature: **TheGamesDB scraper** — new primary metadata source for box art, descriptions, genre, developer, and publisher; add your free API key in Settings → Services; cascades to ScreenScraper then Libretro thumbnails
+- Feature: **Play History page** — dedicated history view showing sessions grouped by day, per-game playtime bar chart, total playtime stats, and most-played summary; accessible from sidebar and mobile nav
+- Feature: **Per-profile favorites, ratings, and play status** — each named profile maintains its own favorites, star ratings, and backlog/playing/completed status independently of the global library
+- Feature: **Per-profile key bindings** — Settings → Controls now has a profile selector; each profile stores keyboard overrides loaded at game launch
+- Feature: **Mobile landscape mode** — on-screen pad resizes correctly in landscape orientation with button press animation on touch devices
+- Fix: Map iteration in netplay.ts uses Array.from() for ES2015 compatibility
+
+## 0.5.3
+
+- Feature: ROM upload progress bar with per-file and overall percentage
+
+## 0.5.2
+
+- Fix: critical SyntaxError in bootstrap.js caused by regex backslash consumption inside TypeScript template literals; replaced with indexOf/slice URL derivation
+
+## 0.5.1
+
+- Fix: netplay relay URL derivation behind HA Ingress prefix
+
+## 0.5.0
+
+- Feature: **Named player profiles** — create profiles in Settings; switch from the library header; save states, cheats, and key remaps isolated per profile
+- Feature: **Cheat codes panel** — add, toggle, and delete cheat codes per game per profile from the in-game panel
+- Feature: **Shader presets** — Scanlines, LCD (pixel-perfect), Phosphor (green glow)
+- Feature: **Netplay** — WebSocket relay server; create or join a room code to play with a friend
+
 ## 0.3.15
 
 - Feature: Settings page now uses tabs (General, Library, Services, Controls, Kiosk, HA Setup)
