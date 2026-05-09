@@ -679,24 +679,40 @@ export async function registerRoutes(
     if (!rom) return res.status(404).json({ message: "ROM not found." });
 
     const SYSTEM_FOLDERS: Record<string, string> = {
-      ps1:             "Sony - PlayStation",
-      psx:             "Sony - PlayStation",
-      snes:            "Nintendo - Super Nintendo Entertainment System",
-      nes:             "Nintendo - Nintendo Entertainment System",
-      n64:             "Nintendo - Nintendo 64",
-      gba:             "Nintendo - Game Boy Advance",
-      gbc:             "Nintendo - Game Boy Color",
-      gb:              "Nintendo - Game Boy",
-      genesis:         "Sega - Mega Drive - Genesis",
-      megadrive:       "Sega - Mega Drive - Genesis",
-      "game-gear":     "Sega - Game Gear",
-      "master-system": "Sega - Master System - Mark III",
-      arcade:          "MAME",
-      mame:            "MAME",
-      saturn:          "Sega - Saturn",
-      psp:             "Sony - PlayStation Portable",
-      ps2:             "Sony - PlayStation 2",
-      nds:             "Nintendo - Nintendo DS",
+      // Nintendo
+      nes:          "Nintendo - Nintendo Entertainment System",
+      snes:         "Nintendo - Super Nintendo Entertainment System",
+      n64:          "Nintendo - Nintendo 64",
+      gb:           "Nintendo - Game Boy",
+      gbc:          "Nintendo - Game Boy Color",
+      gba:          "Nintendo - Game Boy Advance",
+      nds:          "Nintendo - Nintendo DS",
+      virtualboy:   "Nintendo - Virtual Boy",
+      // Sony
+      ps1:          "Sony - PlayStation",
+      psx:          "Sony - PlayStation",
+      ps2:          "Sony - PlayStation 2",
+      psp:          "Sony - PlayStation Portable",
+      // Sega
+      genesis:      "Sega - Mega Drive - Genesis",
+      megadrive:    "Sega - Mega Drive - Genesis",
+      sms:          "Sega - Master System - Mark III",
+      gamegear:     "Sega - Game Gear",
+      segacd:       "Sega - Mega-CD - Sega CD",
+      sega32x:      "Sega - 32X",
+      saturn:       "Sega - Saturn",
+      dreamcast:    "Sega - Dreamcast",
+      // Atari
+      atari2600:    "Atari - 2600",
+      atari7800:    "Atari - 7800",
+      lynx:         "Atari - Lynx",
+      // NEC
+      pce:          "NEC - PC Engine - TurboGrafx 16",
+      // SNK
+      neogeo:       "SNK - Neo Geo",
+      // Arcade
+      arcade:       "MAME",
+      mame:         "MAME",
     };
 
     const folder = SYSTEM_FOLDERS[rom.system?.toLowerCase() ?? ""];
