@@ -671,6 +671,92 @@ export async function registerRoutes(
     res.json({ ok: await storage.deleteCheat(id) });
   });
 
+
+  // GET /api/roms/:id/fetch-cheats — pull from libretro cheat database
+  app.get("/api/roms/:id/fetch-cheats", async (req, res) => {
+    const romId = Number(req.params.id);
+    const rom = await storage.getUploadedRom(romId);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+
+    const SYSTEM_FOLDERS: Record<string, string> = {
+      ps1:           "Sony - PlayStation",
+      psx:           "Sony - PlayStation",
+      snes:          "Nintendo - Super Nintendo Entertainment System",
+      nes:           "Nintendo - Nintendo Entertainment System",
+      n64:           "Nintendo - Nintendo 64",
+      gba:           "Nintendo - Game Boy Advance",
+      gbc:           "Nintendo - Game Boy Color",
+      gb:            "Nintendo - Game Boy",
+      genesis:       "Sega - Mega Drive - Genesis",
+      megadrive:     "Sega - Mega Drive - Genesis",
+      "game-gear":   "Sega - Game Gear",
+      "master-system": "Sega - Master System - Mark III",
+      arcade:        "MAME",
+      mame:          "MAME",
+      saturn:        "Sega - Saturn",
+      psp:           "Sony - PlayStation Portable",
+      ps2:           "Sony - PlayStation 2",
+      nds:           "Nintendo - Nintendo DS",
+    };
+
+    const folder = SYSTEM_FOLDERS[rom.system?.toLowerCase() ?? ""];
+    if (!folder) return res.json({ cheats: [], message: "No cheat database for this system." });
+
+    // Search GitHub for best-matching .cht file
+    const words = rom.title
+      .replace(/[^\w\s]/g, " ")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 4)
+      .join("+");
+
+    const searchUrl =
+      `https://api.github.com/search/code?q=repo:libretro/libretro-database+${encodeURIComponent(words)}+path:cht/${encodeURIComponent(folder)}&per_page=5`;
+
+    let chtPath: string | null = null;
+    try {
+      const searchRes = await fetch(searchUrl, {
+        headers: { Accept: "application/vnd.github+json", "User-Agent": "HomeArcade/1.0" },
+      });
+      if (searchRes.ok) {
+        const data = await searchRes.json() as { items?: { path: string }[] };
+        chtPath = data.items?.[0]?.path ?? null;
+      }
+    } catch { /* network error */ }
+
+    if (!chtPath) return res.json({ cheats: [], message: "No cheat file found for this game." });
+
+    // Fetch raw .cht content
+    let chtText = "";
+    try {
+      const rawRes = await fetch(
+        `https://raw.githubusercontent.com/libretro/libretro-database/master/${chtPath}`,
+        { headers: { "User-Agent": "HomeArcade/1.0" } },
+      );
+      if (!rawRes.ok) return res.json({ cheats: [], message: "Could not download cheat file." });
+      chtText = await rawRes.text();
+    } catch {
+      return res.json({ cheats: [], message: "Network error fetching cheat file." });
+    }
+
+    // Parse .cht format: cheatN_desc = "..." / cheatN_code = "..."
+    const entries: Record<number, { desc?: string; code?: string }> = {};
+    for (const line of chtText.split(/\r?\n/)) {
+      const m = line.match(/^cheat(\d+)_(desc|code)\s*=\s*"(.*)"\s*$/);
+      if (!m) continue;
+      const idx = Number(m[1]);
+      if (!entries[idx]) entries[idx] = {};
+      if (m[2] === "desc") entries[idx].desc = m[3].trim();
+      if (m[2] === "code") entries[idx].code = m[3].trim();
+    }
+
+    const cheats = Object.values(entries)
+      .filter((e) => e.desc && e.code)
+      .map((e) => ({ desc: e.desc!, code: e.code! }));
+
+    res.json({ cheats, source: chtPath });
+  });
+
   app.get("/api/collections", async (_req, res) => {
     const collections = await storage.listCollections();
     res.json(collections);

@@ -8,7 +8,7 @@ import { useIntegration, formatRelative } from "@/lib/integration";
 import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { GameCollectionWithItems, UploadedRom, RomSaveSlot, GameCheatCode } from "@shared/schema";
-import { Heart, Play, Clock, Users, Star, Folder, Plus, ChevronDown, ChevronUp, Hash, Loader2, ImagePlus, Trash2, Save, Zap, ToggleLeft, ToggleRight } from "lucide-react";
+import { Heart, Play, Clock, Users, Star, Folder, Plus, ChevronDown, ChevronUp, Hash, Loader2, ImagePlus, Trash2, Save, Zap, ToggleLeft, ToggleRight, Database, Check } from "lucide-react";
 
 export function GameDetailDialog({
   game,
@@ -69,6 +69,9 @@ export function GameDetailDialog({
   const [cheatDesc, setCheatDesc] = useState("");
   const [cheatCode, setCheatCode] = useState("");
   const [addingCheat, setAddingCheat] = useState(false);
+  const [fetchingCheats, setFetchingCheats] = useState(false);
+  const [fetchedCheats, setFetchedCheats] = useState<{ desc: string; code: string; selected: boolean }[] | null>(null);
+  const [fetchMsg, setFetchMsg] = useState<string | null>(null);
 
   const { data: cheats = [], refetch: refetchCheats } = useQuery<GameCheatCode[]>({
     queryKey: ["cheats", game?.romId, profileId],
@@ -105,6 +108,40 @@ export function GameDetailDialog({
   const deleteCheat = async (id: number) => {
     await apiRequest("DELETE", `/api/cheats/${id}`);
     await refetchCheats();
+  };
+
+  const fetchCheatsFromDb = async () => {
+    if (!game?.romId) return;
+    setFetchingCheats(true);
+    setFetchedCheats(null);
+    setFetchMsg(null);
+    try {
+      const res = await fetch(apiUrl(`/api/roms/${game.romId}/fetch-cheats`));
+      const data = await res.json() as { cheats: { desc: string; code: string }[]; message?: string };
+      if (data.cheats.length === 0) {
+        setFetchMsg(data.message ?? "No cheats found.");
+      } else {
+        setFetchedCheats(data.cheats.map((c) => ({ ...c, selected: false })));
+      }
+    } catch {
+      setFetchMsg("Network error. Check your connection.");
+    } finally {
+      setFetchingCheats(false);
+    }
+  };
+
+  const importSelectedCheats = async () => {
+    if (!game?.romId || !fetchedCheats) return;
+    const selected = fetchedCheats.filter((c) => c.selected);
+    for (const c of selected) {
+      await apiRequest("POST", `/api/roms/${game.romId}/cheats`, {
+        description: c.desc,
+        code: c.code,
+        profileId,
+      });
+    }
+    await refetchCheats();
+    setFetchedCheats(null);
   };
 
   const refreshArt = useCallback(async () => {
@@ -374,11 +411,67 @@ export function GameDetailDialog({
                     Cheats
                   </div>
                   {cheats.length > 0 && (
-                    <span className="font-mono text-[9px] text-muted-foreground/50">
+                    <span className="font-mono text-[9px] text-muted-foreground/50 mr-1">
                       {cheats.filter((c) => c.enabled).length}/{cheats.length} active
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => { setFetchedCheats(null); setFetchMsg(null); void fetchCheatsFromDb(); }}
+                    disabled={fetchingCheats}
+                    title="Fetch codes from libretro database"
+                    className="text-muted-foreground hover:text-primary disabled:opacity-40 transition-colors"
+                  >
+                    {fetchingCheats
+                      ? <Loader2 className="size-3.5 animate-spin" />
+                      : <Database className="size-3.5" />}
+                  </button>
                 </div>
+                {/* Fetched cheats panel */}
+                {fetchMsg && (
+                  <p className="font-mono text-[10px] text-muted-foreground/50 text-center py-1 mb-2">{fetchMsg}</p>
+                )}
+                {fetchedCheats && fetchedCheats.length > 0 && (
+                  <div className="mb-3 rounded-md border border-primary/20 bg-primary/5 p-2 space-y-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-[9px] uppercase tracking-wider text-primary/70">
+                        {fetchedCheats.filter((c) => c.selected).length} of {fetchedCheats.length} selected
+                      </span>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setFetchedCheats((p) => p?.map((c) => ({ ...c, selected: true })) ?? null)}
+                          className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:text-foreground">All</button>
+                        <button type="button" onClick={() => setFetchedCheats((p) => p?.map((c) => ({ ...c, selected: false })) ?? null)}
+                          className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:text-foreground">None</button>
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
+                      {fetchedCheats.map((c, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setFetchedCheats((p) => p?.map((x, j) => j === i ? { ...x, selected: !x.selected } : x) ?? null)}
+                          className={"w-full flex items-start gap-2 rounded px-2 py-1.5 text-left transition-colors " + (c.selected ? "bg-primary/15 text-foreground" : "hover:bg-muted/40 text-muted-foreground")}
+                        >
+                          <span className={"mt-0.5 size-3.5 shrink-0 rounded border flex items-center justify-center " + (c.selected ? "border-primary bg-primary" : "border-border")}>
+                            {c.selected && <Check className="size-2.5 text-primary-foreground" />}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-mono text-[11px] font-medium truncate">{c.desc}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground/60 truncate">{c.code}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void importSelectedCheats()}
+                      disabled={fetchedCheats.filter((c) => c.selected).length === 0}
+                      className="mt-1.5 w-full rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Add {fetchedCheats.filter((c) => c.selected).length} cheat{fetchedCheats.filter((c) => c.selected).length === 1 ? "" : "s"}
+                    </button>
+                  </div>
+                )}
                 {/* Add form */}
                 <div className="flex gap-2 mb-3">
                   <input
