@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { SYSTEMS, type SystemId, formatRomSize } from "@/data/library";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { UploadedRom } from "@shared/schema";
-import { FileArchive, Upload, X } from "lucide-react";
+import { FileArchive, Upload, X, Zap, CheckCircle2 } from "lucide-react";
 
 type UploadLimits = {
   maxUploadMb: number;
@@ -69,6 +69,9 @@ export function RomUpload({ system: fixedSystem, variant = "card" }: RomUploadPr
   const [favorite, setFavorite] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadedIds, setUploadedIds] = useState<number[]>([]);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ matched: number; total: number } | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -137,9 +140,11 @@ export function RomUpload({ system: fixedSystem, variant = "card" }: RomUploadPr
 
       return uploaded;
     },
-    onSuccess: async () => {
+    onSuccess: async (uploaded) => {
       setFiles([]);
       setProgress(null);
+      setScrapeResult(null);
+      setUploadedIds(uploaded.map((r) => r.id));
       if (fileInputRef.current) fileInputRef.current.value = "";
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/roms"] }),
@@ -150,6 +155,22 @@ export function RomUpload({ system: fixedSystem, variant = "card" }: RomUploadPr
       setProgress(null);
     },
   });
+
+  const scrapeUploadedArt = async () => {
+    if (uploadedIds.length === 0) return;
+    setScraping(true);
+    let matched = 0;
+    for (const id of uploadedIds) {
+      try {
+        const res = await fetch(`/api/roms/${id}/scrape-art`, { method: "POST" });
+        const data = await res.json() as { artUrl?: string };
+        if (data.artUrl) matched++;
+      } catch { /* ignore per-rom errors */ }
+    }
+    setScrapeResult({ matched, total: uploadedIds.length });
+    setScraping(false);
+    await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+  };
 
   const targetLabel = systemMeta ? `${systemMeta.shortName} ROMs` : "ROMs";
   const headingCopy = fixedSystem && systemMeta
@@ -328,10 +349,31 @@ export function RomUpload({ system: fixedSystem, variant = "card" }: RomUploadPr
       ) : null}
 
       {upload.isSuccess ? (
-        <div className="rounded-md border border-status-online/40 bg-status-online/10 px-3 py-2 text-xs text-status-online" data-testid="success-rom-upload">
-          {fixedSystem && systemMeta
-            ? `${systemMeta.shortName} ROMs added — they should appear in the grid below.`
-            : "ROM upload complete. Switch to that system's page to launch newly added games."}
+        <div className="rounded-md border border-status-online/40 bg-status-online/10 px-3 py-2.5 space-y-2" data-testid="success-rom-upload">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-status-online">
+              {fixedSystem && systemMeta
+                ? `${systemMeta.shortName} ROMs added — they should appear in the grid below.`
+                : "ROM upload complete. Switch to that system's page to launch newly added games."}
+            </p>
+          </div>
+          {scrapeResult ? (
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-status-online">
+              <CheckCircle2 className="size-3.5 shrink-0" />
+              Art fetched: {scrapeResult.matched}/{scrapeResult.total} matched
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void scrapeUploadedArt()}
+              disabled={scraping}
+              className="inline-flex items-center gap-1.5 rounded border border-status-online/40 bg-status-online/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-status-online hover:bg-status-online/20 disabled:opacity-50 transition-colors"
+            >
+              {scraping
+                ? <><Upload className="size-3 animate-bounce" /> Fetching art…</>
+                : <><Zap className="size-3" /> Fetch art for {uploadedIds.length} ROM{uploadedIds.length !== 1 ? "s" : ""}</>}
+            </button>
+          )}
         </div>
       ) : null}
 

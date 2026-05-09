@@ -155,21 +155,29 @@ export const GameCard = memo(function GameCard({
         </span>
       </button>
 
-      {/* ── Card footer — system + meta ── */}
-      <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-card-border/60">
-        <span className="md-label-small text-muted-foreground uppercase tracking-[0.08em] truncate min-w-0" data-testid={`text-system-${game.id}`}>
-          {system?.shortName ?? game.system}
-        </span>
-        <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-          {game.lastPlayed ? (
-            <span className="md-label-small text-foreground/60 whitespace-nowrap" data-testid={`text-lastplayed-${game.id}`}>
-              {formatRelative(game.lastPlayed)}
-            </span>
-          ) : null}
-          <span className="flex items-center gap-0.5 md-label-small text-foreground/60" data-testid={`text-rating-${game.id}`}>
-            <Star className="size-3 fill-current text-chart-3" />
-            {game.rating > 0 ? game.rating : "—"}
+      {/* ── Card footer — title + system/meta ── */}
+      <div className="px-3 pt-2 pb-2.5 border-t border-card-border/60 space-y-0.5">
+        <div
+          className="text-[12px] font-semibold text-foreground leading-tight line-clamp-1"
+          data-testid={`text-title-${game.id}`}
+        >
+          {game.title}
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="md-label-small text-muted-foreground uppercase tracking-[0.08em] truncate min-w-0" data-testid={`text-system-${game.id}`}>
+            {system?.shortName ?? game.system}
           </span>
+          <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+            {game.lastPlayed ? (
+              <span className="md-label-small text-foreground/60 whitespace-nowrap" data-testid={`text-lastplayed-${game.id}`}>
+                {formatRelative(game.lastPlayed)}
+              </span>
+            ) : null}
+            <span className="flex items-center gap-0.5 md-label-small text-foreground/60" data-testid={`text-rating-${game.id}`}>
+              <Star className="size-3 fill-current text-chart-3" />
+              {game.rating > 0 ? game.rating : "—"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
