@@ -166,6 +166,10 @@ export interface IStorage {
   // Per-profile control bindings
   getProfileControlBindings(profileId: number, core: string): Promise<Record<number, string>>;
   setProfileControlBindings(profileId: number, core: string, bindings: Record<number, string>): Promise<void>;
+  // Gamepad bindings
+  getGamepadBindings(profileId: number, gamepadId: string): Promise<Record<number, number>>;
+  setGamepadBindings(profileId: number, gamepadId: string, bindings: Record<number, number>): Promise<void>;
+  listGamepadBindings(profileId: number): Promise<Array<{ gamepadId: string; bindings: Record<number, number> }>>;
 }
 
 const INTEGRATION_SETTINGS_KEY = "integration";
@@ -529,6 +533,35 @@ export class DatabaseStorage implements IStorage {
       "INSERT INTO profile_control_bindings (profile_id, core, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, core) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at"
     ).run(profileId, core, JSON.stringify(bindings), now);
   }
+
+  // ── Gamepad bindings ──────────────────────────────────────────────────────
+  async getGamepadBindings(profileId: number, gamepadId: string): Promise<Record<number, number>> {
+    const row = sqlite.prepare(
+      "SELECT bindings FROM gamepad_bindings WHERE profile_id=? AND gamepad_id=?"
+    ).get(profileId, gamepadId) as { bindings: string } | undefined;
+    // Fall back to "default" slot if specific gamepad not found
+    const fallback = gamepadId !== "default"
+      ? sqlite.prepare("SELECT bindings FROM gamepad_bindings WHERE profile_id=? AND gamepad_id='default'").get(profileId) as { bindings: string } | undefined
+      : undefined;
+    const raw = row ?? fallback;
+    if (!raw) return {};
+    try { return JSON.parse(raw.bindings); } catch { return {}; }
+  }
+  async setGamepadBindings(profileId: number, gamepadId: string, bindings: Record<number, number>): Promise<void> {
+    const now = Date.now();
+    sqlite.prepare(
+      "INSERT INTO gamepad_bindings (profile_id, gamepad_id, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, gamepad_id) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at"
+    ).run(profileId, gamepadId, JSON.stringify(bindings), now);
+  }
+  async listGamepadBindings(profileId: number) {
+    const rows = sqlite.prepare(
+      "SELECT gamepad_id, bindings FROM gamepad_bindings WHERE profile_id=?"
+    ).all(profileId) as Array<{ gamepad_id: string; bindings: string }>;
+    return rows.map((r) => ({
+      gamepadId: r.gamepad_id,
+      bindings: (() => { try { return JSON.parse(r.bindings) as Record<number, number>; } catch { return {}; } })(),
+    }));
+  }
 }
 
 export const storage = new DatabaseStorage();
@@ -555,6 +588,14 @@ export const storage = new DatabaseStorage();
       bindings TEXT NOT NULL,
       updated_at INTEGER NOT NULL,
       UNIQUE(profile_id, core)
+    )`,
+    `CREATE TABLE IF NOT EXISTS gamepad_bindings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      profile_id INTEGER NOT NULL DEFAULT 1,
+      gamepad_id TEXT NOT NULL DEFAULT 'default',
+      bindings TEXT NOT NULL DEFAULT '{}',
+      updated_at INTEGER NOT NULL,
+      UNIQUE(profile_id, gamepad_id)
     )`,
   ];
   for (const stmt of stmts) {

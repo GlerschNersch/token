@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { THEMES, type AppTheme, applyTheme } from "@/App";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
@@ -12,7 +12,7 @@ import { SYSTEMS, formatRomSize } from "@/data/library";
 import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
 import { filterToPath } from "@/lib/filter";
 import { Link } from "wouter";
-import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, RotateCcw, Zap, CheckCircle2, XCircle, Loader2, UserCircle2, Plus, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, RotateCcw, Zap, CheckCircle2, XCircle, Loader2, UserCircle2, Plus, X, Gamepad2, Wifi, WifiOff } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ConsoleSilhouette } from "@/components/ConsoleSilhouette";
@@ -354,6 +354,215 @@ function ControlsTab() {
              );
            })}
         </div>
+      </div>
+
+      {/* Gamepad remapper */}
+      <GamepadRemapSection profileId={selectedProfileId} />
+    </div>
+  );
+}
+
+
+// ── Gamepad remapper ────────────────────────────────────────────────────────
+
+const RETROPAD_BUTTONS: { index: number; label: string; group: string }[] = [
+  { index: 8,  label: "A (East)",   group: "Face" },
+  { index: 0,  label: "B (South)",  group: "Face" },
+  { index: 9,  label: "X (North)",  group: "Face" },
+  { index: 1,  label: "Y (West)",   group: "Face" },
+  { index: 3,  label: "Start",      group: "System" },
+  { index: 2,  label: "Select",     group: "System" },
+  { index: 4,  label: "D-Pad Up",   group: "D-Pad" },
+  { index: 5,  label: "D-Pad Down", group: "D-Pad" },
+  { index: 6,  label: "D-Pad Left", group: "D-Pad" },
+  { index: 7,  label: "D-Pad Right","group": "D-Pad" },
+  { index: 10, label: "L1",         group: "Shoulder" },
+  { index: 11, label: "R1",         group: "Shoulder" },
+  { index: 12, label: "L2",         group: "Shoulder" },
+  { index: 13, label: "R2",         group: "Shoulder" },
+  { index: 14, label: "L3 (Click)", group: "Analog" },
+  { index: 15, label: "R3 (Click)", group: "Analog" },
+];
+
+// Standard Xbox/PS gamepad default mapping (retropad → physical button index)
+const DEFAULT_GAMEPAD_MAP: Record<number, number> = {
+  8: 0, 0: 1, 9: 2, 1: 3,   // A→0, B→1, X→2, Y→3
+  2: 8, 3: 9,                 // Select→8, Start→9
+  4: 12, 5: 13, 6: 14, 7: 15,// D-pad
+  10: 4, 11: 5, 12: 6, 13: 7,// Shoulders
+  14: 10, 15: 11,             // Sticks
+};
+
+function physicalButtonLabel(idx: number): string {
+  const names: Record<number, string> = {
+    0: "A", 1: "B", 2: "X", 3: "Y",
+    4: "LB/L1", 5: "RB/R1", 6: "LT/L2", 7: "RT/R2",
+    8: "Back/Select", 9: "Start/Menu",
+    10: "L3", 11: "R3",
+    12: "↑", 13: "↓", 14: "←", 15: "→",
+  };
+  return names[idx] !== undefined ? `Button ${idx} (${names[idx]})` : `Button ${idx}`;
+}
+
+function GamepadRemapSection({ profileId }: { profileId: number }) {
+  const { toast } = useToast();
+  const [gamepads, setGamepads] = useState<Gamepad[]>([]);
+  const [capturingBtn, setCapturingBtn] = useState<number | null>(null);
+  const [bindings, setBindings] = useState<Record<number, number>>({});
+  const [saved, setSaved] = useState(false);
+  const rafRef = React.useRef<number | null>(null);
+  const prevBtns = React.useRef<boolean[]>([]);
+
+  // Refresh gamepad list
+  const refreshGamepads = React.useCallback(() => {
+    const pads = Array.from(navigator.getGamepads()).filter(Boolean) as Gamepad[];
+    setGamepads(pads);
+  }, []);
+
+  React.useEffect(() => {
+    window.addEventListener("gamepadconnected", refreshGamepads);
+    window.addEventListener("gamepaddisconnected", refreshGamepads);
+    refreshGamepads();
+    return () => {
+      window.removeEventListener("gamepadconnected", refreshGamepads);
+      window.removeEventListener("gamepaddisconnected", refreshGamepads);
+    };
+  }, [refreshGamepads]);
+
+  // Load saved bindings for this profile
+  React.useEffect(() => {
+    fetch(`/api/profiles/${profileId}/gamepad-bindings/default`)
+      .then((r) => r.json())
+      .then((data: Record<number, number>) => {
+        if (data && typeof data === "object" && Object.keys(data).length > 0) {
+          setBindings(data);
+        } else {
+          setBindings({ ...DEFAULT_GAMEPAD_MAP });
+        }
+      })
+      .catch(() => setBindings({ ...DEFAULT_GAMEPAD_MAP }));
+  }, [profileId]);
+
+  // Polling loop for button capture
+  React.useEffect(() => {
+    if (capturingBtn === null) {
+      prevBtns.current = [];
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    const poll = () => {
+      const pads = Array.from(navigator.getGamepads()).filter(Boolean) as Gamepad[];
+      const pad = pads[0];
+      if (!pad) { rafRef.current = requestAnimationFrame(poll); return; }
+
+      const curr = pad.buttons.map((b) => b.pressed);
+      // Detect newly pressed button (not pressed on previous frame)
+      for (let i = 0; i < curr.length; i++) {
+        if (curr[i] && !(prevBtns.current[i] ?? false)) {
+          setBindings((prev) => ({ ...prev, [capturingBtn]: i }));
+          setCapturingBtn(null);
+          prevBtns.current = [];
+          return;
+        }
+      }
+      prevBtns.current = curr;
+      rafRef.current = requestAnimationFrame(poll);
+    };
+    rafRef.current = requestAnimationFrame(poll);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [capturingBtn]);
+
+  const saveBindings = async () => {
+    try {
+      await apiRequest("PUT", `/api/profiles/${profileId}/gamepad-bindings/default`, bindings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      toast({ title: "Gamepad mapping saved", description: "Applied on next game launch." });
+    } catch {
+      toast({ title: "Save failed", variant: "destructive" });
+    }
+  };
+
+  const resetBindings = () => {
+    setBindings({ ...DEFAULT_GAMEPAD_MAP });
+  };
+
+  const groups = Array.from(new Set(RETROPAD_BUTTONS.map((b) => b.group)));
+
+  return (
+    <div className="space-y-5 pt-6 border-t border-border">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Gamepad2 className="size-4 text-primary" />
+          <h3 className="font-display text-lg font-bold">Gamepad Mapping</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          {gamepads.length > 0 ? (
+            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-green-400">
+              <Wifi className="size-3" /> {gamepads[0].id.slice(0, 28)}{gamepads[0].id.length > 28 ? "…" : ""}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <WifiOff className="size-3" /> No controller detected
+            </span>
+          )}
+        </div>
+      </div>
+
+      <p className="text-sm text-muted-foreground">
+        Map each RetroArch button to a physical button on your controller.
+        {gamepads.length === 0 && " Plug in a controller to use the press-to-capture feature."}
+      </p>
+
+      {capturingBtn !== null && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-accent/15 border border-accent text-accent font-mono text-sm animate-pulse">
+          <Gamepad2 className="size-4 shrink-0" />
+          Press the physical button for <strong className="mx-1">{RETROPAD_BUTTONS.find((b) => b.index === capturingBtn)?.label}</strong> — or{" "}
+          <button onClick={() => setCapturingBtn(null)} className="underline">cancel</button>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <div key={group} className="space-y-2">
+            <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground border-b border-border pb-1">{group}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {RETROPAD_BUTTONS.filter((b) => b.group === group).map((btn) => {
+                const physIdx = bindings[btn.index];
+                const isCapturing = capturingBtn === btn.index;
+                return (
+                  <button
+                    key={btn.index}
+                    onClick={() => gamepads.length > 0 ? setCapturingBtn(btn.index) : undefined}
+                    disabled={gamepads.length === 0}
+                    className={[
+                      "flex flex-col gap-0.5 px-3 py-2.5 rounded-lg border text-left transition-all",
+                      isCapturing
+                        ? "bg-accent/20 border-accent ring-2 ring-accent/40 animate-pulse"
+                        : gamepads.length > 0
+                          ? "bg-card border-border hover:border-primary/60 cursor-pointer"
+                          : "bg-card/50 border-border/50 cursor-default opacity-60",
+                    ].join(" ")}
+                  >
+                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{btn.label}</span>
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {isCapturing ? "Waiting…" : physIdx !== undefined ? physicalButtonLabel(physIdx) : "Not mapped"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <Button onClick={saveBindings} size="sm" className="font-mono text-[11px] uppercase tracking-wider">
+          {saved ? <><Check className="size-3 mr-2" />Saved!</> : "Save Gamepad Map"}
+        </Button>
+        <Button onClick={resetBindings} variant="outline" size="sm" className="font-mono text-[10px] uppercase tracking-wider">
+          <RotateCcw className="size-3 mr-2" /> Reset to Default
+        </Button>
       </div>
     </div>
   );

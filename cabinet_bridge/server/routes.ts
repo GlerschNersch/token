@@ -470,6 +470,11 @@ export async function registerRoutes(
         }
         return merged;
       })(),
+      gamepadBindings: await (async () => {
+        const pId = profileParam ? Number(profileParam) : 1;
+        // "default" slot covers all connected gamepads unless a specific one is saved
+        return await storage.getGamepadBindings(pId, "default");
+      })(),
       userId,
       userName,
       profileId: profileParam ?? "1",
@@ -603,6 +608,38 @@ export async function registerRoutes(
     const profileId = Number(req.params.profileId);
     const core = req.params.core;
     await storage.setProfileControlBindings(profileId, core, {});
+    res.json({ ok: true });
+  });
+
+
+  // ── Gamepad bindings ──────────────────────────────────────────────────────
+  // GET  /api/profiles/:profileId/gamepad-bindings              → all saved gamepads
+  // GET  /api/profiles/:profileId/gamepad-bindings/:gamepadId   → bindings for one gamepad
+  // PUT  /api/profiles/:profileId/gamepad-bindings/:gamepadId   → save bindings
+  // DELETE /api/profiles/:profileId/gamepad-bindings/:gamepadId → clear bindings
+  app.get("/api/profiles/:profileId/gamepad-bindings", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    res.json(await storage.listGamepadBindings(profileId));
+  });
+  app.get("/api/profiles/:profileId/gamepad-bindings/:gamepadId", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const gamepadId = decodeURIComponent(req.params.gamepadId);
+    res.json(await storage.getGamepadBindings(profileId, gamepadId));
+  });
+  app.put("/api/profiles/:profileId/gamepad-bindings/:gamepadId", express.json(), async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const gamepadId = decodeURIComponent(req.params.gamepadId);
+    const bindings = req.body as Record<number, number>;
+    if (typeof bindings !== "object" || bindings === null) {
+      return res.status(400).json({ message: "bindings must be an object" });
+    }
+    await storage.setGamepadBindings(profileId, gamepadId, bindings);
+    res.json({ ok: true });
+  });
+  app.delete("/api/profiles/:profileId/gamepad-bindings/:gamepadId", async (req, res) => {
+    const profileId = Number(req.params.profileId);
+    const gamepadId = decodeURIComponent(req.params.gamepadId);
+    await storage.setGamepadBindings(profileId, gamepadId, {});
     res.json({ ok: true });
   });
 
@@ -3221,6 +3258,7 @@ const EJS_VALUE2: Record<number, string> = {
 function buildEjsControls(
   core: string,
   controlDefaults: Record<string, Record<number, string>>,
+  gamepadBindings: Record<number, number> = {},
 ): Record<number, Record<number, { value: string; value2?: string }>> {
   const isPS = ["psx", "pcsx2", "ppsspp"].includes(core);
   const maxBtn = isPS ? 15 : 11;
@@ -3234,7 +3272,12 @@ function buildEjsControls(
     const key = custom[i] ?? EJS_DEFAULT_KEYS[i];
     if (!key) continue;
     const entry: { value: string; value2?: string } = { value: key };
-    if (EJS_VALUE2[i]) entry.value2 = EJS_VALUE2[i];
+    // Custom gamepad binding (physical button index) takes priority over named default
+    if (gamepadBindings[i] !== undefined) {
+      entry.value2 = String(gamepadBindings[i]);
+    } else if (EJS_VALUE2[i]) {
+      entry.value2 = EJS_VALUE2[i];
+    }
     p1[i] = entry;
   }
   // Hotkeys (shared, still respect custom overrides)
@@ -3244,7 +3287,7 @@ function buildEjsControls(
   return { 0: p1, 1: {}, 2: {}, 3: {} };
 }
 
-function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken, controlDefaults, userId, userName, profileId }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; controlDefaults: Record<string, Record<number, string>>; userId: string; userName: string; profileId: string; }) {
+function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken, controlDefaults, gamepadBindings, userId, userName, profileId }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; controlDefaults: Record<string, Record<number, string>>; gamepadBindings: Record<number, number>; userId: string; userName: string; profileId: string; }) {
   return `"use strict";
 // Diagnostic: immediately mark that this script is executing.
 // If the launch overlay stays at 0%, this script never ran.
@@ -4893,7 +4936,7 @@ window.EJS_rewindEnabled = true;
 window.EJS_rewindGranularity = 2;
 window.EJS_fastForwardSpeed = 3;
 window.EJS_controlScheme = ${JSON.stringify(core)};
-window.EJS_defaultControls = ${JSON.stringify(buildEjsControls(core, controlDefaults))};
+window.EJS_defaultControls = ${JSON.stringify(buildEjsControls(core, controlDefaults, gamepadBindings))};
 window.EJS_defaultOptions = {
   "save-state-location": "browser",
   "save-state-slot": 1

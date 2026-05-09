@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+
+- Feature: **Gamepad button remapper** — Settings → Controls now has a Gamepad Mapping section; plug in any controller and click a RetroArch button then press the physical button to map it; mappings saved per profile and applied at game launch via EJS_defaultControls value2 field
+- Defaults auto-loaded for standard Xbox/PS layout (no setup needed for common controllers); Reset button restores defaults
+
 ## 0.6.0
 
 - Feature: **TheGamesDB scraper** — new primary metadata source for box art, descriptions, genre, developer, and publisher; add your free API key in Settings → Services; cascades to ScreenScraper then Libretro thumbnails

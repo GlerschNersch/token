@@ -211,3 +211,16 @@ export const profileControlBindings = sqliteTable("profile_control_bindings", {
 });
 
 export type ProfileControlBinding = typeof profileControlBindings.$inferSelect;
+
+// ── Per-profile gamepad button bindings ──────────────────────────────────────
+// bindings JSON: { [retropadButtonId]: gamepadButtonIndex }
+// gamepadId: navigator.getGamepads()[n].id string (or "default" for catch-all)
+export const gamepadBindings = sqliteTable("gamepad_bindings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  profileId: integer("profile_id").notNull().default(1),
+  gamepadId: text("gamepad_id").notNull().default("default"),
+  bindings: text("bindings").notNull().default("{}"),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export type GamepadBinding = typeof gamepadBindings.$inferSelect;
