@@ -17,6 +17,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ConsoleSilhouette } from "@/components/ConsoleSilhouette";
 import type { UploadedRom, GameCollectionWithItems, UserProfile } from "@shared/schema";
+import { useProfile } from "@/lib/useProfile";
 
 // ── Control definitions ────────────────────────────────────────────────────
 
@@ -171,12 +172,18 @@ function captureKeyName(e: KeyboardEvent): string {
 
 function ControlsTab() {
   const { config, setConfig } = useIntegration();
+  const { currentProfileId } = useProfile();
   const [selectedSystem, setSelectedSystem] = useState(SYSTEMS_WITH_CORES[0].systemId);
   const [capturing, setCapturing] = useState<number | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState<number>(1);
+  const [selectedProfileId, setSelectedProfileId] = useState<number>(currentProfileId);
   const { toast } = useToast();
 
   const { data: profiles = [] } = useQuery<UserProfile[]>({ queryKey: ["/api/profiles"] });
+
+  // Keep selector in sync if active profile changes externally
+  React.useEffect(() => {
+    setSelectedProfileId(currentProfileId);
+  }, [currentProfileId]);
 
   const sys = SYSTEMS_WITH_CORES.find((s) => s.systemId === selectedSystem)!;
   const core = sys.core;
@@ -187,43 +194,34 @@ function ControlsTab() {
   const { data: profileBindings = {} } = useQuery<Record<number, string>>({
     queryKey: ["/api/profiles", selectedProfileId, "controls", core],
     queryFn: async () => {
-      if (selectedProfileId === 1) return {};
       const res = await fetch(`/api/profiles/${selectedProfileId}/controls/${core}`);
       if (!res.ok) return {};
       return res.json();
     },
-    enabled: selectedProfileId > 1,
+    enabled: selectedProfileId > 0,
   });
 
   const getKey = (index: number) => {
-    if (selectedProfileId !== 1 && profileBindings[index] !== undefined) return profileBindings[index];
+    if (profileBindings[index] !== undefined) return profileBindings[index];
     return saved[index] ?? DEFAULT_KEYS[index] ?? "";
   };
 
+  const isModified = (index: number) => {
+    const current = getKey(index);
+    const def = saved[index] ?? DEFAULT_KEYS[index] ?? "";
+    return current !== def && profileBindings[index] !== undefined;
+  };
+
   const setKey = useCallback(async (index: number, key: string) => {
-    if (selectedProfileId !== 1) {
-      // Save to profile-specific bindings
-      const updated = { ...profileBindings, [index]: key };
-      await apiRequest("PUT", `/api/profiles/${selectedProfileId}/controls/${core}`, updated);
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core] });
-    } else {
-      const current = config.controlDefaults ?? {};
-      const coreMap = { ...(current[core] ?? {}), [index]: key };
-      setConfig({ controlDefaults: { ...current, [core]: coreMap } });
-    }
-  }, [config.controlDefaults, core, selectedProfileId, profileBindings, setConfig]);
+    const updated = { ...profileBindings, [index]: key };
+    await apiRequest("PUT", `/api/profiles/${selectedProfileId}/controls/${core}`, updated);
+    await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core] });
+  }, [core, selectedProfileId, profileBindings]);
 
   const resetCore = async () => {
-    if (selectedProfileId !== 1) {
-      await apiRequest("DELETE", `/api/profiles/${selectedProfileId}/controls/${core}`);
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core] });
-      toast({ title: "Reset", description: `${sys.label} bindings reset for this profile.` });
-    } else {
-      const current = config.controlDefaults ?? {};
-      const next = { ...current };
-      delete next[core];
-      setConfig({ controlDefaults: next });
-    }
+    await apiRequest("DELETE", `/api/profiles/${selectedProfileId}/controls/${core}`);
+    await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core] });
+    toast({ title: "Reset", description: `${sys.label} bindings reset for this profile.` });
   };
 
   // Key capture listener
@@ -251,10 +249,10 @@ function ControlsTab() {
         </div>
 
         {/* Profile selector */}
-        {profiles.length > 1 && (
+        {profiles.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Profile:</span>
-            {[{ id: 1, name: "Global (all profiles)", color: "#6b7280" }, ...profiles].map((p) => (
+            {profiles.map((p) => (
               <button
                 key={p.id}
                 onClick={() => setSelectedProfileId(p.id)}
@@ -264,8 +262,11 @@ function ControlsTab() {
                     : "bg-background/50 border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <span className="size-2 rounded-full" style={{ backgroundColor: (p as any).color ?? "#6b7280" }} />
+                <span className="size-2 rounded-full" style={{ backgroundColor: p.color ?? "#6b7280" }} />
                 {p.name}
+                {p.id === currentProfileId && (
+                  <span className="font-mono text-[8px] opacity-50">active</span>
+                )}
               </button>
             ))}
           </div>
@@ -311,15 +312,21 @@ function ControlsTab() {
            {defs.map((d) => {
              const key = getKey(d.index);
              const active = capturing === d.index;
+             const modified = isModified(d.index);
              return (
                <div key={d.index} className="space-y-1.5">
-                 <Label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{d.label}</Label>
+                 <Label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-1.5">
+                   {d.label}
+                   {modified && <span className="size-1.5 rounded-full bg-primary shrink-0" title="Customised" />}
+                 </Label>
                  <button
                    onClick={() => setCapturing(d.index)}
                    className={`w-full h-10 px-3 rounded-md border font-mono text-xs text-left transition-all ${
                      active
                        ? "bg-accent/20 border-accent text-accent animate-pulse ring-2 ring-accent/30"
-                       : "bg-background/50 border-border text-foreground hover:border-primary/50"
+                       : modified
+                         ? "bg-primary/5 border-primary/40 text-foreground hover:border-primary/70"
+                         : "bg-background/50 border-border text-foreground hover:border-primary/50"
                    }`}
                  >
                    {active ? "Press a key..." : formatKeyLabel(key) || "Not bound"}
