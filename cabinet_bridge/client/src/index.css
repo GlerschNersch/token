@@ -886,3 +886,662 @@ html.dark[data-theme="cyberpunk"] body::before {
     linear-gradient(90deg, hsl(56 100% 55% / 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+
+/* ================================================================
+   ERA THEMES — v0.7.2
+   10 colour schemes spanning the 80s, 90s, and early 2000s.
+   Each carries the full MD3 surface-container hierarchy,
+   container colour roles, tonal elevation overlays, and chart palette.
+   ================================================================ */
+
+/* ── Miami Vice (80s) ─────────────────────────────────────────────
+   Deep midnight navy · hot coral primary · electric teal accent.
+   Warm pastel-on-dark; think Crockett & Tubbs, not purple Synthwave.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="miami-vice"] {
+  --background: 222 48% 7%;
+  --foreground: 0 0% 96%;
+  --border: 222 30% 20%;
+  --surface-container-lowest: 222 52% 5%;
+  --surface-container-low:    222 48% 7%;
+  --surface-container:        222 44% 10%;
+  --surface-container-high:   222 40% 13%;
+  --surface-container-highest:222 36% 16%;
+  --card: var(--surface-container);
+  --card-foreground: 0 0% 96%;
+  --card-border: 222 32% 14%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 0 0% 94%;
+  --sidebar-border: 222 34% 14%;
+  --sidebar-primary: 350 82% 64%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 38% 14%;
+  --sidebar-accent-foreground: 0 0% 94%;
+  --sidebar-ring: 350 82% 64%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 0 0% 96%;
+  --popover-border: 222 32% 18%;
+  --primary: 350 82% 64%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 350 55% 22%;
+  --on-primary-container: 350 82% 90%;
+  --secondary: 222 38% 14%;
+  --secondary-foreground: 0 0% 96%;
+  --secondary-container: 178 55% 20%;
+  --on-secondary-container: 178 80% 84%;
+  --tertiary: 36 90% 60%;
+  --tertiary-foreground: 222 48% 7%;
+  --tertiary-container: 36 55% 18%;
+  --on-tertiary-container: 36 88% 86%;
+  --muted: 222 34% 14%;
+  --muted-foreground: 222 16% 56%;
+  --accent: 178 78% 54%;
+  --accent-foreground: 222 48% 7%;
+  --destructive: 0 80% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 222 32% 22%;
+  --ring: 350 82% 64%;
+  --chart-1: 350 82% 64%;
+  --chart-2: 178 78% 54%;
+  --chart-3: 36 90% 60%;
+  --chart-4: 280 60% 65%;
+  --chart-5: 220 80% 65%;
+  --md-elev-1: hsl(350 50% 100% / 0.05);
+  --md-elev-2: hsl(350 50% 100% / 0.08);
+  --md-elev-3: hsl(350 50% 100% / 0.11);
+  --md-elev-4: hsl(350 50% 100% / 0.12);
+  --md-elev-5: hsl(350 50% 100% / 0.14);
+}
+html.dark[data-theme="miami-vice"] body {
+  background-image:
+    radial-gradient(1100px 550px at 85% -5%,  hsl(350 82% 32% / 0.22), transparent 60%),
+    radial-gradient(900px 450px at 0% 100%, hsl(178 78% 28% / 0.18), transparent 60%);
+}
+
+/* ── Commodore 64 (80s) ───────────────────────────────────────────
+   Deep cobalt-blue surfaces · creamy amber primary · lavender-blue text.
+   Faithful to the iconic C64 palette: #4040A0 screen, #A0A0FF text.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="c64"] {
+  --background: 240 48% 14%;
+  --foreground: 240 55% 80%;
+  --border: 240 40% 28%;
+  --surface-container-lowest: 240 52% 11%;
+  --surface-container-low:    240 48% 14%;
+  --surface-container:        240 44% 18%;
+  --surface-container-high:   240 40% 22%;
+  --surface-container-highest:240 36% 26%;
+  --card: var(--surface-container);
+  --card-foreground: 240 55% 80%;
+  --card-border: 240 38% 22%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 240 52% 78%;
+  --sidebar-border: 240 42% 20%;
+  --sidebar-primary: 46 100% 64%;
+  --sidebar-primary-foreground: 240 52% 10%;
+  --sidebar-accent: 240 40% 22%;
+  --sidebar-accent-foreground: 240 52% 78%;
+  --sidebar-ring: 46 100% 64%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 240 55% 80%;
+  --popover-border: 240 38% 26%;
+  --primary: 46 100% 64%;
+  --primary-foreground: 240 52% 10%;
+  --primary-container: 46 65% 20%;
+  --on-primary-container: 46 100% 86%;
+  --secondary: 240 40% 22%;
+  --secondary-foreground: 240 55% 80%;
+  --secondary-container: 240 55% 28%;
+  --on-secondary-container: 240 80% 88%;
+  --tertiary: 0 80% 65%;
+  --tertiary-foreground: 240 52% 10%;
+  --tertiary-container: 0 50% 20%;
+  --on-tertiary-container: 0 80% 88%;
+  --muted: 240 38% 20%;
+  --muted-foreground: 240 28% 54%;
+  --accent: 240 70% 72%;
+  --accent-foreground: 240 52% 10%;
+  --destructive: 0 80% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 240 40% 26%;
+  --ring: 46 100% 64%;
+  --chart-1: 46 100% 64%;
+  --chart-2: 240 70% 72%;
+  --chart-3: 0 80% 65%;
+  --chart-4: 120 60% 58%;
+  --chart-5: 300 55% 68%;
+  --md-elev-1: hsl(46 60% 100% / 0.05);
+  --md-elev-2: hsl(46 60% 100% / 0.08);
+  --md-elev-3: hsl(46 60% 100% / 0.11);
+  --md-elev-4: hsl(46 60% 100% / 0.12);
+  --md-elev-5: hsl(46 60% 100% / 0.14);
+}
+html.dark[data-theme="c64"] body {
+  background-image:
+    radial-gradient(1000px 500px at 80% -8%, hsl(46 100% 30% / 0.16), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(240 70% 36% / 0.20), transparent 60%);
+}
+
+/* ── Arcade Cabinet (80s) ─────────────────────────────────────────
+   Near-pure black · coin yellow primary · fire-engine red accent.
+   The palette of Pac-Man glass and Donkey Kong side-art.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="arcade"] {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 96%;
+  --border: 0 0% 16%;
+  --surface-container-lowest: 0 0% 2%;
+  --surface-container-low:    0 0% 4%;
+  --surface-container:        0 0% 7%;
+  --surface-container-high:   0 0% 10%;
+  --surface-container-highest:0 0% 13%;
+  --card: var(--surface-container);
+  --card-foreground: 0 0% 96%;
+  --card-border: 0 0% 12%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 0 0% 92%;
+  --sidebar-border: 0 0% 12%;
+  --sidebar-primary: 48 100% 54%;
+  --sidebar-primary-foreground: 0 0% 4%;
+  --sidebar-accent: 0 0% 10%;
+  --sidebar-accent-foreground: 0 0% 92%;
+  --sidebar-ring: 48 100% 54%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 0 0% 96%;
+  --popover-border: 0 0% 14%;
+  --primary: 48 100% 54%;
+  --primary-foreground: 0 0% 4%;
+  --primary-container: 48 70% 16%;
+  --on-primary-container: 48 100% 84%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 96%;
+  --secondary-container: 0 75% 20%;
+  --on-secondary-container: 0 90% 86%;
+  --tertiary: 210 90% 58%;
+  --tertiary-foreground: 0 0% 4%;
+  --tertiary-container: 210 55% 16%;
+  --on-tertiary-container: 210 88% 84%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 50%;
+  --accent: 0 88% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 90% 54%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 0 0% 18%;
+  --ring: 48 100% 54%;
+  --chart-1: 48 100% 54%;
+  --chart-2: 0 88% 58%;
+  --chart-3: 210 90% 58%;
+  --chart-4: 120 70% 52%;
+  --chart-5: 270 70% 68%;
+  --md-elev-1: hsl(48 80% 100% / 0.05);
+  --md-elev-2: hsl(48 80% 100% / 0.08);
+  --md-elev-3: hsl(48 80% 100% / 0.11);
+  --md-elev-4: hsl(48 80% 100% / 0.12);
+  --md-elev-5: hsl(48 80% 100% / 0.14);
+}
+html.dark[data-theme="arcade"] body {
+  background-image:
+    radial-gradient(1000px 500px at 80% -5%, hsl(48 100% 28% / 0.18), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(0 88% 28% / 0.16), transparent 60%);
+}
+
+/* ── Vaporwave (90s) ──────────────────────────────────────────────
+   Deep purple-black · pastel pink primary · sky-blue/lilac accent.
+   Soft, dreamy, retrowave aesthetic — warmer and more pastel than Synthwave.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="vaporwave"] {
+  --background: 270 30% 7%;
+  --foreground: 310 40% 94%;
+  --border: 270 22% 20%;
+  --surface-container-lowest: 270 34% 5%;
+  --surface-container-low:    270 30% 7%;
+  --surface-container:        270 26% 10%;
+  --surface-container-high:   270 23% 13%;
+  --surface-container-highest:270 20% 16%;
+  --card: var(--surface-container);
+  --card-foreground: 310 40% 94%;
+  --card-border: 270 20% 14%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 310 36% 90%;
+  --sidebar-border: 270 24% 14%;
+  --sidebar-primary: 320 72% 72%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 270 22% 14%;
+  --sidebar-accent-foreground: 310 36% 90%;
+  --sidebar-ring: 320 72% 72%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 310 40% 94%;
+  --popover-border: 270 20% 18%;
+  --primary: 320 72% 72%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 320 45% 22%;
+  --on-primary-container: 320 72% 92%;
+  --secondary: 270 22% 14%;
+  --secondary-foreground: 310 40% 94%;
+  --secondary-container: 196 60% 22%;
+  --on-secondary-container: 196 72% 88%;
+  --tertiary: 270 60% 72%;
+  --tertiary-foreground: 0 0% 100%;
+  --tertiary-container: 270 40% 22%;
+  --on-tertiary-container: 270 70% 90%;
+  --muted: 270 20% 14%;
+  --muted-foreground: 270 14% 56%;
+  --accent: 196 72% 68%;
+  --accent-foreground: 270 30% 7%;
+  --destructive: 0 78% 62%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 270 22% 22%;
+  --ring: 320 72% 72%;
+  --chart-1: 320 72% 72%;
+  --chart-2: 196 72% 68%;
+  --chart-3: 270 60% 72%;
+  --chart-4: 42 90% 66%;
+  --chart-5: 160 60% 62%;
+  --md-elev-1: hsl(320 50% 100% / 0.05);
+  --md-elev-2: hsl(320 50% 100% / 0.08);
+  --md-elev-3: hsl(320 50% 100% / 0.11);
+  --md-elev-4: hsl(320 50% 100% / 0.12);
+  --md-elev-5: hsl(320 50% 100% / 0.14);
+}
+html.dark[data-theme="vaporwave"] body {
+  background-image:
+    radial-gradient(1200px 600px at 85% -8%, hsl(320 72% 34% / 0.20), transparent 60%),
+    radial-gradient(900px 450px at 0% 100%, hsl(196 72% 30% / 0.16), transparent 60%);
+}
+
+/* ── Grunge (90s) ─────────────────────────────────────────────────
+   Warm dark-earth surfaces · rust/burnt-orange primary · olive-green accent.
+   Desaturated, gritty — zero neons; think flannel and distortion pedals.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="grunge"] {
+  --background: 26 14% 7%;
+  --foreground: 34 22% 78%;
+  --border: 26 12% 18%;
+  --surface-container-lowest: 26 16% 5%;
+  --surface-container-low:    26 14% 7%;
+  --surface-container:        26 12% 10%;
+  --surface-container-high:   26 10% 13%;
+  --surface-container-highest:26 9% 16%;
+  --card: var(--surface-container);
+  --card-foreground: 34 22% 78%;
+  --card-border: 26 10% 13%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 34 20% 74%;
+  --sidebar-border: 26 12% 14%;
+  --sidebar-primary: 22 62% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 26 10% 14%;
+  --sidebar-accent-foreground: 34 20% 74%;
+  --sidebar-ring: 22 62% 50%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 34 22% 78%;
+  --popover-border: 26 10% 16%;
+  --primary: 22 62% 50%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 22 40% 18%;
+  --on-primary-container: 22 62% 84%;
+  --secondary: 26 10% 14%;
+  --secondary-foreground: 34 22% 78%;
+  --secondary-container: 82 28% 18%;
+  --on-secondary-container: 82 40% 76%;
+  --tertiary: 46 50% 52%;
+  --tertiary-foreground: 26 14% 7%;
+  --tertiary-container: 46 30% 18%;
+  --on-tertiary-container: 46 55% 80%;
+  --muted: 26 10% 14%;
+  --muted-foreground: 26 8% 48%;
+  --accent: 82 32% 46%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 65% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 26 10% 20%;
+  --ring: 22 62% 50%;
+  --chart-1: 22 62% 50%;
+  --chart-2: 82 32% 46%;
+  --chart-3: 46 50% 52%;
+  --chart-4: 200 35% 50%;
+  --chart-5: 340 35% 52%;
+  --md-elev-1: hsl(22 40% 100% / 0.05);
+  --md-elev-2: hsl(22 40% 100% / 0.08);
+  --md-elev-3: hsl(22 40% 100% / 0.11);
+  --md-elev-4: hsl(22 40% 100% / 0.12);
+  --md-elev-5: hsl(22 40% 100% / 0.14);
+}
+html.dark[data-theme="grunge"] body {
+  background-image:
+    radial-gradient(1000px 500px at 80% -5%, hsl(22 62% 24% / 0.18), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(82 32% 22% / 0.14), transparent 60%);
+}
+
+/* ── Windows 95 (90s) ─────────────────────────────────────────────
+   Dark Platinum gray surfaces · Windows teal primary · cobalt blue accent.
+   That iconic Platinum/Teal start-button energy.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="win95"] {
+  --background: 210 8% 10%;
+  --foreground: 210 6% 92%;
+  --border: 210 6% 22%;
+  --surface-container-lowest: 210 9% 8%;
+  --surface-container-low:    210 8% 10%;
+  --surface-container:        210 7% 13%;
+  --surface-container-high:   210 6% 16%;
+  --surface-container-highest:210 6% 20%;
+  --card: var(--surface-container);
+  --card-foreground: 210 6% 92%;
+  --card-border: 210 6% 18%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 210 6% 88%;
+  --sidebar-border: 210 6% 18%;
+  --sidebar-primary: 196 100% 42%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 6% 18%;
+  --sidebar-accent-foreground: 210 6% 88%;
+  --sidebar-ring: 196 100% 42%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 210 6% 92%;
+  --popover-border: 210 6% 22%;
+  --primary: 196 100% 42%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 196 65% 16%;
+  --on-primary-container: 196 88% 84%;
+  --secondary: 210 6% 18%;
+  --secondary-foreground: 210 6% 92%;
+  --secondary-container: 225 70% 22%;
+  --on-secondary-container: 225 80% 86%;
+  --tertiary: 38 90% 56%;
+  --tertiary-foreground: 210 8% 10%;
+  --tertiary-container: 38 55% 18%;
+  --on-tertiary-container: 38 88% 84%;
+  --muted: 210 6% 16%;
+  --muted-foreground: 210 5% 52%;
+  --accent: 225 75% 62%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 76% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 210 6% 24%;
+  --ring: 196 100% 42%;
+  --chart-1: 196 100% 42%;
+  --chart-2: 225 75% 62%;
+  --chart-3: 38 90% 56%;
+  --chart-4: 142 55% 50%;
+  --chart-5: 295 60% 64%;
+  --md-elev-1: hsl(196 60% 100% / 0.05);
+  --md-elev-2: hsl(196 60% 100% / 0.08);
+  --md-elev-3: hsl(196 60% 100% / 0.11);
+  --md-elev-4: hsl(196 60% 100% / 0.12);
+  --md-elev-5: hsl(196 60% 100% / 0.14);
+}
+html.dark[data-theme="win95"] body {
+  background-image:
+    radial-gradient(1000px 500px at 80% -5%, hsl(196 100% 22% / 0.18), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(225 75% 28% / 0.16), transparent 60%);
+}
+
+/* ── Blockbuster (90s – early 2000s) ─────────────────────────────
+   Deep midnight navy · Blockbuster gold primary · royal blue accent.
+   Be kind, rewind.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="blockbuster"] {
+  --background: 226 55% 8%;
+  --foreground: 0 0% 97%;
+  --border: 226 38% 20%;
+  --surface-container-lowest: 226 58% 6%;
+  --surface-container-low:    226 55% 8%;
+  --surface-container:        226 50% 11%;
+  --surface-container-high:   226 46% 14%;
+  --surface-container-highest:226 42% 17%;
+  --card: var(--surface-container);
+  --card-foreground: 0 0% 97%;
+  --card-border: 226 40% 16%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 0 0% 94%;
+  --sidebar-border: 226 42% 15%;
+  --sidebar-primary: 46 100% 52%;
+  --sidebar-primary-foreground: 226 55% 8%;
+  --sidebar-accent: 226 44% 16%;
+  --sidebar-accent-foreground: 0 0% 94%;
+  --sidebar-ring: 46 100% 52%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 0 0% 97%;
+  --popover-border: 226 40% 18%;
+  --primary: 46 100% 52%;
+  --primary-foreground: 226 55% 8%;
+  --primary-container: 46 68% 18%;
+  --on-primary-container: 46 100% 84%;
+  --secondary: 226 44% 16%;
+  --secondary-foreground: 0 0% 97%;
+  --secondary-container: 226 60% 24%;
+  --on-secondary-container: 226 80% 88%;
+  --tertiary: 210 90% 62%;
+  --tertiary-foreground: 226 55% 8%;
+  --tertiary-container: 210 55% 18%;
+  --on-tertiary-container: 210 88% 86%;
+  --muted: 226 40% 15%;
+  --muted-foreground: 226 20% 54%;
+  --accent: 210 88% 60%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 80% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 226 38% 22%;
+  --ring: 46 100% 52%;
+  --chart-1: 46 100% 52%;
+  --chart-2: 210 88% 60%;
+  --chart-3: 0 80% 62%;
+  --chart-4: 142 55% 52%;
+  --chart-5: 270 60% 66%;
+  --md-elev-1: hsl(46 70% 100% / 0.05);
+  --md-elev-2: hsl(46 70% 100% / 0.08);
+  --md-elev-3: hsl(46 70% 100% / 0.11);
+  --md-elev-4: hsl(46 70% 100% / 0.12);
+  --md-elev-5: hsl(46 70% 100% / 0.14);
+}
+html.dark[data-theme="blockbuster"] body {
+  background-image:
+    radial-gradient(1100px 560px at 85% -6%, hsl(46 100% 28% / 0.20), transparent 60%),
+    radial-gradient(900px 450px at 0% 100%, hsl(210 88% 28% / 0.16), transparent 60%);
+}
+
+/* ── Mac OS X Aqua (early 2000s) ──────────────────────────────────
+   Dark charcoal surfaces · bright Aqua blue primary · brushed-silver accent.
+   The gel-button, spinning beach-ball, frosted dock era.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="aqua"] {
+  --background: 218 14% 9%;
+  --foreground: 0 0% 96%;
+  --border: 218 10% 22%;
+  --surface-container-lowest: 218 16% 7%;
+  --surface-container-low:    218 14% 9%;
+  --surface-container:        218 12% 12%;
+  --surface-container-high:   218 11% 15%;
+  --surface-container-highest:218 10% 18%;
+  --card: var(--surface-container);
+  --card-foreground: 0 0% 96%;
+  --card-border: 218 10% 16%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 0 0% 92%;
+  --sidebar-border: 218 10% 16%;
+  --sidebar-primary: 208 100% 56%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 218 10% 16%;
+  --sidebar-accent-foreground: 0 0% 92%;
+  --sidebar-ring: 208 100% 56%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 0 0% 96%;
+  --popover-border: 218 10% 20%;
+  --primary: 208 100% 56%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 208 65% 20%;
+  --on-primary-container: 208 90% 88%;
+  --secondary: 218 10% 16%;
+  --secondary-foreground: 0 0% 96%;
+  --secondary-container: 218 8% 24%;
+  --on-secondary-container: 218 10% 88%;
+  --tertiary: 14 82% 58%;
+  --tertiary-foreground: 0 0% 100%;
+  --tertiary-container: 14 55% 18%;
+  --on-tertiary-container: 14 82% 86%;
+  --muted: 218 10% 15%;
+  --muted-foreground: 218 6% 54%;
+  --accent: 218 8% 62%;
+  --accent-foreground: 218 14% 9%;
+  --destructive: 0 78% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 218 10% 22%;
+  --ring: 208 100% 56%;
+  --chart-1: 208 100% 56%;
+  --chart-2: 14 82% 58%;
+  --chart-3: 142 60% 52%;
+  --chart-4: 38 88% 56%;
+  --chart-5: 280 65% 65%;
+  --md-elev-1: hsl(208 60% 100% / 0.05);
+  --md-elev-2: hsl(208 60% 100% / 0.08);
+  --md-elev-3: hsl(208 60% 100% / 0.11);
+  --md-elev-4: hsl(208 60% 100% / 0.12);
+  --md-elev-5: hsl(208 60% 100% / 0.14);
+}
+html.dark[data-theme="aqua"] body {
+  background-image:
+    radial-gradient(1100px 550px at 85% -5%, hsl(208 100% 30% / 0.20), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(14 82% 28% / 0.12), transparent 60%);
+}
+
+/* ── Y2K Chrome (early 2000s) ─────────────────────────────────────
+   Near-black with a steel tint · electric blue primary · holographic pink accent.
+   That CD-ROM, JNCO jeans, loading-screen-with-lens-flare aesthetic.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="y2k"] {
+  --background: 228 20% 5%;
+  --foreground: 214 18% 92%;
+  --border: 228 14% 18%;
+  --surface-container-lowest: 228 22% 3%;
+  --surface-container-low:    228 20% 5%;
+  --surface-container:        228 18% 8%;
+  --surface-container-high:   228 15% 11%;
+  --surface-container-highest:228 13% 14%;
+  --card: var(--surface-container);
+  --card-foreground: 214 18% 92%;
+  --card-border: 228 14% 13%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 214 16% 88%;
+  --sidebar-border: 228 14% 14%;
+  --sidebar-primary: 218 92% 62%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 228 14% 14%;
+  --sidebar-accent-foreground: 214 16% 88%;
+  --sidebar-ring: 218 92% 62%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 214 18% 92%;
+  --popover-border: 228 14% 16%;
+  --primary: 218 92% 62%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 218 60% 20%;
+  --on-primary-container: 218 88% 88%;
+  --secondary: 228 14% 14%;
+  --secondary-foreground: 214 18% 92%;
+  --secondary-container: 228 10% 20%;
+  --on-secondary-container: 214 18% 88%;
+  --tertiary: 320 80% 65%;
+  --tertiary-foreground: 0 0% 100%;
+  --tertiary-container: 320 52% 20%;
+  --on-tertiary-container: 320 80% 88%;
+  --muted: 228 12% 14%;
+  --muted-foreground: 228 8% 54%;
+  --accent: 320 80% 65%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 82% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 228 14% 20%;
+  --ring: 218 92% 62%;
+  --chart-1: 218 92% 62%;
+  --chart-2: 320 80% 65%;
+  --chart-3: 180 90% 56%;
+  --chart-4: 38 95% 60%;
+  --chart-5: 150 65% 54%;
+  --md-elev-1: hsl(218 60% 100% / 0.05);
+  --md-elev-2: hsl(218 60% 100% / 0.08);
+  --md-elev-3: hsl(218 60% 100% / 0.11);
+  --md-elev-4: hsl(218 60% 100% / 0.12);
+  --md-elev-5: hsl(218 60% 100% / 0.14);
+}
+html.dark[data-theme="y2k"] body {
+  background-image:
+    radial-gradient(1200px 600px at 80% -8%, hsl(218 92% 30% / 0.20), transparent 60%),
+    radial-gradient(900px 450px at 0% 100%, hsl(320 80% 28% / 0.16), transparent 60%);
+}
+/* Y2K: faint metallic grid for that CD-ROM menu screen feel */
+html.dark[data-theme="y2k"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    linear-gradient(hsl(218 92% 62% / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(218 92% 62% / 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ── Halo / Xbox (early 2000s) ────────────────────────────────────
+   Dark military-green surfaces · Xbox lime-green primary · gunmetal accent.
+   The original Xbox dashboard and Halo: Combat Evolved loading screen.
+   ──────────────────────────────────────────────────────────────── */
+html.dark[data-theme="halo"] {
+  --background: 124 18% 6%;
+  --foreground: 120 12% 90%;
+  --border: 124 14% 18%;
+  --surface-container-lowest: 124 20% 4%;
+  --surface-container-low:    124 18% 6%;
+  --surface-container:        124 16% 9%;
+  --surface-container-high:   124 14% 12%;
+  --surface-container-highest:124 12% 15%;
+  --card: var(--surface-container);
+  --card-foreground: 120 12% 90%;
+  --card-border: 124 14% 13%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 120 10% 86%;
+  --sidebar-border: 124 14% 14%;
+  --sidebar-primary: 120 80% 50%;
+  --sidebar-primary-foreground: 124 18% 6%;
+  --sidebar-accent: 124 14% 14%;
+  --sidebar-accent-foreground: 120 10% 86%;
+  --sidebar-ring: 120 80% 50%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 120 12% 90%;
+  --popover-border: 124 12% 18%;
+  --primary: 120 80% 50%;
+  --primary-foreground: 124 18% 6%;
+  --primary-container: 120 50% 16%;
+  --on-primary-container: 120 76% 84%;
+  --secondary: 124 14% 14%;
+  --secondary-foreground: 120 12% 90%;
+  --secondary-container: 124 12% 22%;
+  --on-secondary-container: 120 12% 86%;
+  --tertiary: 38 80% 56%;
+  --tertiary-foreground: 124 18% 6%;
+  --tertiary-container: 38 50% 18%;
+  --on-tertiary-container: 38 78% 84%;
+  --muted: 124 12% 14%;
+  --muted-foreground: 124 8% 50%;
+  --accent: 124 12% 55%;
+  --accent-foreground: 124 18% 6%;
+  --destructive: 0 78% 56%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 124 12% 20%;
+  --ring: 120 80% 50%;
+  --chart-1: 120 80% 50%;
+  --chart-2: 38 80% 56%;
+  --chart-3: 180 70% 52%;
+  --chart-4: 60 80% 54%;
+  --chart-5: 200 65% 58%;
+  --md-elev-1: hsl(120 55% 100% / 0.05);
+  --md-elev-2: hsl(120 55% 100% / 0.08);
+  --md-elev-3: hsl(120 55% 100% / 0.11);
+  --md-elev-4: hsl(120 55% 100% / 0.12);
+  --md-elev-5: hsl(120 55% 100% / 0.14);
+}
+html.dark[data-theme="halo"] body {
+  background-image:
+    radial-gradient(1100px 560px at 85% -6%, hsl(120 80% 24% / 0.20), transparent 60%),
+    radial-gradient(900px 450px at 0% 100%, hsl(38 80% 24% / 0.14), transparent 60%);
+}

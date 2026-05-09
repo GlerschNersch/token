@@ -55,7 +55,7 @@ function PageTransition({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const THEMES = ["default", "synthwave", "gameboy", "oled", "nord", "amber", "dracula", "cyberpunk"] as const;
+export const THEMES = ["default", "synthwave", "gameboy", "oled", "nord", "amber", "dracula", "cyberpunk", "miami-vice", "c64", "arcade", "vaporwave", "grunge", "win95", "blockbuster", "aqua", "y2k", "halo"] as const;
 export type AppTheme = (typeof THEMES)[number];
 
 export function applyTheme(theme: AppTheme) {
