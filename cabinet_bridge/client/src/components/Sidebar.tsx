@@ -51,6 +51,13 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
     ]),
   ) as Record<string, number>;
 
+  const { data: nowPlaying } = useQuery<{ playing: boolean; id?: number; title?: string; system?: string }>({
+    queryKey: ["/api/now-playing"],
+    queryFn: async () => { const res = await fetch("/api/now-playing"); return res.json(); },
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
+
   return (
     <aside
       className={`${alwaysVisible ? "flex" : "hidden lg:flex"} flex-col w-full lg:w-64 shrink-0 border-r border-sidebar-border bg-sidebar text-sidebar-foreground h-full`}
@@ -67,6 +74,20 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
           <Wordmark />
         </Link>
       </div>
+
+      {/* ── Now Playing indicator ── */}
+      {nowPlaying?.playing && nowPlaying.title && (
+        <div className="mx-3 mt-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 flex items-center gap-2.5">
+          <span className="relative flex size-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+            <span className="relative inline-flex size-2 rounded-full bg-primary" />
+          </span>
+          <div className="min-w-0">
+            <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-primary/70">Now Playing</div>
+            <div className="font-medium text-[11px] text-foreground truncate leading-tight">{nowPlaying.title}</div>
+          </div>
+        </div>
+      )}
 
       {/* ── Navigation items ── */}
       <nav className="flex-1 overflow-y-auto nav-scroll px-3 py-4 space-y-5">

@@ -13,7 +13,7 @@ import { apiUrl } from "@/lib/queryClient";
 import { formatRelative } from "@/lib/integration";
 import { useGameDialogState } from "@/lib/useGameDialogState";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
-import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap, History } from "lucide-react";
+import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap, History, Radio } from "lucide-react";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function fmtHours(minutes: number) {
@@ -324,6 +324,13 @@ export default function Dashboard() {
     queryKey: ["/api/collections"],
   });
 
+  const { data: nowPlaying } = useQuery<{ playing: boolean; id?: number; title?: string; system?: string }>({
+    queryKey: ["/api/now-playing"],
+    queryFn: async () => { const res = await fetch("/api/now-playing"); return res.json(); },
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
+
   const {
     selectedGame,
     openGame,
@@ -336,6 +343,10 @@ export default function Dashboard() {
   } = useGameDialogState();
 
   const games = useMemo(() => roms.map(uploadedRomToGame), [roms]);
+
+  const nowPlayingGame = nowPlaying?.playing && nowPlaying.id
+    ? games.find((g) => g.romId === nowPlaying.id) ?? null
+    : null;
 
   // ── metrics ──
   const totalMinutes = useMemo(
@@ -458,6 +469,49 @@ export default function Dashboard() {
       <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
         {/* Mobile top bar */}
         <MobileTopBar />
+
+        {/* ── Now Playing live banner ── */}
+        {nowPlaying?.playing && nowPlaying.title && (
+          <section className="px-5 sm:px-8 pt-6">
+            <div className="relative rounded-xl overflow-hidden border border-primary/40 bg-primary/5">
+              {nowPlayingGame?.artUrl && (
+                <img
+                  src={nowPlayingGame.artUrl}
+                  alt=""
+                  className="absolute right-0 top-0 h-full w-auto object-cover opacity-15 pointer-events-none"
+                />
+              )}
+              <div className="relative flex items-center gap-4 px-5 py-4">
+                <span className="relative flex size-3 shrink-0">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
+                  <span className="relative inline-flex size-3 rounded-full bg-primary" />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-primary/70 flex items-center gap-1.5">
+                    <Radio className="size-3" /> Live — Playing Now
+                  </div>
+                  <div className="font-display text-lg font-bold text-foreground leading-tight truncate">
+                    {nowPlaying.title}
+                  </div>
+                  {nowPlaying.system && (
+                    <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+                      {SYSTEMS.find((s) => s.id === nowPlaying.system)?.shortName ?? nowPlaying.system}
+                    </div>
+                  )}
+                </div>
+                {nowPlayingGame && (
+                  <button
+                    type="button"
+                    onClick={() => openGame(nowPlayingGame)}
+                    className="shrink-0 font-mono text-[10px] uppercase tracking-wider border border-border bg-background/60 px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Details
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── Continue Playing hero ── */}
         {continueGame && (
