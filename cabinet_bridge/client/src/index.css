@@ -629,3 +629,260 @@ html.dark[data-theme="oled"] {
   --chart-5: 264 90% 70%;
 }
 html.dark[data-theme="oled"] body { background-image: none; }
+
+/* ── Nord — arctic aurora: polar-night surfaces, frost-blue primary, aurora accents ── */
+html.dark[data-theme="nord"] {
+  --background: 220 18% 11%;
+  --foreground: 220 14% 88%;
+  --border: 220 14% 22%;
+  --surface-container-lowest: 220 20% 9%;
+  --surface-container-low:    220 18% 11%;
+  --surface-container:        220 16% 14%;
+  --surface-container-high:   220 15% 17%;
+  --surface-container-highest:220 14% 20%;
+  --card: var(--surface-container);
+  --card-foreground: 220 14% 88%;
+  --card-border: 220 14% 18%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 220 14% 86%;
+  --sidebar-border: 220 14% 19%;
+  --sidebar-primary: 213 80% 62%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 14% 18%;
+  --sidebar-accent-foreground: 220 14% 86%;
+  --sidebar-ring: 213 80% 62%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 220 14% 88%;
+  --popover-border: 220 14% 20%;
+  --primary: 213 80% 62%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 213 50% 22%;
+  --on-primary-container: 213 80% 88%;
+  --secondary: 220 14% 18%;
+  --secondary-foreground: 220 14% 88%;
+  --secondary-container: 178 55% 20%;
+  --on-secondary-container: 178 80% 82%;
+  --tertiary: 92 55% 58%;
+  --tertiary-foreground: 220 18% 11%;
+  --tertiary-container: 92 35% 18%;
+  --on-tertiary-container: 92 60% 84%;
+  --muted: 220 14% 17%;
+  --muted-foreground: 220 10% 54%;
+  --accent: 178 55% 52%;
+  --accent-foreground: 220 18% 11%;
+  --destructive: 354 65% 58%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 220 14% 22%;
+  --ring: 213 80% 62%;
+  --chart-1: 213 80% 62%;
+  --chart-2: 178 55% 52%;
+  --chart-3: 40 90% 58%;
+  --chart-4: 92 55% 58%;
+  --chart-5: 311 20% 63%;
+  --md-elev-1: hsl(213 40% 100% / 0.05);
+  --md-elev-2: hsl(213 40% 100% / 0.08);
+  --md-elev-3: hsl(213 40% 100% / 0.11);
+  --md-elev-4: hsl(213 40% 100% / 0.12);
+  --md-elev-5: hsl(213 40% 100% / 0.14);
+}
+html.dark[data-theme="nord"] body {
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, hsl(213 80% 30% / 0.16), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, hsl(178 55% 26% / 0.12), transparent 60%);
+}
+
+/* ── Amber — retro CRT phosphor amber; warm near-black surfaces, amber primary, gold accent ── */
+html.dark[data-theme="amber"] {
+  --background: 30 35% 5%;
+  --foreground: 38 85% 80%;
+  --border: 32 28% 18%;
+  --surface-container-lowest: 30 38% 3%;
+  --surface-container-low:    30 35% 5%;
+  --surface-container:        30 30% 8%;
+  --surface-container-high:   30 26% 11%;
+  --surface-container-highest:30 22% 14%;
+  --card: var(--surface-container);
+  --card-foreground: 38 85% 80%;
+  --card-border: 32 26% 13%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 38 80% 76%;
+  --sidebar-border: 32 28% 14%;
+  --sidebar-primary: 38 96% 55%;
+  --sidebar-primary-foreground: 30 40% 6%;
+  --sidebar-accent: 30 28% 12%;
+  --sidebar-accent-foreground: 38 80% 76%;
+  --sidebar-ring: 38 96% 55%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 38 85% 80%;
+  --popover-border: 32 26% 16%;
+  --primary: 38 96% 55%;
+  --primary-foreground: 30 40% 6%;
+  --primary-container: 38 60% 18%;
+  --on-primary-container: 38 92% 82%;
+  --secondary: 30 26% 14%;
+  --secondary-foreground: 38 85% 80%;
+  --secondary-container: 48 50% 18%;
+  --on-secondary-container: 48 90% 82%;
+  --tertiary: 20 90% 55%;
+  --tertiary-foreground: 30 40% 6%;
+  --tertiary-container: 20 50% 18%;
+  --on-tertiary-container: 20 88% 82%;
+  --muted: 30 22% 14%;
+  --muted-foreground: 34 24% 50%;
+  --accent: 48 100% 58%;
+  --accent-foreground: 30 40% 6%;
+  --destructive: 0 72% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 30 26% 20%;
+  --ring: 38 96% 55%;
+  --chart-1: 38 96% 55%;
+  --chart-2: 48 100% 58%;
+  --chart-3: 20 90% 55%;
+  --chart-4: 142 55% 50%;
+  --chart-5: 264 60% 62%;
+  --md-elev-1: hsl(38 60% 100% / 0.05);
+  --md-elev-2: hsl(38 60% 100% / 0.08);
+  --md-elev-3: hsl(38 60% 100% / 0.11);
+  --md-elev-4: hsl(38 60% 100% / 0.12);
+  --md-elev-5: hsl(38 60% 100% / 0.14);
+}
+html.dark[data-theme="amber"] body {
+  background-image:
+    radial-gradient(1200px 600px at 85% -5%, hsl(38 96% 28% / 0.22), transparent 60%),
+    radial-gradient(800px 400px at 0% 100%, hsl(20 80% 24% / 0.14), transparent 60%);
+}
+
+/* ── Dracula — classic purple/pink/green hacker palette ── */
+html.dark[data-theme="dracula"] {
+  --background: 231 15% 12%;
+  --foreground: 60 30% 96%;
+  --border: 232 14% 22%;
+  --surface-container-lowest: 231 18% 9%;
+  --surface-container-low:    231 15% 12%;
+  --surface-container:        231 14% 15%;
+  --surface-container-high:   231 13% 18%;
+  --surface-container-highest:231 12% 21%;
+  --card: var(--surface-container);
+  --card-foreground: 60 30% 96%;
+  --card-border: 232 12% 19%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 60 26% 92%;
+  --sidebar-border: 232 14% 19%;
+  --sidebar-primary: 265 90% 74%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 231 14% 18%;
+  --sidebar-accent-foreground: 60 26% 92%;
+  --sidebar-ring: 265 90% 74%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 60 30% 96%;
+  --popover-border: 232 12% 22%;
+  --primary: 265 90% 74%;
+  --primary-foreground: 0 0% 100%;
+  --primary-container: 265 55% 22%;
+  --on-primary-container: 265 88% 90%;
+  --secondary: 231 14% 18%;
+  --secondary-foreground: 60 30% 96%;
+  --secondary-container: 326 60% 22%;
+  --on-secondary-container: 326 88% 88%;
+  --tertiary: 135 70% 58%;
+  --tertiary-foreground: 231 18% 9%;
+  --tertiary-container: 135 40% 18%;
+  --on-tertiary-container: 135 70% 86%;
+  --muted: 231 12% 18%;
+  --muted-foreground: 231 8% 55%;
+  --accent: 135 70% 58%;
+  --accent-foreground: 231 18% 9%;
+  --destructive: 0 100% 66%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 231 14% 24%;
+  --ring: 265 90% 74%;
+  --chart-1: 265 90% 74%;
+  --chart-2: 135 70% 58%;
+  --chart-3: 42 100% 64%;
+  --chart-4: 326 100% 74%;
+  --chart-5: 191 97% 77%;
+  --md-elev-1: hsl(265 50% 100% / 0.05);
+  --md-elev-2: hsl(265 50% 100% / 0.08);
+  --md-elev-3: hsl(265 50% 100% / 0.11);
+  --md-elev-4: hsl(265 50% 100% / 0.12);
+  --md-elev-5: hsl(265 50% 100% / 0.14);
+}
+html.dark[data-theme="dracula"] body {
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, hsl(265 90% 32% / 0.22), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, hsl(135 70% 26% / 0.14), transparent 60%);
+}
+
+/* ── Cyberpunk — neon yellow primary, hot-pink accent, near-black grid surfaces ── */
+html.dark[data-theme="cyberpunk"] {
+  --background: 240 22% 4%;
+  --foreground: 56 100% 92%;
+  --border: 240 16% 18%;
+  --surface-container-lowest: 240 25% 3%;
+  --surface-container-low:    240 22% 4%;
+  --surface-container:        240 20% 7%;
+  --surface-container-high:   240 18% 10%;
+  --surface-container-highest:240 16% 13%;
+  --card: var(--surface-container);
+  --card-foreground: 56 100% 92%;
+  --card-border: 240 16% 13%;
+  --sidebar: var(--surface-container-low);
+  --sidebar-foreground: 56 90% 88%;
+  --sidebar-border: 240 16% 14%;
+  --sidebar-primary: 56 100% 55%;
+  --sidebar-primary-foreground: 240 22% 4%;
+  --sidebar-accent: 240 18% 12%;
+  --sidebar-accent-foreground: 56 90% 88%;
+  --sidebar-ring: 56 100% 55%;
+  --popover: var(--surface-container-high);
+  --popover-foreground: 56 100% 92%;
+  --popover-border: 240 16% 16%;
+  --primary: 56 100% 55%;
+  --primary-foreground: 240 22% 4%;
+  --primary-container: 56 65% 16%;
+  --on-primary-container: 56 100% 84%;
+  --secondary: 240 16% 14%;
+  --secondary-foreground: 56 100% 92%;
+  --secondary-container: 345 65% 20%;
+  --on-secondary-container: 345 90% 84%;
+  --tertiary: 180 100% 55%;
+  --tertiary-foreground: 240 22% 4%;
+  --tertiary-container: 180 55% 16%;
+  --on-tertiary-container: 180 90% 84%;
+  --muted: 240 14% 13%;
+  --muted-foreground: 240 8% 55%;
+  --accent: 345 100% 62%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 90% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 240 16% 20%;
+  --ring: 56 100% 55%;
+  --chart-1: 56 100% 55%;
+  --chart-2: 345 100% 62%;
+  --chart-3: 180 100% 55%;
+  --chart-4: 265 90% 70%;
+  --chart-5: 38 100% 58%;
+  --md-elev-1: hsl(56 80% 100% / 0.05);
+  --md-elev-2: hsl(56 80% 100% / 0.08);
+  --md-elev-3: hsl(56 80% 100% / 0.11);
+  --md-elev-4: hsl(56 80% 100% / 0.12);
+  --md-elev-5: hsl(56 80% 100% / 0.14);
+}
+html.dark[data-theme="cyberpunk"] body {
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, hsl(56 100% 28% / 0.18), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, hsl(345 100% 28% / 0.16), transparent 60%);
+  background-color: hsl(240 22% 4%);
+}
+/* Cyberpunk activates grid-bg on body for the iconic city grid look */
+html.dark[data-theme="cyberpunk"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    linear-gradient(hsl(56 100% 55% / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(56 100% 55% / 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
