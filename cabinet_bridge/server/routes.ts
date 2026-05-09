@@ -478,6 +478,8 @@ export async function registerRoutes(
       userId,
       userName,
       profileId: profileParam ?? "1",
+      cheats: await storage.listCheats(rom.id, profileParam ? Number(profileParam) : 1)
+        .then((cs) => cs.filter((c) => c.enabled)),
     }));
   });
 
@@ -653,8 +655,14 @@ export async function registerRoutes(
     const romId = Number(req.params.id);
     const { description, code, profileId } = req.body ?? {};
     if (!code || !description) return res.status(400).json({ message: "code and description required" });
+    const pId = Number(profileId ?? 1);
+    const existing = await storage.listCheats(romId, pId);
+    const normalCode = String(code).trim().toUpperCase();
+    if (existing.some((c) => c.code.toUpperCase() === normalCode)) {
+      return res.status(409).json({ message: "A cheat with this code already exists for this game." });
+    }
     const cheat = await storage.createCheat({
-      romId, profileId: Number(profileId ?? 1),
+      romId, profileId: pId,
       description: String(description).slice(0, 128),
       code: String(code).slice(0, 256),
       enabled: true, createdAt: Date.now(),
@@ -3448,7 +3456,7 @@ function buildEjsControls(
   return { 0: p1, 1: {}, 2: {}, 3: {} };
 }
 
-function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken, controlDefaults, gamepadBindings, userId, userName, profileId }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; controlDefaults: Record<string, Record<number, string>>; gamepadBindings: Record<number, number>; userId: string; userName: string; profileId: string; }) {
+function renderEmulatorBootstrap({ core, title, gameId, romId, discs, romHash, raUsername, raToken, controlDefaults, gamepadBindings, userId, userName, profileId, cheats }: { core: string; title: string; gameId: string; romId: number; discs: Array<{ id: number; label: string }>; romHash: string | null; raUsername: string; raToken: string; controlDefaults: Record<string, Record<number, string>>; gamepadBindings: Record<number, number>; userId: string; userName: string; profileId: string; cheats: Array<{ description: string; code: string }>; }) {
   return `"use strict";
 // Diagnostic: immediately mark that this script is executing.
 // If the launch overlay stays at 0%, this script never ran.
@@ -4480,18 +4488,22 @@ function cabinetRenderCheats(cheats) {
       var desc = (document.querySelector("#cabinet-cheat-desc") || {}).value || "";
       var code = (document.querySelector("#cabinet-cheat-code") || {}).value || "";
       if (!desc.trim() || !code.trim()) { cabinetToast("Enter a description and code"); return; }
+      addBtn.disabled = true;
+      addBtn.textContent = "Adding…";
       fetch("../../roms/" + cabinetRomId + "/cheats", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({ description: desc.trim(), code: code.trim(), profileId: Number(window.CABINET_PROFILE_ID || 1) })
-      }).then(function() {
+      }).then(function(r) {
+        if (r.status === 409) { cabinetToast("Cheat already exists"); return; }
         var d = document.querySelector("#cabinet-cheat-desc");
         var c = document.querySelector("#cabinet-cheat-code");
         if (d) d.value = "";
         if (c) c.value = "";
         cabinetLoadCheats();
         cabinetToast("Cheat added");
-      }).catch(function() { cabinetToast("Failed to add cheat"); });
+      }).catch(function() { cabinetToast("Failed to add cheat"); })
+      .finally(function() { addBtn.disabled = false; addBtn.textContent = "+ Add"; });
     });
   });
 })();
@@ -5194,6 +5206,7 @@ window.EJS_rewindEnabled = true;
 window.EJS_rewindGranularity = 2;
 window.EJS_fastForwardSpeed = 3;
 window.EJS_controlScheme = ${JSON.stringify(core)};
+${cheats.length > 0 ? `window.EJS_cheats = ${JSON.stringify(cheats.map(c => [c.description, c.code]))};` : "// No cheats saved for this game"}
 window.EJS_defaultControls = ${JSON.stringify(buildEjsControls(core, controlDefaults, gamepadBindings))};
 window.EJS_defaultOptions = {
   "save-state-location": "browser",
