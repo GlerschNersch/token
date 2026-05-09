@@ -3248,11 +3248,24 @@ const EJS_DEFAULT_KEYS: Record<number, string> = {
   24: "1", 25: "2", 26: "3",
 };
 const EJS_VALUE2: Record<number, string> = {
-  0: "BUTTON_1", 1: "BUTTON_4", 2: "SELECT", 3: "START",
-  4: "DPAD_UP", 5: "DPAD_DOWN", 6: "DPAD_LEFT", 7: "DPAD_RIGHT",
-  8: "BUTTON_2", 9: "BUTTON_3", 10: "LEFT_TOP_SHOULDER", 11: "RIGHT_TOP_SHOULDER",
-  12: "LEFT_BOTTOM_SHOULDER", 13: "RIGHT_BOTTOM_SHOULDER",
-  14: "LEFT_ANALOG", 15: "RIGHT_ANALOG",
+  // Standard W3C Gamepad API button indices — matches DEFAULT_GAMEPAD_MAP in Settings.tsx.
+  // EmulatorJS expects numeric-string indices here, not named constants.
+  0: "0",   // Retropad B   → A / Cross      (button 0)
+  1: "2",   // Retropad Y   → X / Square     (button 2)
+  2: "8",   // Retropad Sel → Select / Share (button 8)
+  3: "9",   // Retropad Sta → Start / Menu   (button 9)
+  4: "12",  // Retropad D↑  → D-pad Up       (button 12)
+  5: "13",  // Retropad D↓  → D-pad Down     (button 13)
+  6: "14",  // Retropad D←  → D-pad Left     (button 14)
+  7: "15",  // Retropad D→  → D-pad Right    (button 15)
+  8: "1",   // Retropad A   → B / Circle     (button 1)
+  9: "3",   // Retropad X   → Y / Triangle   (button 3)
+  10: "4",  // Retropad L   → LB / L1        (button 4)
+  11: "5",  // Retropad R   → RB / R1        (button 5)
+  12: "6",  // Retropad L2  → LT / L2        (button 6)
+  13: "7",  // Retropad R2  → RT / R2        (button 7)
+  14: "10", // Retropad L3  → Left stick     (button 10)
+  15: "11", // Retropad R3  → Right stick    (button 11)
 };
 
 function buildEjsControls(
@@ -3900,6 +3913,19 @@ function cabinetSetupVirtualPad() {
       cabinetPressedInputCounts[inputValue] = 1;
       cabinetInputUp(Number(inputValue));
     });
+  });
+  // Auto-hide the virtual pad when a physical controller connects so it doesn't
+  // overlap the game. Restore on mobile if the last controller disconnects.
+  window.addEventListener("gamepadconnected", function (e) {
+    cabinetToast("Controller connected: " + (e.gamepad.id || "gamepad").slice(0, 40));
+    setPadVisible(false, false);
+  });
+  window.addEventListener("gamepaddisconnected", function () {
+    var pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+    if (pads.length === 0 && touchCapable) {
+      setPadVisible(true, false);
+    }
+    cabinetToast("Controller disconnected");
   });
   setPadVisible(visible, false);
 }
