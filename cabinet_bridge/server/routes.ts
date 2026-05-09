@@ -4877,6 +4877,90 @@ cabinetSetupRemapProfiles();
 cabinetSetupNetplay();
 cabinetFetchSaveSlots();
 cabinetFetchServerBackups();
+
+// ── Hardware gamepad polling ─────────────────────────────────────────────────
+// EmulatorJS's built-in Gamepad API polling is unreliable (especially under
+// HA Ingress). We poll navigator.getGamepads() every frame ourselves and
+// call cabinetSimulateInput directly — the same path the virtual pad uses.
+(function () {
+  // Server-injected binding: retropad-button → physical-button-index.
+  // Falls back to the standard Xbox / PS layout when nothing is saved.
+  var RETROPAD_TO_PHYSICAL = ${JSON.stringify(gamepadBindings)};
+  var DEFAULT_MAP = {
+    0: 0, 1: 2, 2: 8,  3: 9,
+    4: 12, 5: 13, 6: 14, 7: 15,
+    8: 1,  9: 3, 10: 4, 11: 5,
+    12: 6, 13: 7, 14: 10, 15: 11,
+  };
+  var retroToPhys = Object.keys(RETROPAD_TO_PHYSICAL).length > 0
+    ? RETROPAD_TO_PHYSICAL : DEFAULT_MAP;
+
+  // Invert to physical-button → retropad-button for fast lookup
+  var physToRetro = {};
+  Object.keys(retroToPhys).forEach(function (r) {
+    physToRetro[Number(retroToPhys[r])] = Number(r);
+  });
+
+  var btnState  = {};   // physical button index → boolean
+  var axisState = {};   // virtual axis key     → boolean
+
+  function pressRetro(retro, on) { cabinetSimulateInput(retro, on); }
+
+  function releaseAll() {
+    var axRetroMap = { 200: 6, 201: 7, 202: 4, 203: 5 };
+    Object.keys(btnState).forEach(function (p) {
+      if (btnState[p]) { var r = physToRetro[Number(p)]; if (r !== undefined) pressRetro(r, false); }
+    });
+    Object.keys(axisState).forEach(function (k) {
+      if (axisState[k] && axRetroMap[k] !== undefined) pressRetro(axRetroMap[k], false);
+    });
+    btnState  = {};
+    axisState = {};
+  }
+
+  function poll() {
+    var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    var pad  = null;
+    for (var i = 0; i < pads.length; i++) {
+      if (pads[i] && pads[i].connected) { pad = pads[i]; break; }
+    }
+
+    if (pad && window.EJS_emulator) {
+      // ── Digital buttons ──────────────────────────────────────────────────
+      for (var p = 0; p < pad.buttons.length; p++) {
+        var on    = pad.buttons[p].pressed || pad.buttons[p].value > 0.5;
+        var retro = physToRetro[p];
+        if (retro === undefined) continue;
+        if (on  && !btnState[p]) { btnState[p] = true;  pressRetro(retro, true);  }
+        if (!on &&  btnState[p]) { btnState[p] = false; pressRetro(retro, false); }
+      }
+
+      // ── Left analog stick → D-pad ────────────────────────────────────────
+      var axes = pad.axes || [];
+      if (axes.length >= 2) {
+        var T = 0.5;
+        var axChecks = [
+          [200, axes[0] < -T, 6],  // stick left  → D-left
+          [201, axes[0] >  T, 7],  // stick right → D-right
+          [202, axes[1] < -T, 4],  // stick up    → D-up
+          [203, axes[1] >  T, 5],  // stick down  → D-down
+        ];
+        axChecks.forEach(function (e) {
+          var key = e[0], active = !!e[1], r = e[2];
+          if (active  && !axisState[key]) { axisState[key] = true;  pressRetro(r, true);  }
+          if (!active &&  axisState[key]) { axisState[key] = false; pressRetro(r, false); }
+        });
+      }
+    } else if (!pad) {
+      releaseAll();
+    }
+
+    requestAnimationFrame(poll);
+  }
+
+  requestAnimationFrame(poll);
+})();
+
 window.EJS_ready = function () {
   cabinetSetLaunchProgress(62, "Emulator ready. Loading game…", "Core ready");
 };
