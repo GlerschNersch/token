@@ -4879,13 +4879,13 @@ cabinetSetupSystemMenu();
     });
     if (anyPressed && Date.now() - lastActivation > ACTIVATION_INTERVAL) {
       lastActivation = Date.now();
-      // Dispatch a zero-delta mousemove — cheapest way to keep user activation
-      // without any visible side effect on the emulator.
+      // Dispatch a pointermove at (-1,-1) on document.body — outside the game
+      // canvas so EmulatorJS never sees it, but the browser records user
+      // activation and keeps the page fully active.
       try {
-        var canvas = document.querySelector("#game canvas") || document.querySelector("#game");
-        var target = canvas || document.documentElement;
-        target.dispatchEvent(new MouseEvent("mousemove", {
-          bubbles: true, cancelable: false, movementX: 0, movementY: 0
+        document.body.dispatchEvent(new PointerEvent("pointermove", {
+          bubbles: false, cancelable: false,
+          clientX: -1, clientY: -1, screenX: -1, screenY: -1
         }));
       } catch (_) {}
     }
