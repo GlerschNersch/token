@@ -20,7 +20,7 @@ RUN npm rebuild better-sqlite3
 
 # CACHE_BUST: increment to force Docker to re-copy source and rebuild.
 # Current: 33
-ARG CACHE_BUST=48
+ARG CACHE_BUST=49
 
 # Copy the rest of the source and build.
 COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts ./
