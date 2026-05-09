@@ -7,8 +7,8 @@ import { SYSTEMS, type Game, gameLaunchEndpoint } from "@/data/library";
 import { useIntegration, formatRelative } from "@/lib/integration";
 import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { GameCollectionWithItems, UploadedRom, RomSaveSlot } from "@shared/schema";
-import { Heart, Play, Clock, Users, Star, Folder, Plus, ChevronDown, ChevronUp, Hash, Loader2, ImagePlus, Trash2, Save } from "lucide-react";
+import type { GameCollectionWithItems, UploadedRom, RomSaveSlot, GameCheatCode } from "@shared/schema";
+import { Heart, Play, Clock, Users, Star, Folder, Plus, ChevronDown, ChevronUp, Hash, Loader2, ImagePlus, Trash2, Save, Zap, ToggleLeft, ToggleRight } from "lucide-react";
 
 export function GameDetailDialog({
   game,
@@ -64,6 +64,47 @@ export function GameDetailDialog({
     if (!game?.romId) return;
     await apiRequest("DELETE", `/api/roms/${game.romId}/save-states/${slot}`);
     await refetchSlots();
+  };
+
+  const [cheatDesc, setCheatDesc] = useState("");
+  const [cheatCode, setCheatCode] = useState("");
+  const [addingCheat, setAddingCheat] = useState(false);
+
+  const { data: cheats = [], refetch: refetchCheats } = useQuery<GameCheatCode[]>({
+    queryKey: ["cheats", game?.romId, profileId],
+    queryFn: async () => {
+      const res = await fetch(`/api/roms/${game!.romId}/cheats?profileId=${profileId}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!game?.romId,
+  });
+
+  const addCheat = async () => {
+    if (!game?.romId || !cheatDesc.trim() || !cheatCode.trim()) return;
+    setAddingCheat(true);
+    try {
+      await apiRequest("POST", `/api/roms/${game.romId}/cheats`, {
+        description: cheatDesc.trim(),
+        code: cheatCode.trim(),
+        profileId,
+      });
+      setCheatDesc("");
+      setCheatCode("");
+      await refetchCheats();
+    } finally {
+      setAddingCheat(false);
+    }
+  };
+
+  const toggleCheat = async (id: number, enabled: boolean) => {
+    await apiRequest("PATCH", `/api/cheats/${id}`, { enabled });
+    await refetchCheats();
+  };
+
+  const deleteCheat = async (id: number) => {
+    await apiRequest("DELETE", `/api/cheats/${id}`);
+    await refetchCheats();
   };
 
   const refreshArt = useCallback(async () => {
@@ -321,6 +362,66 @@ export function GameDetailDialog({
                     style={{ width: `${(raProgress.NumAwarded / raProgress.NumAchievements) * 100}%` }}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Cheats */}
+            {game.romId && (
+              <div className="rounded-md border border-border bg-background/50 p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="size-3.5 text-muted-foreground" />
+                  <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground flex-1">
+                    Cheats
+                  </div>
+                  {cheats.length > 0 && (
+                    <span className="font-mono text-[9px] text-muted-foreground/50">
+                      {cheats.filter((c) => c.enabled).length}/{cheats.length} active
+                    </span>
+                  )}
+                </div>
+                {/* Add form */}
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    value={cheatDesc}
+                    onChange={(e) => setCheatDesc(e.target.value)}
+                    className="flex-1 min-w-0 rounded-md border border-border bg-background/70 px-2.5 py-1.5 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Code"
+                    value={cheatCode}
+                    onChange={(e) => setCheatCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === "Enter") void addCheat(); }}
+                    className="w-[90px] shrink-0 rounded-md border border-border bg-background/70 px-2.5 py-1.5 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void addCheat()}
+                    disabled={addingCheat || !cheatDesc.trim() || !cheatCode.trim()}
+                    className="shrink-0 rounded-md border border-primary/40 bg-primary/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider text-primary hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {addingCheat ? <Loader2 className="size-3 animate-spin" /> : "+ Add"}
+                  </button>
+                </div>
+                {/* Cheat list */}
+                {cheats.length === 0 ? (
+                  <p className="font-mono text-[10px] text-muted-foreground/40 text-center py-2">
+                    No cheats yet. Add a GameShark or Action Replay code above.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {cheats.map((c) => (
+                      <CheatRow
+                        key={c.id}
+                        cheat={c}
+                        onToggle={() => toggleCheat(c.id, !c.enabled)}
+                        onDelete={() => deleteCheat(c.id)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -592,6 +693,71 @@ function SaveSlotCard({
           {timeAgo}
         </div>
       </div>
+    </div>
+  );
+}
+
+function CheatRow({
+  cheat,
+  onToggle,
+  onDelete,
+}: {
+  cheat: GameCheatCode;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-border bg-background/60 px-2.5 py-2">
+      {/* Toggle */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={cheat.enabled}
+        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label={cheat.enabled ? "Disable cheat" : "Enable cheat"}
+      >
+        {cheat.enabled
+          ? <ToggleRight className="size-5 text-primary" />
+          : <ToggleLeft className="size-5" />}
+      </button>
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className={`font-mono text-[11px] font-semibold truncate ${cheat.enabled ? "text-foreground" : "text-muted-foreground/50"}`}>
+          {cheat.description}
+        </div>
+        <div className="font-mono text-[9px] text-muted-foreground/50 truncate tracking-wider">
+          {cheat.code}
+        </div>
+      </div>
+      {/* Delete */}
+      {confirming ? (
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="font-mono text-[9px] uppercase tracking-wider text-red-400 hover:text-red-300"
+          >
+            Delete?
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="shrink-0 rounded border border-border bg-background/70 p-1 text-muted-foreground/50 hover:text-destructive hover:border-destructive/40 transition-colors"
+          aria-label="Delete cheat"
+        >
+          <Trash2 className="size-3" />
+        </button>
+      )}
     </div>
   );
 }
