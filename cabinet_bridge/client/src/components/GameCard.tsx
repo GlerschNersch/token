@@ -4,6 +4,25 @@ import { SYSTEMS, type Game } from "@/data/library";
 import { formatRelative } from "@/lib/integration";
 import { Heart, Info, Star, Clock } from "lucide-react";
 
+// ── Play-status badge ─────────────────────────────────────────────────────────
+const STATUS_META: Record<string, { label: string; color: string }> = {
+  playing:   { label: "Playing",   color: "bg-amber-400" },
+  beaten:    { label: "Beaten",    color: "bg-green-500" },
+  completed: { label: "Completed", color: "bg-violet-500" },
+};
+
+function PlayStatusDot({ status }: { status?: string | null }) {
+  if (!status || status === "unset") return null;
+  const meta = STATUS_META[status];
+  if (!meta) return null;
+  return (
+    <span
+      title={meta.label}
+      className={`inline-block size-2 rounded-full shrink-0 ${meta.color}`}
+    />
+  );
+}
+
 /**
  * MD3 Elevated Card — 16px large shape, tonal surface, state layer on hover/press.
  */
@@ -55,12 +74,6 @@ export const GameCard = memo(function GameCard({
       tabIndex={0}
       onClick={handleOpen}
       onKeyDown={handleKeyDown}
-      /* MD3 Elevated Card:
-         - rounded-xl  → 16px large shape
-         - bg-card      → surface-container tonal surface
-         - md3-state    → state layer for hover/press/focus
-         - No border when unfocused (MD3 Elevated Cards are borderless, elevated by shadow)
-      */
       className={[
         "group relative rounded-xl overflow-hidden bg-card",
         "md3-state md3-state-on-surface",
@@ -69,7 +82,6 @@ export const GameCard = memo(function GameCard({
         focused
           ? "ring-2 ring-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_18px_hsl(var(--primary)/0.35)] scale-[1.02]"
           : [
-              /* MD3 Elevated Card shadow (Level 1) */
               "shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_2px_6px_1px_hsl(0_0%_0%/0.15)]",
               "hover:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_4px_12px_2px_hsl(0_0%_0%/0.25)]",
               "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -164,8 +176,15 @@ export const GameCard = memo(function GameCard({
           {game.title}
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="md-label-small text-muted-foreground uppercase tracking-[0.08em] truncate min-w-0" data-testid={`text-system-${game.id}`}>
-            {system?.shortName ?? game.system}
+          {/* System name + play-status dot */}
+          <span className="flex items-center gap-1.5 min-w-0 truncate">
+            <PlayStatusDot status={game.playStatus} />
+            <span
+              className="md-label-small text-muted-foreground uppercase tracking-[0.08em] truncate"
+              data-testid={`text-system-${game.id}`}
+            >
+              {system?.shortName ?? game.system}
+            </span>
           </span>
           <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
             {game.minutesPlayed && game.minutesPlayed > 0 ? (
