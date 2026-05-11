@@ -4,6 +4,58 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [0.7.38] — 2026-05-11
+
+### Release
+
+- Bump version to trigger Home Assistant update
+
+---
+
+## [0.7.37] — 2026-05-11
+
+### Feature: Netplay lobby UI
+
+- **New Netplay Lobby** — Create or join rooms via the library header. View active rooms, join with a code, and see player counts.
+- **Room Management** — Host can see room code and share it; joining is seamless via the "Join Room" dialog.
+
+---
+
+## [0.7.36] — 2026-05-11
+
+### Feature: ROM scanner
+
+- **Auto-import ROMs** — New "Scanner" tab in Settings allows you to point to a folder on the host and automatically import games into the library.
+- **Background Watcher** — Optional toggle to watch for file changes and update the library in real-time.
+
+---
+
+## [0.7.35] — 2026-05-11
+
+### Feature: Smart filter collections
+
+- **Dynamic Collections** — Create game lists based on rules (e.g., "System is NES AND Genre is Platformer").
+- **Automatic Updates** — New games matching the filters are added to the collection automatically.
+
+---
+
+## [0.7.34] — 2026-05-11
+
+### Feature: Appearance settings
+
+- **Theme Picker** — New tab in Settings for changing the global UI theme (Default, Synthwave, Game Boy, OLED, etc.) without page reload.
+
+---
+
+## [0.7.33] — 2026-05-11
+
+### Feature: Play status & Live timer
+
+- **Play Status Badges** — "Playing", "Beaten", and "Completed" badges now appear on game cards to help track your backlog.
+- **Live Play Timer** — Total play time now updates in real-time while you're in a game.
+
+---
+
 ## [0.7.32] — 2026-05-10
 
 ### Feature: save state auto-sync from server

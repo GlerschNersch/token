@@ -4,7 +4,7 @@
 
 HomeArcade is a Home Assistant Add-on that turns your sidebar into a full retro game library. Upload ROMs, browse by system, launch games in an in-browser emulator, track play time, earn RetroAchievements, and manage multiple player profiles — all without leaving Home Assistant.
 
-**Current version: 0.6.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 0.7.38** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -375,6 +375,24 @@ npm run build       # production build (same as Docker)
 ---
 
 ## Changelog
+
+### v0.7.38
+- Bump version to trigger Home Assistant update
+
+### v0.7.37
+- **Netplay lobby UI** — Create or join rooms via the library header; view active rooms and join with a code
+
+### v0.7.36
+- **ROM scanner** — Auto-import ROMs from a watched folder on the host
+
+### v0.7.35
+- **Smart filter collections** — Dynamic game lists based on rules (system, genre, etc.)
+
+### v0.7.34
+- **Appearance settings** — New theme picker in Settings
+
+### v0.7.33
+- **Play status & Live timer** — Status badges on cards and real-time playtime updates
 
 ### v0.6.0
 - **TheGamesDB scraper** — new primary metadata source (box art, descriptions, genre, developer, publisher); add your free API key in Settings → Services. Falls through to ScreenScraper then Libretro thumbnails if unmatched
