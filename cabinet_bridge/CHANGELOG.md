@@ -1,3 +1,7 @@
+## 0.7.34 – 2026-05-11
+
+- Feature: **Appearance tab in Settings** — dedicated Settings → Appearance tab with 18 themes grouped by era (Base / 80s / 90s / Early 2000s); each card shows a tri-colour swatch and "Active" badge; theme moves out of General to its own tab; run `node server/apply-settings-appearance-patch.mjs` once from `cabinet_bridge/` to activate
+
 ## 0.7.33 – 2026-05-11
 
 - Feature: **Play status badge on game cards** — colored dot next to system name: amber = Playing, green = Beaten, purple = Completed; hidden when status is Unset
