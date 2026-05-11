@@ -1,3 +1,8 @@
+## 0.7.35 – 2026-05-11
+
+- Feature: **Smart filter collections** — dynamic collections that auto-populate from rules; create in Settings → Library with system pill toggles, play status filters, min rating, min playtime, genre keyword, and favorites-only switch; stored as JSON in `game_collections.smart_filter`; re-evaluated live on every `listCollections()` call; run `node server/apply-smart-filter-patch.mjs` once from `cabinet_bridge/` to activate
+- API: `POST /api/collections/smart` (create), `PATCH /api/collections/:id/smart` (update rules)
+
 ## 0.7.34 – 2026-05-11
 
 - Feature: **Appearance tab in Settings** — dedicated Settings → Appearance tab with 18 themes grouped by era (Base / 80s / 90s / Early 2000s); each card shows a tri-colour swatch and "Active" badge; theme moves out of General to its own tab; run `node server/apply-settings-appearance-patch.mjs` once from `cabinet_bridge/` to activate
