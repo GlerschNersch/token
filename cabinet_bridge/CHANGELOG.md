@@ -1,3 +1,10 @@
+## 0.7.33 – 2026-05-11
+
+- Feature: **Play status badge on game cards** — colored dot next to system name: amber = Playing, green = Beaten, purple = Completed; hidden when status is Unset
+- Feature: **Live play timer** — fixed pill in the top-right corner of the emulator overlay ticks mm:ss (then h:mm:ss) from the moment the game boots; run `node server/apply-overlay-patches.mjs` once from `cabinet_bridge/` to activate
+- Feature: **Sync timestamp on save panel** — ☁ Sync button now shows "Last synced: Xm ago" next to it, persisted across sessions via localStorage; same patch script above
+- Test: expanded `routes.test.ts` — coverage for P1/P2 controls port routing, gamepadRumble, systemDisplay schema validation, profile creation
+
 ## [0.7.0] – 2026-05-08
 
 ### Changed
