@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [0.7.29] — 2026-05-10
+
+### Feature: sort/filter persistence + video previews in game detail
+
+- **Sort order and genre filter now persist across page loads** — stored in `localStorage` (`ha-sort`, `ha-genre`); picks up exactly where you left off
+- **Video preview in game detail dialog** — hover the box art to reveal a ▶ Preview button; clicking it plays the ScreenScraper video clip inline, muted and looping. A "Box art" toggle switches back. Resets automatically when opening a different game.
+
+---
+
 ## [0.7.28] — 2026-05-10
 
 ### Feature: 2-player controller support

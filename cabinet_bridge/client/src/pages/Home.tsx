@@ -43,13 +43,16 @@ export default function Home({ filter }: { filter: Filter }) {
   const goToFilter = (next: Filter) => navigate(filterToPath(next));
 
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<Sort>("recent");
-  const [genreFilter, setGenreFilter] = useState<string>("");
+  const [sort, setSort] = useState<Sort>(() => (localStorage.getItem("ha-sort") as Sort | null) ?? "recent");
+  const [genreFilter, setGenreFilter] = useState<string>(() => localStorage.getItem("ha-genre") ?? "");
   const [openGame, setOpenGame] = useState<Game | null>(null);
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
   const [ratingOverrides, setRatingOverrides] = useState<Record<string, number>>({});
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  const persistSort = (s: Sort) => { setSort(s); try { localStorage.setItem("ha-sort", s); } catch {} };
+  const persistGenre = (g: string) => { setGenreFilter(g); try { localStorage.setItem("ha-genre", g); } catch {} };
   const [newCollectionName, setNewCollectionName] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const { currentProfileId, setCurrentProfileId } = useProfile();
@@ -463,7 +466,7 @@ export default function Home({ filter }: { filter: Filter }) {
               </div>
 
               {/* Sort — desktop pills (hidden on mobile, shown via MobileSortBar below) */}
-              <SortMenu sort={sort} setSort={setSort} />
+              <SortMenu sort={sort} setSort={persistSort} />
 
               {/* Surprise me */}
               <button
@@ -528,7 +531,7 @@ export default function Home({ filter }: { filter: Filter }) {
               type="button"
               role="radio"
               aria-checked={sort === o.id}
-              onClick={() => setSort(o.id)}
+              onClick={() => persistSort(o.id)}
               className={`shrink-0 px-3 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-colors ${
                 sort === o.id
                   ? "border-primary/60 bg-primary/15 text-primary"
@@ -546,7 +549,7 @@ export default function Home({ filter }: { filter: Filter }) {
           <div className="px-4 sm:px-8 py-2 border-b border-border flex items-center gap-2 overflow-x-auto scrollbar-none">
             <button
               type="button"
-              onClick={() => setGenreFilter("")}
+              onClick={() => persistGenre("")}
               className={`shrink-0 px-3 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-colors ${
                 !genreFilter
                   ? "border-primary/60 bg-primary/15 text-primary"
@@ -560,7 +563,7 @@ export default function Home({ filter }: { filter: Filter }) {
               <button
                 key={g}
                 type="button"
-                onClick={() => setGenreFilter(genreFilter === g ? "" : g)}
+                onClick={() => persistGenre(genreFilter === g ? "" : g)}
                 className={`shrink-0 px-3 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-colors ${
                   genreFilter === g
                     ? "border-primary/60 bg-primary/15 text-primary"

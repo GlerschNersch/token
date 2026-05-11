@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,8 @@ export function GameDetailDialog({
   const [wheelArtError, setWheelArtError] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [scrapingArt, setScrapingArt] = useState(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  useEffect(() => { setVideoPlaying(false); }, [game?.id]);
   const [selectedRomId, setSelectedRomId] = useState<number | null>(null);
 
   const { data: raProgress, isLoading: loadingRa } = useQuery({
@@ -234,39 +236,67 @@ export function GameDetailDialog({
         data-testid="dialog-game-detail"
       >
         <div className="grid sm:grid-cols-[220px_1fr]">
-          {/* Left panel — box art */}
+          {/* Left panel — box art / video preview */}
           <div className="relative sm:h-auto h-48 group">
-            <div className="absolute inset-0">
-              <GameArt game={game} />
-            </div>
-            {showWheelArt && (
-              <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pb-3 px-3 pointer-events-none">
-                <img
-                  src={game.wheelArtUrl!}
-                  alt={`${game.title} logo`}
-                  onError={() => setWheelArtError(true)}
-                  className="max-h-14 max-w-full object-contain drop-shadow-lg"
-                  style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.7))" }}
-                  decoding="async"
+            {videoPlaying && game.romId ? (
+              <div className="absolute inset-0 bg-black flex items-center justify-center">
+                <video
+                  src={`/api/roms/${game.romId}/video`}
+                  autoPlay
+                  controls
+                  muted
+                  loop
+                  className="w-full h-full object-contain"
+                  onError={() => setVideoPlaying(false)}
                 />
               </div>
+            ) : (
+              <>
+                <div className="absolute inset-0">
+                  <GameArt game={game} />
+                </div>
+                {showWheelArt && (
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-center pb-3 px-3 pointer-events-none">
+                    <img
+                      src={game.wheelArtUrl!}
+                      alt={`${game.title} logo`}
+                      onError={() => setWheelArtError(true)}
+                      className="max-h-14 max-w-full object-contain drop-shadow-lg"
+                      style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.7))" }}
+                      decoding="async"
+                    />
+                  </div>
+                )}
+              </>
             )}
-            {/* Refresh art button — appears on hover */}
-            {game.romId && (
-              <button
-                type="button"
-                onClick={refreshArt}
-                disabled={scrapingArt}
-                className="absolute top-2 right-2 flex items-center gap-1.5 rounded-md border border-white/20 bg-black/55 backdrop-blur-sm px-2 py-1.5 font-mono text-[9px] uppercase tracking-wider text-white/80 hover:bg-black/75 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 focus:outline-none"
-                aria-label="Refresh cover art"
-                data-testid="button-refresh-art"
-              >
-                {scrapingArt
-                  ? <Loader2 className="size-3 animate-spin" />
-                  : <ImagePlus className="size-3" />}
-                {scrapingArt ? "Scraping…" : "Refresh art"}
-              </button>
-            )}
+            {/* Hover controls: video toggle + refresh art */}
+            <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
+              {game.romId && game.videoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setVideoPlaying((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-md border border-white/20 bg-black/55 backdrop-blur-sm px-2 py-1.5 font-mono text-[9px] uppercase tracking-wider text-white/80 hover:bg-black/75 hover:text-white focus:outline-none"
+                  aria-label={videoPlaying ? "Show box art" : "Play video preview"}
+                  data-testid="button-video-preview"
+                >
+                  <Play className="size-3" />
+                  {videoPlaying ? "Box art" : "Preview"}
+                </button>
+              )}
+              {game.romId && (
+                <button
+                  type="button"
+                  onClick={refreshArt}
+                  disabled={scrapingArt}
+                  className="flex items-center gap-1.5 rounded-md border border-white/20 bg-black/55 backdrop-blur-sm px-2 py-1.5 font-mono text-[9px] uppercase tracking-wider text-white/80 hover:bg-black/75 hover:text-white focus:outline-none"
+                  aria-label="Refresh cover art"
+                  data-testid="button-refresh-art"
+                >
+                  {scrapingArt ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3" />}
+                  {scrapingArt ? "Scraping…" : "Refresh art"}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Right panel */}
