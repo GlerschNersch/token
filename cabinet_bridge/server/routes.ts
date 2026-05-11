@@ -3932,9 +3932,12 @@ function cabinetQuickSaveSlot(slot) {
     saved = true;
   }
   // Automatic sync: capture thumb and backup to server
-  cabinetCaptureThumb(slot).then(function() {
-    return cabinetBackupSlot(slot);
-  }).catch(function() {});
+  // Small delay so EmulatorJS has time to flush the state to IDBFS
+  setTimeout(function() {
+    cabinetCaptureThumb(slot).then(function() {
+      return cabinetBackupSlot(slot);
+    }).catch(function() {});
+  }, 800);
 
   cabinetRecordSaveSlot(slot)
     .then(function () {
@@ -4780,11 +4783,31 @@ async function cabinetBackupSlot(slot) {
   }
   var FS = emulator.gameManager.FS;
   var gameId = window.EJS_gameID || "";
-  var statePath = "/" + gameId + "-" + slot + ".state";
-  var data;
+  // Try multiple candidate paths — EmulatorJS path format varies by core/version
+  var candidates = [
+    "/" + gameId + "-" + slot + ".state",
+    "/" + gameId + "-" + slot + "-quick.state",
+    "/" + slot + ".state",
+    slot + "-quick.state",
+  ];
+  // Also scan IDBFS root for any file ending in the slot pattern
   try {
-    data = FS.readFile(statePath, { encoding: "binary" });
-  } catch (_e) {
+    var rootFiles = FS.readdir("/");
+    for (var i = 0; i < rootFiles.length; i++) {
+      var f = rootFiles[i];
+      if ((f.endsWith("-" + slot + ".state") || f.endsWith("-" + slot + "-quick.state")) && candidates.indexOf("/" + f) === -1) {
+        candidates.push("/" + f);
+      }
+    }
+  } catch (_scanErr) {}
+  var data;
+  for (var ci = 0; ci < candidates.length; ci++) {
+    try {
+      data = FS.readFile(candidates[ci], { encoding: "binary" });
+      if (data && data.length > 0) break;
+    } catch (_e) {}
+  }
+  if (!data || data.length === 0) {
     cabinetToast("No save data in slot " + slot + " to back up");
     return;
   }
