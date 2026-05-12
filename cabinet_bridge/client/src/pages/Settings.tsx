@@ -1,1436 +1,396 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { THEMES, type AppTheme, applyTheme } from "@/App";
+import { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { useIntegration } from "@/lib/integration";
-import { SYSTEMS, formatRomSize } from "@/data/library";
-import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
-import { filterToPath } from "@/lib/filter";
-import { Link } from "wouter";
-import { ArrowLeft, ExternalLink, Copy, Check, AlertTriangle, Trash2, ChevronRight, RotateCcw, Zap, CheckCircle2, XCircle, Loader2, UserCircle2, Plus, X, Gamepad2, Wifi, WifiOff, Pencil, Monitor, Vibrate , Sparkles , ScanLine } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ConsoleSilhouette } from "@/components/ConsoleSilhouette";
-import type { UploadedRom, GameCollectionWithItems, UserProfile } from "@shared/schema";
-import { useProfile } from "@/lib/useProfile";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  Settings as SettingsIcon,
+  Globe,
+  Lock,
+  Zap,
+  Copy,
+  Check,
+  RotateCcw,
+  Wifi,
+  Terminal,
+  ChevronRight,
+  ShieldAlert,
+  Loader2,
+  Trash2,
+  AlertTriangle,
+  Plus,
+  Sparkles,
+  ScanLine,
+} from "lucide-react";
 import type { SmartFilterRules } from "@shared/schema";
 
-const DEFAULT_KEYS: Record<number, string> = {
-  0: "z", 1: "a", 2: "shift", 3: "enter",
-  4: "up arrow", 5: "down arrow", 6: "left arrow", 7: "right arrow",
-  8: "x", 9: "s", 10: "q", 11: "w",
-  12: "e", 13: "r", 14: "tab", 15: "c",
-  24: "1", 25: "2", 26: "3",
-};
-
-type ButtonDef = { index: number; label: string };
-
-const BUTTON_DEFS: Record<string, ButtonDef[]> = {
-  nes: [
-    { index: 0, label: "B" }, { index: 1, label: "A" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-  ],
-  snes: [
-    { index: 0, label: "B" }, { index: 1, label: "Y" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "A" }, { index: 9, label: "X" },
-    { index: 10, label: "L" }, { index: 11, label: "R" },
-  ],
-  segaMD: [
-    { index: 0, label: "B" }, { index: 1, label: "A" },
-    { index: 2, label: "Mode" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "C" }, { index: 9, label: "Y" },
-    { index: 10, label: "X" }, { index: 11, label: "Z" },
-  ],
-  n64: [
-    { index: 0, label: "B" }, { index: 1, label: "A" },
-    { index: 2, label: "Z" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 10, label: "R" }, { index: 11, label: "L" },
-  ],
-  gba: [
-    { index: 0, label: "B" }, { index: 1, label: "A (unused)" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "A" }, { index: 10, label: "L" }, { index: 11, label: "R" },
-  ],
-  gambatte: [
-    { index: 0, label: "B" }, { index: 1, label: "A (unused)" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "A" },
-  ],
-  psx: [
-    { index: 0, label: "Cross (✕)" }, { index: 1, label: "Square (□)" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "Circle (○)" }, { index: 9, label: "Triangle (△)" },
-    { index: 10, label: "L1" }, { index: 11, label: "R1" },
-    { index: 12, label: "L2" }, { index: 13, label: "R2" },
-    { index: 14, label: "L3 (stick)" }, { index: 15, label: "R3 (stick)" },
-  ],
-  pcsx2: [
-    { index: 0, label: "Cross (✕)" }, { index: 1, label: "Square (□)" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "Circle (○)" }, { index: 9, label: "Triangle (△)" },
-    { index: 10, label: "L1" }, { index: 11, label: "R1" },
-    { index: 12, label: "L2" }, { index: 13, label: "R2" },
-    { index: 14, label: "L3 (stick)" }, { index: 15, label: "R3 (stick)" },
-  ],
-  ppsspp: [
-    { index: 0, label: "Cross (✕)" }, { index: 1, label: "Square (□)" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "Circle (○)" }, { index: 9, label: "Triangle (△)" },
-    { index: 10, label: "L" }, { index: 11, label: "R" },
-  ],
-  melonds: [
-    { index: 0, label: "B" }, { index: 1, label: "Y" },
-    { index: 2, label: "Select" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "A" }, { index: 9, label: "X" },
-    { index: 10, label: "L" }, { index: 11, label: "R" },
-  ],
-  reicast: [
-    { index: 0, label: "B" }, { index: 1, label: "A" },
-    { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 9, label: "Y" }, { index: 10, label: "R" }, { index: 11, label: "L" },
-  ],
-  mame2003: [
-    { index: 0, label: "Button 1" }, { index: 1, label: "Button 2" },
-    { index: 2, label: "Coin" }, { index: 3, label: "Start" },
-    { index: 4, label: "Up" }, { index: 5, label: "Down" },
-    { index: 6, label: "Left" }, { index: 7, label: "Right" },
-    { index: 8, label: "Button 3" }, { index: 9, label: "Button 4" },
-    { index: 10, label: "Button 5" }, { index: 11, label: "Button 6" },
-  ],
-};
-
-const HOTKEY_DEFS: ButtonDef[] = [
-  { index: 24, label: "Quick Save" },
-  { index: 25, label: "Quick Load" },
-  { index: 26, label: "Change Save Slot" },
-];
-
-const SYSTEMS_WITH_CORES: { systemId: string; label: string; core: string }[] = [
-  { systemId: "nes",       label: "NES",            core: "nes" },
-  { systemId: "snes",      label: "SNES",           core: "snes" },
-  { systemId: "genesis",   label: "Genesis / Mega Drive", core: "segaMD" },
-  { systemId: "n64",       label: "Nintendo 64",    core: "n64" },
-  { systemId: "gb",        label: "Game Boy",       core: "gambatte" },
-  { systemId: "gbc",       label: "Game Boy Color", core: "gambatte" },
-  { systemId: "gba",       label: "Game Boy Advance", core: "gba" },
-  { systemId: "nds",       label: "Nintendo DS",    core: "melonds" },
-  { systemId: "ps1",       label: "PlayStation 1",  core: "psx" },
-  { systemId: "ps2",       label: "PlayStation 2",  core: "pcsx2" },
-  { systemId: "psp",       label: "PSP",            core: "ppsspp" },
-  { systemId: "dreamcast", label: "Dreamcast",      core: "reicast" },
-  { systemId: "arcade",    label: "Arcade (MAME)",  core: "mame2003" },
-];
-
-function formatKeyLabel(key: string): string {
-  const map: Record<string, string> = {
-    "up arrow": "↑", "down arrow": "↓", "left arrow": "←", "right arrow": "→",
-    "enter": "↩ Enter", "shift": "⇧ Shift", "tab": "⇥ Tab", "escape": "Esc",
-    "backspace": "⌫ Bksp", "space": "Space", "control": "Ctrl", "alt": "Alt",
-  };
-  return map[key.toLowerCase()] ?? key.toUpperCase();
-}
-
-function captureKeyName(e: KeyboardEvent): string {
-  const map: Record<string, string> = {
-    ArrowUp: "up arrow", ArrowDown: "down arrow", ArrowLeft: "left arrow", ArrowRight: "right arrow",
-    Enter: "enter", Shift: "shift", Tab: "tab", Escape: "escape",
-    Backspace: "backspace", " ": "space", Control: "control", Alt: "alt",
-  };
-  return map[e.key] ?? e.key.toLowerCase();
-}
-
-function ControlsTab() {
-  const { config, setConfig } = useIntegration();
-  const { currentProfileId } = useProfile();
-  const [selectedSystem, setSelectedSystem] = useState(SYSTEMS_WITH_CORES[0].systemId);
-  const [capturing, setCapturing] = useState<number | null>(null);
-  const [selectedProfileId, setSelectedProfileId] = useState<number>(currentProfileId);
-  const [playerPort, setPlayerPort] = useState(0);
-  const { toast } = useToast();
-
-  const { data: profiles = [] } = useQuery<UserProfile[]>({ queryKey: ["/api/profiles"] });
-
-  React.useEffect(() => {
-    setSelectedProfileId(currentProfileId);
-  }, [currentProfileId]);
-
-  const sys = SYSTEMS_WITH_CORES.find((s) => s.systemId === selectedSystem)!;
-  const core = sys.core;
-  const defs = BUTTON_DEFS[core] ?? [];
-  const saved = config.controlDefaults?.[core] ?? {};
-
-  const { data: profileBindings = {} } = useQuery<Record<number, string>>({
-    queryKey: ["/api/profiles", selectedProfileId, "controls", core, playerPort],
-    queryFn: async () => {
-      const res = await fetch(`/api/profiles/${selectedProfileId}/controls/${core}?port=${playerPort}`);
-      if (!res.ok) return {};
-      return res.json();
-    },
-    enabled: selectedProfileId > 0,
-  });
-
-  const getKey = (index: number) => {
-    if (profileBindings[index] !== undefined) return profileBindings[index];
-    return saved[index] ?? DEFAULT_KEYS[index] ?? "";
-  };
-
-  const isModified = (index: number) => {
-    const current = getKey(index);
-    const def = saved[index] ?? DEFAULT_KEYS[index] ?? "";
-    return current !== def && profileBindings[index] !== undefined;
-  };
-
-  const setKey = useCallback(async (index: number, key: string) => {
-    const updated = { ...profileBindings, [index]: key };
-    await apiRequest("PUT", `/api/profiles/${selectedProfileId}/controls/${core}?port=${playerPort}`, updated);
-    await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core, playerPort] });
-  }, [core, selectedProfileId, profileBindings, playerPort]);
-
-  const resetCore = async () => {
-    await apiRequest("DELETE", `/api/profiles/${selectedProfileId}/controls/${core}?port=${playerPort}`);
-    await queryClient.invalidateQueries({ queryKey: ["/api/profiles", selectedProfileId, "controls", core, playerPort] });
-    toast({ title: "Reset", description: `${sys.label} bindings reset for this profile.` });
-  };
-
-  useEffect(() => {
-    if (capturing === null) return;
-    const handler = (e: KeyboardEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.key === "Escape") { setCapturing(null); return; }
-      setKey(capturing, captureKeyName(e));
-      setCapturing(null);
-    };
-    window.addEventListener("keydown", handler, { capture: true });
-    return () => window.removeEventListener("keydown", handler, { capture: true });
-  }, [capturing, setKey]);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1">
-          <h3 className="font-display text-lg font-bold">Input Mapping</h3>
-          <p className="text-sm text-muted-foreground">
-            Customise keyboard controls per system and per profile. Profile overrides take precedence over global defaults.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Player:</span>
-          {[{ port: 0, label: "Player 1" }, { port: 1, label: "Player 2" }].map(({ port, label }) => (
-            <button
-              key={port}
-              onClick={() => setPlayerPort(port)}
-              className={`px-4 py-1.5 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all ${
-                playerPort === port
-                  ? "bg-primary/20 border-primary text-primary shadow-[0_0_8px_hsl(var(--primary)/0.3)]"
-                  : "bg-background/50 border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {profiles.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Profile:</span>
-            {profiles.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedProfileId(p.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-all ${
-                  selectedProfileId === p.id
-                    ? "bg-primary/15 border-primary text-primary"
-                    : "bg-background/50 border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <span className="size-2 rounded-full" style={{ backgroundColor: p.color ?? "#6b7280" }} />
-                {p.name}
-                {p.id === currentProfileId && (
-                  <span className="font-mono text-[8px] opacity-50">active</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {SYSTEMS_WITH_CORES.map((s) => (
-            <button
-              key={s.systemId}
-              onClick={() => setSelectedSystem(s.systemId)}
-              className={`px-3 py-1.5 rounded-md border font-mono text-[10px] uppercase tracking-wider transition-all ${
-                selectedSystem === s.systemId
-                  ? "bg-primary/15 border-primary text-primary shadow-[0_0_8px_hsl(var(--primary)/0.3)]"
-                  : "bg-background/50 border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="grid md:grid-cols-[240px_1fr] gap-6 p-4 rounded-xl border border-card-border bg-black/40 backdrop-blur-sm relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <ConsoleSilhouette systemId={selectedSystem} />
-        </div>
-        <div className="space-y-4 relative">
-          <div className="aspect-[4/3] rounded-lg border border-white/10 bg-black/40 p-4 flex items-center justify-center relative group">
-             <ConsoleSilhouette systemId={selectedSystem} />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-             <div className="absolute bottom-3 left-3 font-mono text-[9px] uppercase tracking-widest text-white/40">
-               {sys.label} Silhouette
-             </div>
-          </div>
-          <Button variant="outline" size="sm" className="w-full font-mono text-[10px] uppercase tracking-wider" onClick={resetCore}>
-            <RotateCcw className="size-3 mr-2" /> Reset {sys.label}
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 relative">
-           {defs.map((d) => {
-             const key = getKey(d.index);
-             const active = capturing === d.index;
-             const modified = isModified(d.index);
-             return (
-               <div key={d.index} className="space-y-1.5">
-                 <Label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground flex items-center gap-1.5">
-                   {d.label}
-                   {modified && <span className="size-1.5 rounded-full bg-primary shrink-0" title="Customised" />}
-                 </Label>
-                 <button
-                   onClick={() => setCapturing(d.index)}
-                   className={`w-full h-10 px-3 rounded-md border font-mono text-xs text-left transition-all ${
-                     active
-                       ? "bg-accent/20 border-accent text-accent animate-pulse ring-2 ring-accent/30"
-                       : modified
-                         ? "bg-primary/5 border-primary/40 text-foreground hover:border-primary/70"
-                         : "bg-background/50 border-border text-foreground hover:border-primary/50"
-                   }`}
-                 >
-                   {active ? "Press a key..." : formatKeyLabel(key) || "Not bound"}
-                 </button>
-               </div>
-             );
-           })}
-        </div>
-      </div>
-      <div className="space-y-3">
-        <h4 className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Emulator Hotkeys</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-           {HOTKEY_DEFS.map((d) => {
-             const key = getKey(d.index);
-             const active = capturing === d.index;
-             return (
-               <div key={d.index} className="space-y-1.5">
-                 <Label className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{d.label}</Label>
-                 <button
-                   onClick={() => setCapturing(d.index)}
-                   className={`w-full h-10 px-3 rounded-md border font-mono text-xs text-left transition-all ${
-                     active
-                       ? "bg-accent/20 border-accent text-accent animate-pulse ring-2 ring-accent/30"
-                       : "bg-background/50 border-border text-foreground hover:border-primary/50"
-                   }`}
-                 >
-                   {active ? "Press a key..." : formatKeyLabel(key) || "Not bound"}
-                 </button>
-               </div>
-             );
-           })}
-        </div>
-      </div>
-      <GamepadRemapSection profileId={selectedProfileId} playerPort={playerPort} />
-      <div className="space-y-4 pt-6 border-t border-border">
-        <div className="flex items-center gap-2">
-          <Vibrate className="size-4 text-primary" />
-          <h3 className="font-display text-lg font-bold">Controller Haptics</h3>
-        </div>
-        <div className="flex items-center justify-between rounded-xl border border-border bg-black/30 px-4 py-3">
-          <div>
-            <p className="text-sm font-medium">Gamepad rumble / vibration</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Requires a controller with a vibration motor and browser support.</p>
-          </div>
-          <Switch
-            id="haptics-toggle"
-            checked={config.gamepadRumble ?? true}
-            onCheckedChange={(v) => setConfig({ gamepadRumble: v })}
-          />
-        </div>
-      </div>
-      <div className="space-y-4 pt-6 border-t border-border">
-        <div className="flex items-center gap-2">
-          <Monitor className="size-4 text-primary" />
-          <h3 className="font-display text-lg font-bold">Display Options</h3>
-        </div>
-        <p className="text-sm text-muted-foreground -mt-2">
-          Per-system overrides applied when a game launches. Integer scale forces pixel-perfect rendering; aspect ratio overrides the default stretch.
-        </p>
-        <div className="space-y-3">
-          {SYSTEMS_WITH_CORES.map((s) => {
-            const opts = config.systemDisplay?.[s.core] ?? {};
-            const setOpts = (patch: { aspectRatio?: string; integerScale?: boolean; shader?: string }) =>
-              setConfig({ systemDisplay: { ...(config.systemDisplay ?? {}), [s.core]: { ...opts, ...patch } } });
-            return (
-              <div key={s.core} className="rounded-xl border border-border bg-black/30 px-4 py-3 space-y-3">
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{s.label}</div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Aspect ratio</Label>
-                    <select
-                      value={opts.aspectRatio ?? ""}
-                      onChange={(e) => setOpts({ aspectRatio: e.target.value || undefined })}
-                      className="w-full h-9 rounded-md border border-border bg-background/50 px-2 font-mono text-xs text-foreground"
-                    >
-                      <option value="">Default</option>
-                      <option value="4/3">4:3</option>
-                      <option value="3/2">3:2</option>
-                      <option value="16/9">16:9</option>
-                      <option value="1/1">1:1 (Square)</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Integer scale</Label>
-                    <div className="flex items-center gap-2 h-9">
-                      <Switch
-                        checked={opts.integerScale ?? false}
-                        onCheckedChange={(v) => setOpts({ integerScale: v || undefined })}
-                      />
-                      <span className="text-xs text-muted-foreground">Pixel-perfect</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Shader</Label>
-                    <select
-                      value={opts.shader ?? ""}
-                      onChange={(e) => setOpts({ shader: e.target.value || undefined })}
-                      className="w-full h-9 rounded-md border border-border bg-background/50 px-2 font-mono text-xs text-foreground"
-                    >
-                      <option value="">None</option>
-                      <option value="crt">CRT</option>
-                      <option value="scanlines">Scanlines</option>
-                      <option value="grayscale">Grayscale</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const RETROPAD_BUTTONS: { index: number; label: string; group: string }[] = [
-  { index: 8,  label: "A (East)",   group: "Face" },
-  { index: 0,  label: "B (South)",  group: "Face" },
-  { index: 9,  label: "X (North)",  group: "Face" },
-  { index: 1,  label: "Y (West)",   group: "Face" },
-  { index: 3,  label: "Start",      group: "System" },
-  { index: 2,  label: "Select",     group: "System" },
-  { index: 4,  label: "D-Pad Up",   group: "D-Pad" },
-  { index: 5,  label: "D-Pad Down", group: "D-Pad" },
-  { index: 6,  label: "D-Pad Left", group: "D-Pad" },
-  { index: 7,  label: "D-Pad Right","group": "D-Pad" },
-  { index: 10, label: "L1",         group: "Shoulder" },
-  { index: 11, label: "R1",         group: "Shoulder" },
-  { index: 12, label: "L2",         group: "Shoulder" },
-  { index: 13, label: "R2",         group: "Shoulder" },
-  { index: 14, label: "L3 (Click)", group: "Analog" },
-  { index: 15, label: "R3 (Click)", group: "Analog" },
-];
-
-const DEFAULT_GAMEPAD_MAP: Record<number, number> = {
-  8: 0, 0: 1, 9: 2, 1: 3,
-  2: 8, 3: 9,
-  4: 12, 5: 13, 6: 14, 7: 15,
-  10: 4, 11: 5, 12: 6, 13: 7,
-  14: 10, 15: 11,
-};
-
-function physicalButtonLabel(idx: number): string {
-  const names: Record<number, string> = {
-    0: "A", 1: "B", 2: "X", 3: "Y",
-    4: "LB/L1", 5: "RB/R1", 6: "LT/L2", 7: "RT/R2",
-    8: "Back/Select", 9: "Start/Menu",
-    10: "L3", 11: "R3",
-    12: "↑", 13: "↓", 14: "←", 15: "→",
-  };
-  return names[idx] !== undefined ? `Button ${idx} (${names[idx]})` : `Button ${idx}`;
-}
-
-function GamepadRemapSection({ profileId, playerPort = 0 }: { profileId: number; playerPort?: number }) {
-  const { toast } = useToast();
-  const [gamepads, setGamepads] = useState<Gamepad[]>([]);
-  const [capturingBtn, setCapturingBtn] = useState<number | null>(null);
-  const [bindings, setBindings] = useState<Record<number, number>>({});
-  const [saved, setSaved] = useState(false);
-  const rafRef = React.useRef<number | null>(null);
-  const prevBtns = React.useRef<boolean[]>([]);
-
-  const refreshGamepads = React.useCallback(() => {
-    const pads = Array.from(navigator.getGamepads()).filter(Boolean) as Gamepad[];
-    setGamepads(pads);
-  }, []);
-
-  React.useEffect(() => {
-    window.addEventListener("gamepadconnected", refreshGamepads);
-    window.addEventListener("gamepaddisconnected", refreshGamepads);
-    refreshGamepads();
-    return () => {
-      window.removeEventListener("gamepadconnected", refreshGamepads);
-      window.removeEventListener("gamepaddisconnected", refreshGamepads);
-    };
-  }, [refreshGamepads]);
-
-  React.useEffect(() => {
-    fetch(`/api/profiles/${profileId}/gamepad-bindings/default?port=${playerPort}`)
-      .then((r) => r.json())
-      .then((data: Record<number, number>) => {
-        if (data && typeof data === "object" && Object.keys(data).length > 0) {
-          setBindings(data);
-        } else {
-          setBindings({ ...DEFAULT_GAMEPAD_MAP });
-        }
-      })
-      .catch(() => setBindings({ ...DEFAULT_GAMEPAD_MAP }));
-  }, [profileId, playerPort]);
-
-  React.useEffect(() => {
-    if (capturingBtn === null) {
-      prevBtns.current = [];
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      return;
-    }
-    const poll = () => {
-      const pads = Array.from(navigator.getGamepads()).filter(Boolean) as Gamepad[];
-      const pad = pads[0];
-      if (!pad) { rafRef.current = requestAnimationFrame(poll); return; }
-      const curr = pad.buttons.map((b) => b.pressed);
-      for (let i = 0; i < curr.length; i++) {
-        if (curr[i] && !(prevBtns.current[i] ?? false)) {
-          setBindings((prev) => ({ ...prev, [capturingBtn]: i }));
-          setCapturingBtn(null);
-          prevBtns.current = [];
-          return;
-        }
-      }
-      prevBtns.current = curr;
-      rafRef.current = requestAnimationFrame(poll);
-    };
-    rafRef.current = requestAnimationFrame(poll);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [capturingBtn]);
-
-  const saveBindings = async () => {
-    try {
-      await apiRequest("PUT", `/api/profiles/${profileId}/gamepad-bindings/default?port=${playerPort}`, bindings);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      toast({ title: "Gamepad mapping saved", description: "Applied on next game launch." });
-    } catch {
-      toast({ title: "Save failed", variant: "destructive" });
-    }
-  };
-
-  const resetBindings = () => { setBindings({ ...DEFAULT_GAMEPAD_MAP }); };
-  const groups = Array.from(new Set(RETROPAD_BUTTONS.map((b) => b.group)));
-
-  return (
-    <div className="space-y-5 pt-6 border-t border-border">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Gamepad2 className="size-4 text-primary" />
-          <h3 className="font-display text-lg font-bold">Gamepad Mapping</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          {gamepads.length > 0 ? (
-            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-green-400">
-              <Wifi className="size-3" /> {gamepads[0].id.slice(0, 28)}{gamepads[0].id.length > 28 ? "…" : ""}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              <WifiOff className="size-3" /> No controller detected
-            </span>
-          )}
-        </div>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Map each RetroArch button to a physical button on your controller.
-        {gamepads.length === 0 && " Plug in a controller to use the press-to-capture feature."}
-      </p>
-      {capturingBtn !== null && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-accent/15 border border-accent text-accent font-mono text-sm animate-pulse">
-          <Gamepad2 className="size-4 shrink-0" />
-          Press the physical button for <strong className="mx-1">{RETROPAD_BUTTONS.find((b) => b.index === capturingBtn)?.label}</strong> — or{" "}
-          <button onClick={() => setCapturingBtn(null)} className="underline">cancel</button>
-        </div>
-      )}
-      <div className="space-y-4">
-        {groups.map((group) => (
-          <div key={group} className="space-y-2">
-            <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground border-b border-border pb-1">{group}</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {RETROPAD_BUTTONS.filter((b) => b.group === group).map((btn) => {
-                const physIdx = bindings[btn.index];
-                const isCapturing = capturingBtn === btn.index;
-                return (
-                  <button
-                    key={btn.index}
-                    onClick={() => gamepads.length > 0 ? setCapturingBtn(btn.index) : undefined}
-                    disabled={gamepads.length === 0}
-                    className={[
-                      "flex flex-col gap-0.5 px-3 py-2.5 rounded-lg border text-left transition-all",
-                      isCapturing
-                        ? "bg-accent/20 border-accent ring-2 ring-accent/40 animate-pulse"
-                        : gamepads.length > 0
-                          ? "bg-card border-border hover:border-primary/60 cursor-pointer"
-                          : "bg-card/50 border-border/50 cursor-default opacity-60",
-                    ].join(" ")}
-                  >
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{btn.label}</span>
-                    <span className="font-mono text-xs font-semibold text-foreground">
-                      {isCapturing ? "Waiting…" : physIdx !== undefined ? physicalButtonLabel(physIdx) : "Not mapped"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center gap-3 pt-2">
-        <Button onClick={saveBindings} size="sm" className="font-mono text-[11px] uppercase tracking-wider">
-          {saved ? <><Check className="size-3 mr-2" />Saved!</> : "Save Gamepad Map"}
-        </Button>
-        <Button onClick={resetBindings} variant="outline" size="sm" className="font-mono text-[10px] uppercase tracking-wider">
-          <RotateCcw className="size-3 mr-2" /> Reset to Default
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export default function Settings() {
-  const { config, setConfig, resetConfig, saveStatus } = useIntegration();
+  const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
   const { toast } = useToast();
   const [copied, setCopied] = useState<string | null>(null);
-  const [activeTheme, setActiveTheme] = useState<AppTheme>(
-    () => (localStorage.getItem("ha-theme") as AppTheme | null) ?? "default"
-  );
-  const handleTheme = (t: AppTheme) => { applyTheme(t); setActiveTheme(t); };
 
-  const [esImporting, setEsImporting] = useState(false);
-  const [esResult, setEsResult] = useState<{ imported: number; skipped: number } | null>(null);
-  const [esError, setEsError] = useState<string | null>(null);
-  const [lbImporting, setLbImporting] = useState(false);
-  const [lbResult, setLbResult] = useState<{ imported: number; skipped: number } | null>(null);
-  const [lbError, setLbError] = useState<string | null>(null);
-
-  const [renamingCollectionId, setRenamingCollectionId] = useState<number | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-
-  const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
-  const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
-
-  const copy = async (text: string, key: string) => {
-    try { await navigator.clipboard.writeText(text); setCopied(key); setTimeout(() => setCopied(null), 1200); }
-    catch { /* ignore */ }
+  const copy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+    toast({ title: "Copied to clipboard", description: "Endpoint URL is ready to paste." });
   };
 
-  const renameCollectionMutation = useMutation({
-    mutationFn: async ({ id, name }: { id: number; name: string }) => {
-      const res = await apiRequest("PATCH", `/api/collections/${id}`, { name });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/collections"] });
-      setRenamingCollectionId(null);
-    },
-  });
+  const handleReset = () => {
+    if (confirm("Reset all integration settings to default? Your HA base URL and token will be cleared.")) {
+      resetConfig();
+      toast({ title: "Settings reset", description: "Integration defaults restored." });
+    }
+  };
 
-  const deleteCollectionMutation = useMutation({
-    mutationFn: async (id: number) => apiRequest("DELETE", `/api/collections/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/collections"] }),
-  });
-
-  const submitRename = (id: number) => {
-    const trimmed = renameValue.trim();
-    if (!trimmed) { setRenamingCollectionId(null); return; }
-    renameCollectionMutation.mutate({ id, name: trimmed });
+  const handleLiveModeToggle = (live: boolean) => {
+    if (live) {
+      toast({
+        title: "Live Mode Enabled",
+        description: "App will now attempt to call real Home Assistant webhooks.",
+      });
+    }
+    setConfig({ liveMode: live });
   };
 
   return (
     <div className="flex h-full">
-      <Sidebar active="favorites" />
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-20 lg:pb-0" data-testid="page-settings">
-        <MobileTopBar active="favorites" />
-        <div className="px-4 sm:px-10 py-5 sm:py-10 max-w-4xl w-full mx-auto">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground mb-4"
-            data-testid="link-back"
-          >
-            <ArrowLeft className="size-3.5" /> Back to Library
-          </Link>
-          <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Configuration</div>
-          <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight mt-1 mb-1">Settings</h1>
-          <div className="mb-5 inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground" data-testid="text-settings-save-status">
-            <span aria-hidden="true" className={`inline-block size-1.5 rounded-full ${
-              saveStatus === "saving" ? "bg-amber-400 animate-pulse"
-              : saveStatus === "saved" ? "bg-status-online"
-              : saveStatus === "error" ? "bg-destructive"
-              : "bg-muted-foreground/40"
-            }`} />
-            {saveStatus === "loading" ? "Loading…"
-              : saveStatus === "saving" ? "Saving…"
-              : saveStatus === "saved" ? "Saved"
-              : saveStatus === "error" ? "Save failed"
-              : "Settings sync to add-on storage"}
+      <Sidebar active="settings" />
+
+      <main className="flex-1 min-w-0 flex flex-col bg-background/30 overflow-y-auto overscroll-y-contain">
+        <MobileTopBar active="settings" />
+
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 space-y-12">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                Integration
+              </div>
+              <h1 className="font-display text-2xl font-bold leading-tight mt-1">Settings</h1>
+            </div>
+            <div className="flex items-center gap-3">
+              {saveStatus === "saving" && (
+                <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+                  <Loader2 className="size-3 animate-spin" /> Saving...
+                </div>
+              )}
+              {saveStatus === "saved" && (
+                <div className="flex items-center gap-2 font-mono text-[10px] text-accent uppercase tracking-wider">
+                  <Check className="size-3" /> All changes saved
+                </div>
+              )}
+              {saveStatus === "error" && (
+                <div className="flex items-center gap-2 font-mono text-[10px] text-destructive uppercase tracking-wider">
+                  <ShieldAlert className="size-3" /> Save failed
+                </div>
+              )}
+            </div>
           </div>
-          <Tabs defaultValue="general">
-            <TabsList className="mb-6 w-full grid grid-cols-3 sm:flex sm:flex-wrap h-auto gap-1 p-1">
-              <TabsTrigger value="general" className="text-xs sm:text-sm">General</TabsTrigger>
-              <TabsTrigger value="library" className="text-xs sm:text-sm">Library</TabsTrigger>
-              <TabsTrigger value="services" className="text-xs sm:text-sm">Services</TabsTrigger>
-              <TabsTrigger value="controls" className="text-xs sm:text-sm">Controls</TabsTrigger>
-              <TabsTrigger value="kiosk" className="text-xs sm:text-sm">Kiosk</TabsTrigger>
-              <TabsTrigger value="ha" className="text-xs sm:text-sm">HA Setup</TabsTrigger>
-              <TabsTrigger value="appearance" className="text-xs sm:text-sm">Appearance</TabsTrigger>
-            </TabsList>
-            <TabsContent value="general" className="space-y-8">
-              <Section title="Home Assistant connection" description="Where HomeArcade sends its requests. The base URL is only needed when Live mode is on.">
-                <Field label="Home Assistant base URL" hint="e.g. https://homeassistant.local:8123">
-                  <Input type="url" value={config.haBaseUrl} onChange={(e) => setConfig({ haBaseUrl: e.target.value })} placeholder="https://homeassistant.local:8123" data-testid="input-ha-base" />
-                </Field>
-                <Field label="Long-lived access token (optional)" hint="Only required for /api/services/* calls. Webhook endpoints are unauthenticated by design.">
-                  <Input type="password" value={config.haToken} onChange={(e) => setConfig({ haToken: e.target.value })} placeholder="eyJhbGciOiJIUzI1NiIs…" data-testid="input-ha-token" autoComplete="off" />
-                </Field>
-                <div className="flex items-start gap-3 rounded-md border border-border bg-background/40 p-3">
-                  <Switch id="live-mode" checked={config.liveMode} onCheckedChange={(v) => setConfig({ liveMode: !!v })} data-testid="switch-live-mode" />
-                  <div className="flex-1">
-                    <Label htmlFor="live-mode" className="font-medium text-sm">Live mode</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">When off, every action is logged as a simulation. Turn on once your HA webhooks are configured.</p>
+
+          <Separator className="bg-border/60" />
+
+          {/* Connection */}
+          <Section
+            title="Home Assistant Connection"
+            description="Configure how Cabinet Bridge talks to your Home Assistant instance. Use the internal URL if this is running as an add-on."
+          >
+            <div className="grid gap-6">
+              <Field
+                label="Base URL"
+                hint="External or internal URL including port (e.g. http://192.168.1.50:8123)"
+              >
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Globe className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={config.haBaseUrl}
+                      onChange={(e) => setConfig({ haBaseUrl: e.target.value })}
+                      placeholder="https://homeassistant.local:8123"
+                      className="pl-9 font-mono text-sm"
+                      data-testid="input-ha-base"
+                    />
                   </div>
                 </div>
-                {config.liveMode && (
-                  <div className="flex items-start gap-2 rounded-md border border-chart-3/40 bg-chart-3/10 px-3 py-2 text-xs" data-testid="banner-live">
-                    <AlertTriangle className="size-4 mt-0.5 text-chart-3 shrink-0" />
-                    <span>Live mode is on — buttons will issue real <code>POST</code> requests.</span>
+              </Field>
+
+              <Field
+                label="Long-lived Access Token"
+                hint="Required for certain actions, but often not needed for simple webhooks."
+              >
+                <div className="relative">
+                  <Lock className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    value={config.haToken}
+                    onChange={(e) => setConfig({ haToken: e.target.value })}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    className="pl-9 font-mono text-sm"
+                    data-testid="input-ha-token"
+                  />
+                </div>
+              </Field>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-sidebar/40">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 font-display font-semibold text-sm">
+                    <Zap className="size-4 text-accent" />
+                    Live Mode
                   </div>
-                )}
-              </Section>
-              <ProfilesSection />
-              <Section title="Reset" description="Clear all locally saved settings.">
-                <Button variant="outline" onClick={() => resetConfig()} data-testid="button-reset-config">Reset to defaults</Button>
-              </Section>
-              <Section title="Help &amp; feedback" description="Found a bug or have a feature request?">
-                <div className="flex flex-wrap gap-3">
-                  <a href="https://github.com/GlerschNersch/token/issues/new" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition-colors" data-testid="link-report-issue">
-                    <AlertTriangle className="size-4 text-yellow-500" /> Report an issue <ExternalLink className="size-3.5 text-muted-foreground" />
-                  </a>
-                  <a href="https://github.com/GlerschNersch/token" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
-                    View on GitHub <ExternalLink className="size-3.5 text-muted-foreground" />
-                  </a>
+                  <div className="text-xs text-muted-foreground max-w-sm">
+                    When enabled, actions will fire real network requests to Home Assistant.
+                  </div>
                 </div>
-              </Section>
-            </TabsContent>
-            <TabsContent value="library" className="space-y-8">
-              <RomLibrarySection />
-              <Section title="Game launch endpoints" description="HomeArcade derives a webhook URL for each uploaded ROM. Register these in Home Assistant to wire up automations or voice commands.">
-                <div className="rounded-md border border-border bg-background/40 overflow-hidden">
-                  <table className="w-full text-sm" data-testid="table-launch-endpoints">
-                    <thead className="bg-secondary/40 text-muted-foreground">
-                      <tr>
-                        <th className="text-left font-mono text-[10px] uppercase tracking-[0.18em] px-3 py-2">Game</th>
-                        <th className="hidden sm:table-cell text-left font-mono text-[10px] uppercase tracking-[0.18em] px-3 py-2">Endpoint</th>
-                        <th className="px-3 py-2 w-10" />
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {uploadedRoms.length === 0 ? (
-                        <tr><td colSpan={3} className="px-3 py-6 text-center text-xs text-muted-foreground">Upload ROMs to generate launch endpoints.</td></tr>
-                      ) : uploadedRoms.map((rom) => {
-                        const ep = `/api/webhook/cabinet_launch_${rom.slug}`;
-                        return (
-                          <tr key={rom.id}>
-                            <td className="px-3 py-2">
-                              <div className="truncate max-w-[180px] sm:max-w-none">{rom.title}</div>
-                              <div className="sm:hidden font-mono text-[11px] text-muted-foreground break-all mt-0.5">POST {ep}</div>
-                            </td>
-                            <td className="hidden sm:table-cell px-3 py-2 font-mono text-[12px] text-foreground/80 break-all">POST {ep}</td>
-                            <td className="px-3 py-2 text-right">
-                              <button type="button" onClick={() => copy(ep, `rom-${rom.id}`)} aria-label={`Copy ${rom.title} endpoint`} data-testid={`button-copy-rom-endpoint-${rom.id}`} className="text-muted-foreground hover:text-foreground">
-                                {copied === `rom-${rom.id}` ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {config.liveMode ? "Active" : "Simulation"}
+                  </span>
+                  <Switch
+                    checked={config.liveMode}
+                    onCheckedChange={handleLiveModeToggle}
+                    data-testid="switch-live-mode"
+                  />
                 </div>
-              </Section>
-              <Section title="Cheat database cache" description="Cheat codes are cached locally after first lookup — one fetch per system, then instant. Cache refreshes automatically after 7 days.">
-                <Button variant="outline" size="sm" onClick={async () => {
-                  await fetch("/api/cheat-cache", { method: "DELETE" });
-                  toast({ title: "Cheat cache cleared", description: "Next lookup will re-fetch from the libretro database." });
-                }} data-testid="button-clear-cheat-cache">
-                  <RotateCcw className="size-3 mr-2" /> Clear cheat cache
-                </Button>
-              </Section>
-              <Section title="Collections" description="Rename or delete your game collections. Games are not affected when a collection is deleted.">
-                {collections.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No collections yet. Create one from the library sidebar.</p>
-                ) : (
-                  <div className="rounded-md border border-border bg-background/40 divide-y divide-border overflow-hidden">
-                    {collections.map((col) => (
-                      <div key={col.id} className="flex items-center gap-2 px-3 py-2.5">
-                        {renamingCollectionId === col.id ? (
-                          <>
-                            <input autoFocus type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === "Enter") submitRename(col.id); if (e.key === "Escape") setRenamingCollectionId(null); }}
-                              className="flex-1 h-7 rounded border border-border bg-background px-2 font-mono text-[12px] focus:outline-none focus:ring-1 focus:ring-ring"
-                              data-testid={"input-rename-collection-" + col.id} />
-                            <button type="button" onClick={() => submitRename(col.id)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Save rename" data-testid={"button-save-rename-" + col.id}><Check className="size-3.5" /></button>
-                            <button type="button" onClick={() => setRenamingCollectionId(null)} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Cancel rename" data-testid={"button-cancel-rename-" + col.id}><X className="size-3.5" /></button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="flex-1 text-sm truncate">{col.name}</span>
-                            <span className="text-[11px] text-muted-foreground shrink-0">{col.romIds.length} game{col.romIds.length === 1 ? "" : "s"}</span>
-                            <button type="button" onClick={() => { setRenamingCollectionId(col.id); setRenameValue(col.name); }} className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Rename collection" data-testid={"button-rename-collection-" + col.id}><Pencil className="size-3.5" /></button>
-                            <button type="button" onClick={() => { if (window.confirm("Delete collection \"" + col.name + "\"?")) deleteCollectionMutation.mutate(col.id); }} className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Delete collection" data-testid={"button-delete-collection-" + col.id}><Trash2 className="size-3.5" /></button>
-                          </>
-                        )}
+              </div>
+
+              {!config.liveMode && (
+                <div className="flex items-start gap-3 p-4 rounded-lg border border-accent/20 bg-accent/5">
+                  <AlertTriangle className="size-4 text-accent mt-0.5 shrink-0" />
+                  <div className="text-xs text-accent/90 leading-relaxed">
+                    <strong>Cabinet is in Simulation Mode.</strong> Clicks will be logged in the
+                    activity panel but no webhooks will be fired. This is great for testing the UI
+                    without triggering hardware actions.
+                  </div>
+                </div>
+              )}
+            </div>
+          </Section>
+
+          <Separator className="bg-border/60" />
+
+          {/* Scanner */}
+          <ScannerStatusSection />
+
+          <Separator className="bg-border/60" />
+
+          {/* Smart Filters */}
+          <SmartFilterCollectionCreator />
+
+          <Separator className="bg-border/60" />
+
+          {/* PC Status Settings */}
+          <Section
+            title="PC Status Monitoring"
+            description="Link Home Assistant entities to the dashboard meters for CPU, RAM, and Online status."
+          >
+            <div className="grid sm:grid-cols-2 gap-6">
+              <Field label="PC Hostname" hint="Shown at the top of the right panel.">
+                <Input
+                  value={config.pcHostname}
+                  onChange={(e) => setConfig({ pcHostname: e.target.value })}
+                  placeholder="GAMING-PC"
+                  className="font-mono text-sm"
+                  data-testid="input-pc-hostname"
+                />
+              </Field>
+              <Field label="Online Entity ID" hint="binary_sensor showing if PC is up.">
+                <Input
+                  value={config.pcOnlineEntityId}
+                  onChange={(e) => setConfig({ pcOnlineEntityId: e.target.value })}
+                  placeholder="binary_sensor.gaming_pc_status"
+                  className="font-mono text-sm"
+                  data-testid="input-pc-online-id"
+                />
+              </Field>
+              <Field label="CPU Entity ID" hint="sensor providing percentage value.">
+                <Input
+                  value={config.pcCpuEntityId}
+                  onChange={(e) => setConfig({ pcCpuEntityId: e.target.value })}
+                  placeholder="sensor.gaming_pc_cpu_usage"
+                  className="font-mono text-sm"
+                  data-testid="input-pc-cpu-id"
+                />
+              </Field>
+              <Field label="RAM Entity ID" hint="sensor providing percentage value.">
+                <Input
+                  value={config.pcRamEntityId}
+                  onChange={(e) => setConfig({ pcRamEntityId: e.target.value })}
+                  placeholder="sensor.gaming_pc_ram_usage"
+                  className="font-mono text-sm"
+                  data-testid="input-pc-ram-id"
+                />
+              </Field>
+              <Field label="Current App Entity ID" hint="sensor showing foreground window.">
+                <Input
+                  value={config.pcAppEntityId}
+                  onChange={(e) => setConfig({ pcAppEntityId: e.target.value })}
+                  placeholder="sensor.gaming_pc_current_app"
+                  className="font-mono text-sm"
+                  data-testid="input-pc-app-id"
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Separator className="bg-border/60" />
+
+          {/* Endpoints */}
+          <Section
+            title="Webhook Endpoints"
+            description="URLs automatically generated for your Home Assistant automations. Copy these to use as Webhook triggers."
+          >
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border border-border bg-sidebar/20">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Wifi className="size-4 text-primary" />
+                  System Actions
+                </h3>
+                <div className="grid gap-3">
+                  {[
+                    { id: "wake_pc", label: "Wake PC", default: "/api/webhook/cabinet_wake_pc" },
+                    { id: "sleep_pc", label: "Sleep PC", default: "/api/webhook/cabinet_sleep_pc" },
+                    { id: "restart_pc", label: "Restart PC", default: "/api/webhook/cabinet_restart_pc" },
+                    { id: "shutdown_pc", label: "Shutdown PC", default: "/api/webhook/cabinet_shutdown_pc" },
+                  ].map((a) => (
+                    <div key={a.id} className="space-y-1.5">
+                      <Label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
+                        {a.label}
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={config.endpoints[a.id] || a.default}
+                          onChange={(e) => setEndpoint(a.id, e.target.value)}
+                          className="font-mono text-[12px] bg-background/40"
+                          data-testid={`input-endpoint-${a.id}`}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={() => copy(config.endpoints[a.id] || a.default, a.id)}
+                          data-testid={`button-copy-${a.id}`}
+                        >
+                          {copied === a.id ? (
+                            <Check className="size-3.5 text-accent" />
+                          ) : (
+                            <Copy className="size-3.5" />
+                          )}
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </Section>
-              <SmartFilterCollectionCreator />
-              <ScannerStatusSection />
-              <ScannerStatusSection />
-
-              <SmartFilterCollectionCreator />
-
-              <Section title="Metadata import" description="Import game metadata from an EmulationStation gamelist.xml or a LaunchBox platform XML.">
-                <div className="rounded-md border border-border bg-background/40 p-3">
-                  <Label className="text-sm font-medium">EmulationStation / Batocera / RetroPie</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5 mb-2">Upload a gamelist.xml file.</p>
-                  <input type="file" accept=".xml,text/xml,application/xml" data-testid="input-es-xml" className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-sm file:font-mono file:uppercase file:tracking-wide file:cursor-pointer"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0]; if (!file) return;
-                      setEsImporting(true); setEsResult(null); setEsError(null);
-                      try {
-                        const res = await fetch("/api/import/emulationstation", { method: "POST", headers: { "Content-Type": "application/xml" }, body: await file.arrayBuffer() });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || "Import failed");
-                        setEsResult({ imported: data.imported, skipped: data.skipped });
-                        await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-                      } catch (err) { setEsError(String(err)); }
-                      finally { setEsImporting(false); e.target.value = ""; }
-                    }} />
-                  {esImporting && <p className="text-xs text-muted-foreground mt-2">Importing…</p>}
-                  {esResult && <p className="text-xs text-status-online mt-2" data-testid="text-es-import-result">✓ Imported {esResult.imported} game{esResult.imported !== 1 ? "s" : ""}, skipped {esResult.skipped}.</p>}
-                  {esError && <p className="text-xs text-destructive mt-2" data-testid="text-es-import-error">{esError}</p>}
-                </div>
-                <div className="rounded-md border border-border bg-background/40 p-3">
-                  <Label className="text-sm font-medium">LaunchBox</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5 mb-2">Upload a platform XML from your LaunchBox Data/Platforms folder.</p>
-                  <input type="file" accept=".xml,text/xml,application/xml" data-testid="input-lb-xml" className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-background file:text-sm file:font-mono file:uppercase file:tracking-wide file:cursor-pointer"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0]; if (!file) return;
-                      setLbImporting(true); setLbResult(null); setLbError(null);
-                      try {
-                        const res = await fetch("/api/import/launchbox", { method: "POST", headers: { "Content-Type": "application/xml" }, body: await file.arrayBuffer() });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || "Import failed");
-                        setLbResult({ imported: data.imported, skipped: data.skipped });
-                        await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-                      } catch (err) { setLbError(String(err)); }
-                      finally { setLbImporting(false); e.target.value = ""; }
-                    }} />
-                  {lbImporting && <p className="text-xs text-muted-foreground mt-2">Importing…</p>}
-                  {lbResult && <p className="text-xs text-status-online mt-2" data-testid="text-lb-import-result">✓ Imported {lbResult.imported} game{lbResult.imported !== 1 ? "s" : ""}, skipped {lbResult.skipped}.</p>}
-                  {lbError && <p className="text-xs text-destructive mt-2" data-testid="text-lb-import-error">{lbError}</p>}
-                </div>
-              </Section>
-            </TabsContent>
-            <TabsContent value="services" className="space-y-8">
-              <Section title="TheGamesDB (recommended)" description="Primary metadata source — box art, descriptions, genre, developer, and publisher. Free API key at thegamesdb.net (sign up → API Key).">
-                <Field label="TheGamesDB API Key" hint="Register at thegamesdb.net to get a free key.">
-                  <Input type="password" value={config.tgdbApiKey ?? ""} onChange={(e) => setConfig({ tgdbApiKey: e.target.value })} placeholder="••••••••" autoComplete="off" />
-                </Field>
-              </Section>
-              <Section title="ScreenScraper.fr (optional)" description="Fallback metadata source. Excellent retro coverage. Register free at screenscraper.fr.">
-                <Field label="ScreenScraper user ID" hint="Your screenscraper.fr username.">
-                  <Input type="text" value={config.ssUserId ?? ""} onChange={(e) => setConfig({ ssUserId: e.target.value })} placeholder="your_username" data-testid="input-ss-userid" autoComplete="off" />
-                </Field>
-                <Field label="ScreenScraper password" hint="Your screenscraper.fr password.">
-                  <Input type="password" value={config.ssPassword ?? ""} onChange={(e) => setConfig({ ssPassword: e.target.value })} placeholder="••••••••" data-testid="input-ss-password" autoComplete="off" />
-                </Field>
-              </Section>
-              <Section title="RetroAchievements (optional)" description="Earn achievements for classic games. Register free at retroachievements.org.">
-                <Field label="RA Username" hint="Your retroachievements.org username.">
-                  <Input type="text" value={config.raUsername ?? ""} onChange={(e) => setConfig({ raUsername: e.target.value })} placeholder="your_ra_username" data-testid="input-ra-username" autoComplete="off" />
-                </Field>
-                <Field label="RA API Token" hint="Found under Settings → Keys on retroachievements.org.">
-                  <Input type="password" value={config.raToken ?? ""} onChange={(e) => setConfig({ raToken: e.target.value })} placeholder="••••••••" data-testid="input-ra-token" autoComplete="off" />
-                </Field>
-              </Section>
-            </TabsContent>
-            <TabsContent value="controls"><ControlsTab /></TabsContent>
-            <TabsContent value="kiosk" className="space-y-8">
-              <Section title="Kiosk / Arcade mode" description="Lock the UI to a specific collection, hide upload and settings, and optionally require a PIN to exit.">
-                <div className="flex items-start gap-3 rounded-md border border-border bg-background/40 p-3">
-                  <Switch id="kiosk-mode" checked={config.kioskMode ?? false} onCheckedChange={(v) => setConfig({ kioskMode: !!v })} data-testid="switch-kiosk-mode" />
-                  <div className="flex-1">
-                    <Label htmlFor="kiosk-mode" className="font-medium text-sm">Enable kiosk mode</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">Hides upload, settings, and management UI. Refresh after changing.</p>
-                  </div>
-                </div>
-                <Field label="Exit PIN (optional)" hint="4–8 digit PIN to leave kiosk mode. Leave blank for no PIN.">
-                  <Input type="password" inputMode="numeric" maxLength={8} value={config.kioskPin ?? ""} onChange={(e) => setConfig({ kioskPin: e.target.value.replace(/\D/g, "") })} placeholder="e.g. 1234" data-testid="input-kiosk-pin" autoComplete="off" />
-                </Field>
-                <Field label="Locked collection (optional)" hint="Kiosk mode shows only games from this collection.">
-                  <select value={config.kioskCollectionId ?? ""} onChange={(e) => setConfig({ kioskCollectionId: e.target.value ? Number(e.target.value) : null })} data-testid="select-kiosk-collection" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                    <option value="">— Show all games —</option>
-                    {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </Field>
-              </Section>
-            </TabsContent>
-            <TabsContent value="ha" className="space-y-8">
-              <Section title="Now Playing sensor" description="HomeArcade exposes a live endpoint so Home Assistant can display what's currently running.">
-                <p className="text-xs text-muted-foreground">Add a <code>rest</code> sensor to your <code>configuration.yaml</code>:</p>
-                <Code>{`rest:\n  - resource: http://homeassistant.local:5000/api/now-playing\n    scan_interval: 15\n    sensor:\n      - name: "HomeArcade Now Playing"\n        unique_id: homearcade_now_playing\n        value_template: >\n          {% if value_json.playing %}\n            {{ value_json.title }}\n          {% else %}\n            Idle\n          {% endif %}\n        json_attributes:\n          - playing\n          - system\n          - id`}</Code>
-                <p className="text-xs text-muted-foreground mt-2">Optionally create an <code>input_text.homearcade_now_playing</code> helper — HomeArcade will update it automatically.</p>
-                <Code>{`input_text:\n  homearcade_now_playing:\n    name: HomeArcade Now Playing\n    max: 100`}</Code>
-              </Section>
-              <Section title="Lovelace card" description="Add HomeArcade as a card to your HA dashboard with now-playing status and a recent games shelf.">
-                <ol className="space-y-4 list-none p-0 m-0">
-                  <Step n={1} title="Copy the card file">Place <code>homearcade-card.js</code> in your HA <code>/config/www/</code> folder.<Code>{`wget -O /config/www/homearcade-card.js \\\n  http://homeassistant.local:5000/homearcade-card.js`}</Code></Step>
-                  <Step n={2} title="Register the resource">Go to <strong>Settings → Dashboards → Resources → Add</strong>:<Code>{`URL:  /local/homearcade-card.js\nType: JavaScript Module`}</Code></Step>
-                  <Step n={3} title="Add the card"><strong>Add Card → Manual</strong>:<Code>{`type: custom:homearcade-card\ntitle: HomeArcade\nbase_url: http://homeassistant.local:5000\nmax_recent: 6`}</Code></Step>
-                </ol>
-                <div className="mt-3">
-                  <a href="homearcade-card.js" download="homearcade-card.js" className="inline-flex items-center gap-1.5 text-xs font-mono text-primary hover:underline" data-testid="link-download-card">
-                    <ExternalLink className="size-3.5" /> Download homearcade-card.js
-                  </a>
-                </div>
-              </Section>
-            </TabsContent>
-            <TabsContent value="appearance" className="space-y-8">
-              <Section title="Theme" description="Choose a colour theme. Saved in the browser and applied immediately.">
-                {([
-                  { group: "Base", themes: [
-                    { id: "default", label: "Default", swatch: ["#f026ab","#22d3ee","#0f0f18"] },
-                    { id: "synthwave", label: "Synthwave", swatch: ["#d946ef","#06f0e0","#0b0612"] },
-                    { id: "oled", label: "OLED Black", swatch: ["#ff2dba","#06f0e0","#000000"] },
-                    { id: "nord", label: "Nord", swatch: ["#81a1c1","#88c0d0","#1e222a"] },
-                    { id: "amber", label: "Amber CRT", swatch: ["#f59e0b","#fbbf24","#140e08"] },
-                    { id: "dracula", label: "Dracula", swatch: ["#bd93f9","#50fa7b","#1e1f29"] },
-                    { id: "cyberpunk", label: "Cyberpunk", swatch: ["#e8d510","#ff2d6b","#070712"] },
-                    { id: "gameboy", label: "Game Boy", swatch: ["#4ade80","#86efac","#0f1a0a"] },
-                  ]},
-                  { group: "80s", themes: [
-                    { id: "miami-vice", label: "Miami Vice", swatch: ["#f43f5e","#2dd4bf","#080e1e"] },
-                    { id: "c64", label: "Commodore 64", swatch: ["#facc15","#a5b4fc","#1c1c70"] },
-                    { id: "arcade", label: "Arcade Cabinet", swatch: ["#facc15","#ef4444","#0a0a0a"] },
-                  ]},
-                  { group: "90s", themes: [
-                    { id: "vaporwave", label: "Vaporwave", swatch: ["#f472b6","#67e8f9","#180d25"] },
-                    { id: "grunge", label: "Grunge", swatch: ["#c2602a","#6b7c3a","#131009"] },
-                    { id: "win95", label: "Windows 95", swatch: ["#00a8cc","#4169e1","#191c1e"] },
-                    { id: "blockbuster", label: "Blockbuster", swatch: ["#fbbf24","#3b82f6","#06081a"] },
-                  ]},
-                  { group: "Early 2000s", themes: [
-                    { id: "aqua", label: "Mac OS X Aqua", swatch: ["#0ea5e9","#f97316","#141618"] },
-                    { id: "y2k", label: "Y2K Chrome", swatch: ["#3b82f6","#ec4899","#0a0b12"] },
-                    { id: "halo", label: "Halo / Xbox", swatch: ["#22c55e","#f59e0b","#0d1209"] },
-                  ]},
-                ] as { group: string; themes: { id: AppTheme; label: string; swatch: string[] }[] }[]).map(({ group, themes }) => (
-                  <div key={group} className="mb-5 last:mb-0">
-                    <p className="md-label-small text-muted-foreground/70 uppercase tracking-[0.1em] mb-2">{group}</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                      {themes.map(({ id, label, swatch }) => (
-                        <button key={id} onClick={() => handleTheme(id)} data-testid={`button-theme-${id}`}
-                          className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-xs font-mono transition-all ${
-                            activeTheme === id ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40 text-muted-foreground"
-                          }`}>
-                          <div className="flex gap-1">
-                            {swatch.map((c, i) => <span key={i} className="size-5 rounded-full border border-white/10" style={{ background: c }} />)}
-                          </div>
-                          <span className="text-center leading-tight">{label}</span>
-                          {activeTheme === id && <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Active</span>}
-                        </button>
-                      ))}
                     </div>
-                  </div>
-                ))}
-              </Section>
-            </TabsContent>
-          </Tabs>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border border-border bg-sidebar/20">
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Terminal className="size-4 text-primary" />
+                  Sample Game Launch
+                </h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Each game has a unique webhook. Example for a specific title:
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    value="/api/webhook/cabinet_launch_super-mario-world"
+                    className="font-mono text-[12px] bg-background/40 opacity-70"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={() =>
+                      copy("/api/webhook/cabinet_launch_super-mario-world", "sample-game")
+                    }
+                  >
+                    {copied === "sample-game" ? (
+                      <Check className="size-3.5 text-accent" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          <Separator className="bg-border/60" />
+
+          {/* Wiring Guide */}
+          <Section
+            title="Wiring Guide"
+            description="Follow these steps to connect Cabinet Bridge to your physical hardware using Home Assistant."
+          >
+            <ul className="space-y-6">
+              <Step n={1} title="Create a Wake-on-LAN Script">
+                Define a script in HA that sends a magic packet to your PC's MAC address.
+                <Code>{`script:
+  wake_gaming_pc:
+    alias: "Wake Gaming PC"
+    sequence:
+      - service: wake_on_lan.send_magic_packet
+        data:
+          mac: "AA:BB:CC:DD:EE:FF"`}</Code>
+              </Step>
+              <Step n={2} title="Setup the Webhook Automation">
+                Create an automation that triggers on the `cabinet_wake_pc` webhook and runs your
+                script.
+                <Code>{`automation:
+  - alias: "Cabinet: Wake PC"
+    trigger:
+      - platform: webhook
+        webhook_id: cabinet_wake_pc
+    action:
+      - service: script.wake_gaming_pc`}</Code>
+              </Step>
+              <Step n={3} title="Configure PC Sensors">
+                Install the <strong>HASS.Agent</strong> or <strong>IOT Link</strong> on your Windows
+                PC to provide CPU, RAM, and Online sensors back to Home Assistant.
+              </Step>
+              <Step n={4} title="Enable Live Mode">
+                Scroll up and toggle <strong>Live Mode</strong>. Cabinet Bridge will now send a POST
+                request to your HA webhooks whenever you click an action button.
+              </Step>
+              <Step n={5} title="Add as Sidebar Item (Optional)">
+                Add this to your `configuration.yaml` to see Cabinet Bridge in the HA sidebar:
+                <Code>{`panel_iframe:
+  cabinet:
+    title: "Cabinet"
+    icon: mdi:gamepad-variant
+    url: "${window.location.origin}${window.location.pathname}"`}</Code>
+              </Step>
+            </ul>
+          </Section>
+
+          <Separator className="bg-border/60" />
+
+          {/* Footer actions */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+              <ShieldAlert className="size-3.5" />
+              Settings are saved automatically to the local database.
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+              data-testid="button-reset-settings"
+            >
+              <RotateCcw className="size-3.5" /> Reset to Defaults
+            </Button>
+          </div>
         </div>
       </main>
     </div>
   );
 }
-
-function RomLibrarySection() {
-  const { toast } = useToast();
-  const { data: roms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
-  const scrape = useMutation({
-    mutationFn: async (rom: UploadedRom) => {
-      const res = await apiRequest("POST", `/api/roms/${rom.id}/scrape-art`);
-      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error((b as { message?: string }).message ?? `Error ${res.status}`); }
-      return (await res.json()) as UploadedRom;
-    },
-    onSuccess: async (data) => {
-      await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-      if (!data.artUrl) toast({ title: "No art found", description: "ScreenScraper couldn't match this ROM.", variant: "destructive" });
-    },
-    onError: (err: Error) => toast({ title: "Art scrape failed", description: err.message, variant: "destructive" }),
-  });
-  const deleteRom = useMutation({
-    mutationFn: async (rom: UploadedRom) => {
-      const res = await apiRequest("DELETE", `/api/roms/${rom.id}`);
-      return (await res.json()) as { deleted: boolean };
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["/api/roms"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/collections"] }),
-      ]);
-    },
-  });
-  type ScrapeResult = { id: number; title: string; status: string };
-  const [bulkRunning, setBulkRunning] = useState(false);
-  const [bulkTotal, setBulkTotal] = useState(0);
-  const [bulkIndex, setBulkIndex] = useState(0);
-  const [bulkCurrent, setBulkCurrent] = useState("");
-  const [bulkResults, setBulkResults] = useState<ScrapeResult[]>([]);
-  const [bulkDone, setBulkDone] = useState<{ matched: number; failed: number; total: number } | null>(null);
-  const unmatched = roms.filter((r) => r.scrapeStatus !== "matched").length;
-  const startBulkScrape = useCallback((force = false) => {
-    setBulkRunning(true); setBulkDone(null); setBulkResults([]); setBulkIndex(0); setBulkTotal(0); setBulkCurrent("Starting…");
-    const url = apiUrl("/api/roms/scrape-all") + (force ? "?force=1" : "");
-    fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ force }) })
-      .then(async (res) => {
-        const reader = res.body!.getReader();
-        const decoder = new TextDecoder();
-        let buf = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split("\n");
-          buf = lines.pop()!;
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const ev = JSON.parse(line.slice(6));
-              if (ev.type === "start") { setBulkTotal(ev.total); }
-              if (ev.type === "progress") { setBulkIndex(ev.index); setBulkCurrent(ev.title); }
-              if (ev.type === "result") { setBulkResults((prev) => [...prev, { id: ev.id, title: ev.title, status: ev.status }]); }
-              if (ev.type === "done") { setBulkDone({ matched: ev.matched, failed: ev.failed, total: ev.total }); setBulkRunning(false); queryClient.invalidateQueries({ queryKey: ["/api/roms"] }); }
-            } catch { /* ignore malformed */ }
-          }
-        }
-      })
-      .catch((err) => { setBulkRunning(false); toast({ title: "Scrape failed", description: String(err), variant: "destructive" }); });
-  }, [toast]);
-  const pct = bulkTotal > 0 ? Math.round((bulkIndex / bulkTotal) * 100) : 0;
-  return (
-    <Section title="ROM library" description="Manage uploaded ROMs. Upload new ones from each system's page.">
-      <div className="rounded-md border border-border bg-background/40 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Art scraper</div>
-            <p className="text-sm mt-0.5">{bulkDone ? `Done — ${bulkDone.matched} matched, ${bulkDone.failed} not found` : bulkRunning ? `Scraping ${bulkIndex + 1} of ${bulkTotal}…` : unmatched > 0 ? `${unmatched} ROM${unmatched === 1 ? "" : "s"} without art` : "All ROMs have art"}</p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Button variant="outline" size="sm" onClick={() => startBulkScrape(false)} disabled={bulkRunning || unmatched === 0} data-testid="button-scrape-all">
-              {bulkRunning ? <Loader2 className="size-3.5 mr-1.5 animate-spin" /> : <Zap className="size-3.5 mr-1.5" />}{bulkRunning ? "Scraping…" : "Scrape missing"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => startBulkScrape(true)} disabled={bulkRunning || roms.length === 0} data-testid="button-scrape-all-force" title="Re-scrape every ROM including those already matched"><RotateCcw className="size-3.5" /></Button>
-          </div>
-        </div>
-        {(bulkRunning || bulkDone) && (
-          <div className="space-y-2">
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${bulkDone ? 100 : pct}%` }} /></div>
-            {bulkRunning && <p className="font-mono text-[10px] text-muted-foreground truncate">{bulkCurrent}</p>}
-          </div>
-        )}
-        {bulkResults.length > 0 && (
-          <div className="max-h-36 overflow-y-auto space-y-0.5 rounded border border-border bg-background/60 p-2">
-            {bulkResults.map((r) => (
-              <div key={r.id} className="flex items-center gap-2 text-[11px] font-mono">
-                {r.status === "matched" ? <CheckCircle2 className="size-3 shrink-0 text-green-500" /> : <XCircle className="size-3 shrink-0 text-muted-foreground" />}
-                <span className="truncate text-muted-foreground">{r.title}</span>
-                <span className={`ml-auto shrink-0 ${r.status === "matched" ? "text-green-500" : "text-muted-foreground/60"}`}>{r.status === "matched" ? "matched" : "not found"}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="rounded-md border border-border bg-background/40 p-4" data-testid="rom-upload-redirect">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Where to upload</div>
-        <p className="text-sm mt-1 max-w-prose">Open a system from the sidebar —{" "}<Link href={filterToPath("ps1")} className="text-primary hover:underline" data-testid="link-upload-ps1">PS1</Link>,{" "}<Link href={filterToPath("snes")} className="text-primary hover:underline" data-testid="link-upload-snes">SNES</Link>, or{" "}<Link href={filterToPath("nes")} className="text-primary hover:underline" data-testid="link-upload-nes">NES</Link>{" "}— and you'll find an upload dropzone there.</p>
-        <div className="mt-3 flex flex-wrap gap-2">{SYSTEMS.map((s) => (<Link key={s.id} href={filterToPath(s.id)} className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background/60 px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider hover-elevate" data-testid={`link-upload-system-${s.id}`}>{s.shortName}<ChevronRight className="size-3" /></Link>))}</div>
-      </div>
-      <div className="rounded-md border border-border bg-background/40 overflow-hidden">
-        <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Uploaded library</span>
-          <span className="font-mono text-[10px] text-muted-foreground" data-testid="text-uploaded-count">{roms.length} ROM{roms.length === 1 ? "" : "s"}</span>
-        </div>
-        {roms.length === 0 ? (
-          <p className="px-3 py-6 text-center text-xs text-muted-foreground" data-testid="state-no-roms">No uploaded ROMs yet.</p>
-        ) : (
-          <ul className="divide-y divide-border" data-testid="list-uploaded-roms">
-            {roms.map((rom) => (
-              <li key={rom.id} className="px-3 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3" data-testid={`row-rom-${rom.id}`}>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{rom.title}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground truncate">{rom.system.toUpperCase()} · {formatRomSize(rom.size)} · {rom.scrapeStatus === "matched" ? "art matched" : "no art yet"}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground truncate">cabinet_launch_{rom.slug}</div>
-                </div>
-                <div className="shrink-0 flex flex-wrap items-center justify-start sm:justify-end gap-2">
-                  {rom.artUrl && <img src={rom.artUrl} alt="" className="h-10 w-8 rounded object-cover border border-border" loading="lazy" decoding="async" data-testid={`img-rom-art-${rom.id}`} />}
-                  <Button variant="outline" size="sm" onClick={() => scrape.mutate(rom)} disabled={scrape.isPending} data-testid={`button-scrape-rom-${rom.id}`}>{rom.artUrl ? "Refresh art" : "Find art"}</Button>
-                  <Button variant="outline" size="sm" disabled={deleteRom.isPending} className="text-destructive hover:text-destructive" data-testid={`button-delete-rom-${rom.id}`} onClick={() => { if (window.confirm(`Delete ${rom.title}?`)) deleteRom.mutate(rom); }}><Trash2 className="size-3.5 mr-1" /> Delete</Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      {deleteRom.isError && <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">{(deleteRom.error as Error).message}</div>}
-      {deleteRom.isSuccess && <div className="rounded-md border border-status-online/40 bg-status-online/10 px-3 py-2 text-xs text-status-online">ROM removed.</div>}
-    </Section>
-  );
-}
-
-const PROFILE_COLORS = ["#8b5cf6","#ec4899","#06b6d4","#10b981","#f59e0b","#ef4444","#6366f1","#84cc16"];
-
-function ProfilesSection() {
-  const { toast } = useToast();
-  const { data: profiles = [], refetch } = useQuery<UserProfile[]>({ queryKey: ["/api/profiles"] });
-  const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState(PROFILE_COLORS[0]);
-  const [adding, setAdding] = useState(false);
-  const createProfile = async () => {
-    const name = newName.trim(); if (!name) return;
-    setAdding(true);
-    try {
-      await apiRequest("POST", "/api/profiles", { name, color: newColor });
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
-      setNewName("");
-      toast({ title: "Profile created", description: `"${name}" is ready to use.` });
-    } catch { toast({ title: "Failed to create profile", variant: "destructive" }); }
-    finally { setAdding(false); }
-  };
-  const deleteProfile = async (id: number) => {
-    if (id === 1) { toast({ title: "Cannot delete the default profile", variant: "destructive" }); return; }
-    try {
-      await apiRequest("DELETE", `/api/profiles/${id}`);
-      await queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
-      toast({ title: "Profile deleted" });
-    } catch { toast({ title: "Failed to delete profile", variant: "destructive" }); }
-  };
-  return (
-    <Section title="Player profiles" description="Create separate profiles to keep save states, cheats, and key remaps independent. Switch profiles from the library header.">
-      <div className="flex flex-col gap-2">
-        {profiles.map(p => (
-          <div key={p.id} className="flex items-center gap-3 rounded-md border border-border bg-background/40 px-3 py-2">
-            <span className="size-3 rounded-full shrink-0" style={{ background: p.color }} />
-            <UserCircle2 className="size-4 text-muted-foreground shrink-0" />
-            <span className="flex-1 font-mono text-sm">{p.name}</span>
-            {p.id === 1 && <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">Default</span>}
-            {p.id !== 1 && (<button type="button" onClick={() => deleteProfile(p.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded" title="Delete profile"><X className="size-4" /></button>)}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-end gap-2 mt-2">
-        <div className="flex-1 flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground font-mono uppercase tracking-wider">New profile name</label>
-          <Input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") void createProfile(); }} placeholder="e.g. Player 2" className="font-mono text-sm" data-testid="input-new-profile-name" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground font-mono uppercase tracking-wider">Colour</label>
-          <div className="flex gap-1.5">{PROFILE_COLORS.map(c => (<button key={c} type="button" onClick={() => setNewColor(c)} className="size-6 rounded-full border-2 transition-transform hover:scale-110" style={{ background: c, borderColor: newColor === c ? "white" : "transparent" }} title={c} />))}</div>
-        </div>
-        <Button onClick={() => void createProfile()} disabled={!newName.trim() || adding} className="gap-1.5" data-testid="button-create-profile">
-          {adding ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />} Add
-        </Button>
-      </div>
-    </Section>
-  );
-}
-
-const ALL_SYSTEMS = [
-  { id: "nes", label: "NES" }, { id: "snes", label: "SNES" },
-  { id: "genesis", label: "Genesis" }, { id: "n64", label: "N64" },
-  { id: "gb", label: "GB" }, { id: "gbc", label: "GBC" },
-  { id: "gba", label: "GBA" }, { id: "nds", label: "NDS" },
-  { id: "ps1", label: "PS1" }, { id: "ps2", label: "PS2" },
-  { id: "psp", label: "PSP" }, { id: "dreamcast", label: "DC" },
-  { id: "arcade", label: "Arcade" },
-];
-const ALL_STATUSES = [
-  { id: "unset", label: "Unset" }, { id: "playing", label: "Playing" },
-  { id: "beaten", label: "Beaten" }, { id: "completed", label: "Completed" },
-];
-
-function SmartFilterCollectionCreator() {
-  const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [systems, setSystems] = useState<string[]>([]);
-  const [statuses, setStatuses] = useState<string[]>([]);
-  const [minRating, setMinRating] = useState<number>(0);
-  const [minMinutes, setMinMinutes] = useState<number>(0);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [genre, setGenre] = useState("");
-  const [saving, setSaving] = useState(false);
-  const toggle = <T,>(arr: T[], val: T): T[] => arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val];
-  const handleCreate = async () => {
-    if (!name.trim()) return;
-    const rules: SmartFilterRules = {};
-    if (systems.length)  rules.systems = systems;
-    if (statuses.length) rules.playStatus = statuses;
-    if (minRating > 0)   rules.minRating = minRating;
-    if (minMinutes > 0)  rules.minMinutesPlayed = minMinutes;
-    if (favoritesOnly)   rules.favorites = true;
-    if (genre.trim())    rules.genre = genre.trim();
-    setSaving(true);
-    try {
-      const res = await apiRequest("POST", "/api/collections/smart", { name: name.trim(), rules });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Error");
-      await queryClient.invalidateQueries({ queryKey: ["/api/collections"] });
-      toast({ title: "Smart filter created", description: `"${name.trim()}" will update automatically.` });
-      setOpen(false); setName(""); setSystems([]); setStatuses([]); setMinRating(0); setMinMinutes(0); setFavoritesOnly(false); setGenre("");
-    } catch (err) { toast({ title: "Failed to create", description: String(err), variant: "destructive" }); }
-    finally { setSaving(false); }
-  };
-  return (
-    <Section title="Smart filter collections" description="Collections that auto-populate based on rules — system, play status, rating, or playtime. They update whenever your library changes.">
-      {!open ? (
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-1.5" data-testid="button-create-smart-filter">
-          <Sparkles className="size-3.5" /> New smart filter
-        </Button>
-      ) : (
-        <div className="rounded-xl border border-border bg-black/30 p-4 space-y-4">
-          <div className="space-y-1">
-            <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Collection name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Currently Playing" data-testid="input-smart-filter-name" className="font-mono text-sm" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Systems <span className="opacity-50">(empty = all)</span></Label>
-            <div className="flex flex-wrap gap-1.5">{ALL_SYSTEMS.map(({ id, label }) => (<button key={id} type="button" onClick={() => setSystems((s) => toggle(s, id))} className={`px-2.5 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all ${systems.includes(id) ? "bg-primary/20 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}>{label}</button>))}</div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Play status <span className="opacity-50">(empty = any)</span></Label>
-            <div className="flex flex-wrap gap-1.5">{ALL_STATUSES.map(({ id, label }) => (<button key={id} type="button" onClick={() => setStatuses((s) => toggle(s, id))} className={`px-2.5 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all ${statuses.includes(id) ? "bg-primary/20 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}>{label}</button>))}</div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Min rating (0 = any)</Label>
-              <select value={minRating} onChange={(e) => setMinRating(Number(e.target.value))} className="w-full h-9 rounded-md border border-border bg-background/50 px-2 font-mono text-xs text-foreground" data-testid="select-smart-filter-min-rating">
-                <option value={0}>Any</option>{[1,2,3,4,5].map((n) => <option key={n} value={n}>{"★".repeat(n)}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Min playtime</Label>
-              <select value={minMinutes} onChange={(e) => setMinMinutes(Number(e.target.value))} className="w-full h-9 rounded-md border border-border bg-background/50 px-2 font-mono text-xs text-foreground">
-                <option value={0}>Any</option><option value={10}>10 min</option><option value={60}>1 hour</option><option value={300}>5 hours</option><option value={1200}>20 hours</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Genre contains</Label>
-              <Input value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="e.g. RPG" className="font-mono text-xs" data-testid="input-smart-filter-genre" />
-            </div>
-            <div className="flex items-center gap-2 pt-5">
-              <Switch id="sf-favorites" checked={favoritesOnly} onCheckedChange={setFavoritesOnly} />
-              <Label htmlFor="sf-favorites" className="text-sm">Favorites only</Label>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Button onClick={handleCreate} disabled={!name.trim() || saving} className="gap-1.5" data-testid="button-save-smart-filter">
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} Create
-            </Button>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          </div>
-        </div>
-      )}
-    </Section>
-  );
-}
-
-interface ScannerStatusData {
-  enabled: boolean; watchDir: string | null; lastScanAt: number | null;
-  lastScanFound: number; totalScanned: number; watching: boolean; error: string | null;
-}
-
-function ScannerStatusSection() {
-  const { toast } = useToast();
-  const [scanning, setScanning] = useState(false);
-  const { data: status } = useQuery<ScannerStatusData>({ queryKey: ["/api/scanner/status"], refetchInterval: 30_000 });
-  const handleScanNow = async () => {
-    setScanning(true);
-    try {
-      await apiRequest("POST", "/api/scanner/scan-now");
-      await queryClient.invalidateQueries({ queryKey: ["/api/scanner/status"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-      toast({ title: "Scan complete", description: `Found ${status?.lastScanFound ?? 0} new ROM(s).` });
-    } catch (err) { toast({ title: "Scan failed", description: String(err), variant: "destructive" }); }
-    finally { setScanning(false); }
-  };
-  if (!status?.enabled) {
-    return (
-      <Section title="ROM scanner" description="Auto-import ROMs dropped into a watched folder. Set CABINET_ROM_WATCH_DIR in your HA add-on environment to enable.">
-        <p className="text-sm text-muted-foreground">Not active — set{" "}<code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">CABINET_ROM_WATCH_DIR</code>{" "}in the add-on config to enable automatic ROM imports.</p>
-      </Section>
-    );
-  }
-  return (
-    <Section title="ROM scanner" description="Auto-imports new ROM files found in the watched folder every 60 seconds.">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-mono">
-          <span className="text-muted-foreground">Watch dir:</span>
-          <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{status.watchDir}</code>
-          {status.watching && (<span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-400"><span className="size-1.5 rounded-full bg-green-400 animate-pulse" /> Active</span>)}
-        </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground font-mono">
-          <span>Total imported: <span className="text-foreground">{status.totalScanned}</span></span>
-          {status.lastScanAt ? (<span>Last scan: <span className="text-foreground">{new Date(status.lastScanAt).toLocaleTimeString()}</span></span>) : null}
-          {(status.lastScanFound ?? 0) > 0 && (<span className="text-primary">+{status.lastScanFound} last run</span>)}
-        </div>
-        {status.error ? (<p className="text-xs text-destructive font-mono">{status.error}</p>) : null}
-        <Button variant="outline" size="sm" onClick={handleScanNow} disabled={scanning} className="gap-1.5" data-testid="button-scan-now">
-          {scanning ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5" />} Scan now
-        </Button>
-      </div>
-    </Section>
-  );
-}
-
-
-// ── ROM scanner status ────────────────────────────────────────────────────────
-
-interface ScannerStatusData {
-  enabled: boolean;
-  watchDir: string | null;
-  lastScanAt: number | null;
-  lastScanFound: number;
-  totalScanned: number;
-  watching: boolean;
-  error: string | null;
-}
-
-function ScannerStatusSection() {
-  const { toast } = useToast();
-  const [scanning, setScanning] = useState(false);
-  const { data: status } = useQuery<ScannerStatusData>({
-    queryKey: ["/api/scanner/status"],
-    refetchInterval: 30_000,
-  });
-
-  const handleScanNow = async () => {
-    setScanning(true);
-    try {
-      await apiRequest("POST", "/api/scanner/scan-now");
-      await queryClient.invalidateQueries({ queryKey: ["/api/scanner/status"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-      toast({ title: "Scan complete", description: `Found ${status?.lastScanFound ?? 0} new ROM(s).` });
-    } catch (err) {
-      toast({ title: "Scan failed", description: String(err), variant: "destructive" });
-    } finally {
-      setScanning(false);
-    }
-  };
-
-  if (!status?.enabled) {
-    return (
-      <Section title="ROM scanner"
-        description="Auto-import ROMs dropped into a watched folder. Set CABINET_ROM_WATCH_DIR in your HA add-on environment to enable.">
-        <p className="text-sm text-muted-foreground">
-          Not active — set{" "}
-          <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">CABINET_ROM_WATCH_DIR</code>{" "}
-          in the add-on config to enable automatic ROM imports.
-        </p>
-      </Section>
-    );
-  }
-
-  return (
-    <Section title="ROM scanner"
-      description="Auto-imports new ROM files found in the watched folder every 60 seconds.">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-mono">
-          <span className="text-muted-foreground">Watch dir:</span>
-          <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{status.watchDir}</code>
-          {status.watching && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-400">
-              <span className="size-1.5 rounded-full bg-green-400 animate-pulse" /> Active
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground font-mono">
-          <span>Total imported: <span className="text-foreground">{status.totalScanned}</span></span>
-          {status.lastScanAt ? (
-            <span>Last scan: <span className="text-foreground">{new Date(status.lastScanAt).toLocaleTimeString()}</span></span>
-          ) : null}
-          {(status.lastScanFound ?? 0) > 0 && (
-            <span className="text-primary">+{status.lastScanFound} last run</span>
-          )}
-        </div>
-
-        {status.error ? (
-          <p className="text-xs text-destructive font-mono">{status.error}</p>
-        ) : null}
-
-        <Button variant="outline" size="sm" onClick={handleScanNow} disabled={scanning}
-          className="gap-1.5" data-testid="button-scan-now">
-          {scanning ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5" />}
-          Scan now
-        </Button>
-      </div>
-    </Section>
-  );
-}
-
-
-// ── Smart filter collection creator ──────────────────────────────────────────
 
 const ALL_SYSTEMS = [
   { id: "nes", label: "NES" }, { id: "snes", label: "SNES" },
@@ -1508,7 +468,6 @@ function SmartFilterCollectionCreator() {
             />
           </div>
 
-          {/* Systems */}
           <div className="space-y-1.5">
             <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               Systems <span className="opacity-50">(empty = all)</span>
@@ -1528,7 +487,6 @@ function SmartFilterCollectionCreator() {
             </div>
           </div>
 
-          {/* Play status */}
           <div className="space-y-1.5">
             <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               Play status <span className="opacity-50">(empty = any)</span>
@@ -1548,7 +506,6 @@ function SmartFilterCollectionCreator() {
             </div>
           </div>
 
-          {/* Row: min rating + min played */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Min rating (0 = any)</Label>
@@ -1572,7 +529,6 @@ function SmartFilterCollectionCreator() {
             </div>
           </div>
 
-          {/* Genre + favorites */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Genre contains</Label>
@@ -1600,18 +556,129 @@ function SmartFilterCollectionCreator() {
   );
 }
 
+interface ScannerStatusData {
+  enabled: boolean;
+  watchDir: string | null;
+  lastScanAt: number | null;
+  lastScanFound: number;
+  totalScanned: number;
+  watching: boolean;
+  error: string | null;
+}
+
+function ScannerStatusSection() {
+  const { toast } = useToast();
+  const [scanning, setScanning] = useState(false);
+  const { data: status } = useQuery<ScannerStatusData>({
+    queryKey: ["/api/scanner/status"],
+    refetchInterval: 30_000,
+  });
+
+  const handleScanNow = async () => {
+    setScanning(true);
+    try {
+      await apiRequest("POST", "/api/scanner/scan-now");
+      await queryClient.invalidateQueries({ queryKey: ["/api/scanner/status"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+      toast({ title: "Scan complete", description: `Found ${status?.lastScanFound ?? 0} new ROM(s).` });
+    } catch (err) {
+      toast({ title: "Scan failed", description: String(err), variant: "destructive" });
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  if (!status?.enabled) {
+    return (
+      <Section title="ROM scanner"
+        description="Auto-import ROMs dropped into a watched folder. Set CABINET_ROM_WATCH_DIR in your HA add-on environment to enable.">
+        <p className="text-sm text-muted-foreground">
+          Not active — set{" "}
+          <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">CABINET_ROM_WATCH_DIR</code>{" "}
+          in the add-on config to enable automatic ROM imports.
+        </p>
+      </Section>
+    );
+  }
+
+  return (
+    <Section title="ROM scanner"
+      description="Auto-imports new ROM files found in the watched folder every 60 seconds.">
+      <div className="space-y-3">
+        <div className="flex items-center gap-x-3 gap-y-1 text-sm font-mono">
+          <span className="text-muted-foreground">Watch dir:</span>
+          <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{status.watchDir}</code>
+          {status.watching && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-400">
+              <span className="size-1.5 rounded-full bg-green-400 animate-pulse" /> Active
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground font-mono">
+          <span>Total imported: <span className="text-foreground">{status.totalScanned}</span></span>
+          {status.lastScanAt ? (
+            <span>Last scan: <span className="text-foreground">{new Date(status.lastScanAt).toLocaleTimeString()}</span></span>
+          ) : null}
+          {(status.lastScanFound ?? 0) > 0 && (
+            <span className="text-primary">+{status.lastScanFound} last run</span>
+          )}
+        </div>
+
+        {status.error ? (
+          <p className="text-xs text-destructive font-mono">{status.error}</p>
+        ) : null}
+
+        <Button variant="outline" size="sm" onClick={handleScanNow} disabled={scanning}
+          className="gap-1.5" data-testid="button-scan-now">
+          {scanning ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5" />}
+          Scan now
+        </Button>
+      </div>
+    </Section>
+  );
+}
+
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return (<section><h2 className="font-display text-base font-semibold tracking-tight">{title}</h2><p className="text-xs text-muted-foreground mt-0.5 mb-4 max-w-prose">{description}</p><div className="space-y-3">{children}</div></section>);
+  return (
+    <section>
+      <h2 className="font-display text-base font-semibold tracking-tight">{title}</h2>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-4 max-w-prose">{description}</p>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (<div><Label className="text-sm font-medium">{label}</Label>{hint && <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">{hint}</p>}{children}</div>);
+  return (
+    <div>
+      <Label className="text-sm font-medium">{label}</Label>
+      {hint && <p className="text-xs text-muted-foreground mt-0.5 mb-1.5">{hint}</p>}
+      {children}
+    </div>
+  );
 }
 
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (<li className="flex gap-3"><span className="shrink-0 size-6 rounded-full bg-arcade-gradient text-white font-mono text-[12px] font-bold flex items-center justify-center">{n}</span><div className="flex-1 min-w-0"><div className="font-display font-semibold text-sm">{title}</div><div className="text-sm text-muted-foreground mt-1 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-foreground/80">{children}</div></div></li>);
+  return (
+    <li className="flex gap-3">
+      <span className="shrink-0 size-6 rounded-full bg-arcade-gradient text-white font-mono text-[12px] font-bold flex items-center justify-center">
+        {n}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="font-display font-semibold text-sm">{title}</div>
+        <div className="text-sm text-muted-foreground mt-1 [&_code]:font-mono [&_code]:text-[12px] [&_code]:text-foreground/80">
+          {children}
+        </div>
+      </div>
+    </li>
+  );
 }
 
 function Code({ children }: { children: string }) {
-  return (<pre className="mt-2 rounded-md border border-border bg-background/60 p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-foreground/90 max-w-full"><code>{children}</code></pre>);
+  return (
+    <pre className="mt-2 rounded-md border border-border bg-background/60 p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-foreground/90 max-w-full">
+      <code>{children}</code>
+    </pre>
+  );
 }
