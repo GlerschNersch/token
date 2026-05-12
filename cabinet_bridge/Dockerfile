@@ -5,9 +5,11 @@ ENV LANG=C.UTF-8 \
     PORT=5000 \
     NODE_ENV=production
 
-# Install Node 22 from Alpine edge/main + build deps
-RUN apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
-      nodejs~=22 npm && \
+# Node 22+ available in Alpine edge/main (currently ships 24).
+# npm comes from the same repo as a dependency of nodejs.
+RUN apk add --no-cache \
+      --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
+      nodejs npm && \
     apk add --no-cache python3 make g++ sqlite-libs libstdc++ && \
     node --version && npm --version
 
@@ -17,8 +19,8 @@ COPY package.json package-lock.json ./
 RUN NODE_ENV=development npm install --no-audit --no-fund --ignore-scripts
 RUN npm rebuild better-sqlite3
 
-# CACHE_BUST: 58
-ARG CACHE_BUST=58
+# CACHE_BUST: 59
+ARG CACHE_BUST=59
 
 COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts ./
 COPY shared ./shared
