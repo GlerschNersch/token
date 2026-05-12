@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect, memo } from "react";
 import { useLocation } from "wouter";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
@@ -943,7 +943,7 @@ const ListView = memo(function ListView({
       })}
     </div>
   );
-}
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function SectionHeading({
