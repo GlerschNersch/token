@@ -19,8 +19,8 @@ COPY package.json package-lock.json ./
 RUN NODE_ENV=development npm install --no-audit --no-fund --ignore-scripts
 RUN npm rebuild better-sqlite3
 
-# CACHE_BUST: 59
-ARG CACHE_BUST=59
+# CACHE_BUST: 60
+ARG CACHE_BUST=60
 
 COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts ./
 COPY shared ./shared
