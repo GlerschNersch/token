@@ -161,7 +161,7 @@ export const GameCard = memo(function GameCard({
         onClick={handleFav}
         style={{ touchAction: "manipulation" }}
         className={[
-          "absolute top-2 right-2 size-9 rounded-full flex items-center justify-center",
+          "absolute top-2 right-2 size-11 rounded-full flex items-center justify-center z-10",
           "transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
           "md3-state",
           game.favorite
@@ -172,14 +172,15 @@ export const GameCard = memo(function GameCard({
         aria-pressed={!!game.favorite}
         data-testid={`button-fav-${game.id}`}
       >
-        <Heart className={`size-4 ${game.favorite ? "fill-current" : ""}`} />
+        <Heart className={`size-5 ${game.favorite ? "fill-current" : ""}`} />
       </button>
 
       {/* ── Hover overlay — description + details ── */}
+      {/* Hidden on touch devices via .hide-on-touch utility to avoid 'double-tap to open' frustration */}
       <button
         type="button"
         onClick={handleOpen}
-        className="absolute inset-0 flex flex-col justify-between bg-black/70 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-opacity focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 p-3"
+        className="absolute inset-0 flex flex-col justify-between bg-black/70 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 hide-on-touch transition-opacity focus:outline-none focus-visible:pointer-events-auto focus-visible:opacity-100 p-3"
         data-testid={`button-details-${game.id}`}
         aria-label={`View details for ${game.title}`}
       >

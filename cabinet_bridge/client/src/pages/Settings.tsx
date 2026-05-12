@@ -67,9 +67,9 @@ export default function Settings() {
       <main className="flex-1 min-w-0 flex flex-col bg-background/30 overflow-y-auto overscroll-y-contain">
         <MobileTopBar active="settings" />
 
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 space-y-12">
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 space-y-10 sm:space-y-12 pb-24 lg:pb-12">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                 Integration

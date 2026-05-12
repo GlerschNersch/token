@@ -300,10 +300,10 @@
   .md-label-large  { font-size: var(--md-type-label-large-size);  line-height: var(--md-type-label-large-line);  letter-spacing: var(--md-type-label-large-track);  font-weight: var(--md-type-label-large-weight); }
   .md-label-medium { font-size: var(--md-type-label-medium-size); line-height: var(--md-type-label-medium-line); letter-spacing: var(--md-type-label-medium-track); font-weight: var(--md-type-label-medium-weight); }
   .md-label-small  { font-size: var(--md-type-label-small-size);  line-height: var(--md-type-label-small-line);  letter-spacing: var(--md-type-label-small-track);  font-weight: var(--md-type-label-small-weight); }
-}
+  .hide-on-touch   { @media (hover: none) { display: none !important; } }
+  }
 
-@layer base {
-  * { @apply border-border; }
+  @layer base {  * { @apply border-border; }
   html, body, #root { height: 100%; }
   body {
     @apply font-sans antialiased bg-background text-foreground;
