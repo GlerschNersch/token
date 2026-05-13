@@ -77,7 +77,7 @@ export default function Player({ id }: { id: string }) {
                   <h2 className="font-display font-bold uppercase tracking-wider">Control Helper</h2>
                 </div>
                 <p className="text-xs text-muted-foreground max-w-prose">
-                  These are your global defaults for {rom.system.toUpperCase()}. To change them, go to <strong>Settings &gt; Controls</strong>.
+                  These are your global defaults for {rom.system.toUpperCase()}. To change them or remap your gamepad, go to <strong>Settings &gt; Controls</strong>.
                   Press <kbd className="bg-muted px-1 rounded text-foreground">ESC</kbd> in-game to access the emulator's core menu.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

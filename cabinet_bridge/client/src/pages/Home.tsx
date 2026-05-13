@@ -671,7 +671,7 @@ export default function Home({ filter }: { filter: Filter }) {
                   </button>
                 }
               />
-              <Grid games={visibleRecentlyPlayed} onOpen={setOpenGame} onToggleFav={toggleFav} />
+              <Grid games={visibleRecentlyPlayed} onOpen={setOpenGame} onToggleFav={toggleFav} mapping={config.uiGamepadMapping} />
             </section>
           ) : null}
 
@@ -754,7 +754,7 @@ export default function Home({ filter }: { filter: Filter }) {
                 onResetFilter={() => goToFilter("all")}
               />
             ) : viewMode === "grid" ? (
-              <Grid games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} disabled={openGame !== null} />
+              <Grid games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} disabled={openGame !== null} mapping={config.uiGamepadMapping} />
             ) : (
               <ListView games={filtered} onOpen={setOpenGame} onToggleFav={toggleFav} />
             )}
@@ -798,11 +798,13 @@ const Grid = memo(function Grid({
   onOpen,
   onToggleFav,
   disabled,
+  mapping,
 }: {
   games: Game[];
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
   disabled?: boolean;
+  mapping?: { select?: number; favorite?: number };
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const { focusedIndex } = useGridNav({
@@ -811,6 +813,7 @@ const Grid = memo(function Grid({
     disabled,
     onActivate: (i) => { if (games[i]) onOpen(games[i]); },
     onFav: (i) => { if (games[i]) onToggleFav(games[i]); },
+    mapping,
   });
 
   return (

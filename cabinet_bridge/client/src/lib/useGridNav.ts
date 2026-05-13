@@ -19,12 +19,14 @@ export function useGridNav({
   onActivate,
   onFav,
   disabled = false,
+  mapping = { select: 0, favorite: 3 },
 }: {
   count: number;
   gridRef: React.RefObject<HTMLElement | null>;
   onActivate: (index: number) => void;
   onFav: (index: number) => void;
   disabled?: boolean;
+  mapping?: { select?: number; favorite?: number };
 }) {
   const [focusedIndex, setFocusedIndex] = useState(-1);
 
@@ -32,9 +34,11 @@ export function useGridNav({
   const focusedRef = useRef(focusedIndex);
   const countRef = useRef(count);
   const disabledRef = useRef(disabled);
+  const mappingRef = useRef(mapping);
   focusedRef.current = focusedIndex;
   countRef.current = count;
   disabledRef.current = disabled;
+  mappingRef.current = mapping;
 
   // Reset focus when games list changes length (new filter, search, etc.)
   useEffect(() => {
@@ -152,15 +156,19 @@ export function useGridNav({
         }
       }
 
-      // A button (index 0) → open
-      const curA = gp.buttons[0]?.pressed ?? false;
-      if (curA && !prevA && focusedRef.current >= 0) onActivate(focusedRef.current);
-      prevA = curA;
+      const m = mappingRef.current;
 
-      // Y button (index 3) → favourite
-      const curY = gp.buttons[3]?.pressed ?? false;
-      if (curY && !prevY && focusedRef.current >= 0) onFav(focusedRef.current);
-      prevY = curY;
+      // Select button → open
+      const selectIdx = m.select ?? 0;
+      const curSelect = gp.buttons[selectIdx]?.pressed ?? false;
+      if (curSelect && !prevSelect && focusedRef.current >= 0) onActivate(focusedRef.current);
+      prevSelect = curSelect;
+
+      // Favorite button → favourite
+      const favIdx = m.favorite ?? 3;
+      const curFav = gp.buttons[favIdx]?.pressed ?? false;
+      if (curFav && !prevFav && focusedRef.current >= 0) onFav(focusedRef.current);
+      prevFav = curFav;
     };
 
     rafId = requestAnimationFrame(tick);

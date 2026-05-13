@@ -33,6 +33,8 @@ import {
   Activity,
   Database,
   Link2,
+  Gamepad2,
+  Keyboard,
 } from "lucide-react";
 import type { SmartFilterRules } from "@shared/schema";
 
@@ -133,6 +135,9 @@ export default function Settings() {
               </TabsTrigger>
               <TabsTrigger value="automation" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Zap className="size-4" /> Automation
+              </TabsTrigger>
+              <TabsTrigger value="controls" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
+                <Gamepad2 className="size-4" /> Controls
               </TabsTrigger>
               <TabsTrigger value="library" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Database className="size-4" /> Library
@@ -364,6 +369,10 @@ export default function Settings() {
                   </div>
                 </div>
               </Section>
+            </TabsContent>
+
+            <TabsContent value="controls" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <ControlsSettings />
             </TabsContent>
 
             <TabsContent value="library" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -733,5 +742,211 @@ function Code({ children }: { children: string }) {
     <pre className="mt-2 rounded-md border border-border bg-background/60 p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-foreground/90 max-w-full">
       <code>{children}</code>
     </pre>
+  );
+}
+
+function ControlsSettings() {
+  const { config, setConfig } = useIntegration();
+  const [gamepads, setGamepads] = useState<Gamepad[]>([]);
+  const [pressedButtons, setPressedButtons] = useState<Record<number, number[]>>({});
+
+  useEffect(() => {
+    const update = () => {
+      const activeGps = navigator.getGamepads?.().filter((g): g is Gamepad => g !== null) ?? [];
+      setGamepads(activeGps);
+
+      const nextPressed: Record<number, number[]> = {};
+      activeGps.forEach((gp) => {
+        const pressed: number[] = [];
+        gp.buttons.forEach((btn, idx) => {
+          if (btn.pressed) pressed.push(idx);
+        });
+        nextPressed[gp.index] = pressed;
+      });
+      setPressedButtons(nextPressed);
+    };
+
+    window.addEventListener("gamepadconnected", update);
+    window.addEventListener("gamepaddisconnected", update);
+    const timer = setInterval(update, 100); // Faster poll for the tester
+    return () => {
+      window.removeEventListener("gamepadconnected", update);
+      window.removeEventListener("gamepaddisconnected", update);
+      clearInterval(timer);
+    };
+  }, []);
+
+  return (
+    <div className="space-y-10">
+      <Section
+        title="Input Preferences"
+        description="Configure global behavior for controllers and keyboards."
+      >
+        <div className="grid gap-6">
+          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
+            <div className="space-y-0.5">
+              <div className="font-display font-semibold text-sm">Gamepad Haptics</div>
+              <div className="text-xs text-muted-foreground">Enable vibration/rumble during gameplay (if supported).</div>
+            </div>
+            <Switch
+              checked={config.gamepadRumble}
+              onCheckedChange={(v) => setConfig({ gamepadRumble: v })}
+            />
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        title="Connected Controllers"
+        description="Detect and test gamepads connected to this device. Press buttons to see them light up."
+      >
+        {gamepads.length === 0 ? (
+          <div className="p-8 rounded-lg border border-dashed border-border bg-sidebar/10 flex flex-col items-center text-center gap-3">
+            <Gamepad2 className="size-8 text-muted-foreground/30" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">No controllers detected</p>
+              <p className="text-xs text-muted-foreground">Connect a USB or Bluetooth controller and press a button.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {gamepads.map((gp) => (
+              <div key={gp.index} className="p-5 rounded-xl border border-border bg-sidebar/20 space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <Gamepad2 className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold truncate">{gp.id}</div>
+                    <div className="flex gap-3 mt-1">
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Index: {gp.index}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{gp.buttons.length} Buttons</span>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1 rounded bg-green-500/10 text-green-500 font-mono text-[10px] font-bold uppercase tracking-wider">
+                    Connected
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                   {gp.buttons.map((_, idx) => (
+                     <div
+                       key={idx}
+                       className={`size-7 rounded flex items-center justify-center font-mono text-[10px] border transition-colors ${
+                         pressedButtons[gp.index]?.includes(idx)
+                           ? "bg-primary border-primary text-primary-foreground scale-110 shadow-[0_0_12px_hsl(var(--primary))]"
+                           : "bg-background/40 border-border text-muted-foreground"
+                       }`}
+                     >
+                       {idx}
+                     </div>
+                   ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section
+        title="Keyboard Shortcuts"
+        description="Global hotkeys for navigating the interface without a mouse."
+      >
+        <div className="grid sm:grid-cols-2 gap-3">
+           <Shortcut keyName="Arrow Keys" action="Navigate Grid" />
+           <Shortcut keyName="Enter" action="Open Game" />
+           <Shortcut keyName="F" action="Toggle Favorite" />
+           <Shortcut keyName="/" action="Focus Search" />
+           <Shortcut keyName="Esc" action="Close Dialog / Back" />
+           <Shortcut keyName="S" action="Quick Save (in-game)" />
+           <Shortcut keyName="L" action="Quick Load (in-game)" />
+           <Shortcut keyName="1-9" action="Change Save Slot" />
+        </div>
+      </Section>
+
+      <Section
+        title="UI Navigation Mapping"
+        description="Remap the buttons used for navigating the HomeArcade interface."
+      >
+        <div className="grid gap-3">
+          {[
+            { id: "select",   label: "Select / Open" },
+            { id: "back",     label: "Back / Close" },
+            { id: "favorite", label: "Toggle Favorite" },
+            { id: "menu",     label: "System Menu" },
+          ].map((action) => (
+            <div key={action.id} className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
+              <div className="space-y-0.5">
+                <div className="font-display font-semibold text-sm">{action.label}</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Action: {action.id}</div>
+              </div>
+              <RemapButton
+                actionId={action.id}
+                currentValue={config.uiGamepadMapping?.[action.id]}
+                onMap={(btn) => {
+                  const mapping = { ...(config.uiGamepadMapping || {}) };
+                  mapping[action.id] = btn;
+                  setConfig({ uiGamepadMapping: mapping });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+function RemapButton({ actionId, currentValue, onMap }: { actionId: string; currentValue?: number; onMap: (btn: number) => void }) {
+  const [listening, setListening] = useState(false);
+
+  useEffect(() => {
+    if (!listening) return;
+    let rafId: number;
+    const poll = () => {
+      const gps = navigator.getGamepads?.();
+      for (const gp of gps || []) {
+        if (!gp) continue;
+        const pressedIdx = gp.buttons.findIndex(b => b.pressed);
+        if (pressedIdx !== -1) {
+          onMap(pressedIdx);
+          setListening(false);
+          return;
+        }
+      }
+      rafId = requestAnimationFrame(poll);
+    };
+    rafId = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(rafId);
+  }, [listening, onMap]);
+
+  return (
+    <Button
+      variant={listening ? "default" : "outline"}
+      size="sm"
+      onClick={() => setListening(!listening)}
+      className={`min-w-[100px] gap-2 ${listening ? "animate-pulse ring-2 ring-primary" : ""}`}
+    >
+      {listening ? (
+        <>
+          <Loader2 className="size-3.5 animate-spin" />
+          Press any button...
+        </>
+      ) : (
+        <>
+          <kbd className="font-mono text-[10px] opacity-70">BTN {currentValue ?? "?"}</kbd>
+          Remap
+        </>
+      )}
+    </Button>
+  );
+}
+
+function Shortcut({ keyName, action }: { keyName: string; action: string }) {
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-sidebar/10">
+       <span className="text-xs text-muted-foreground">{action}</span>
+       <kbd className="px-2 py-1 rounded bg-muted font-mono text-[10px] font-bold text-foreground border-b-2 border-muted-foreground/30">{keyName}</kbd>
+    </div>
   );
 }

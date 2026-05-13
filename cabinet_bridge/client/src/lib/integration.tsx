@@ -63,6 +63,8 @@ export interface IntegrationConfig {
   gamepadRumble?: boolean;
   /** Per-system display overrides: { [core]: { aspectRatio?, integerScale?, shader? } } */
   systemDisplay?: Record<string, { aspectRatio?: string; integerScale?: boolean; shader?: string }>;
+  /** Custom UI navigation mapping: { [action]: buttonIndex } */
+  uiGamepadMapping?: Record<string, number>;
 }
 
 export type IntegrationSaveStatus = "idle" | "loading" | "saving" | "saved" | "error";
@@ -165,6 +167,9 @@ function normalizeConfig(raw: unknown): IntegrationConfig {
     systemDisplay: (source.systemDisplay && typeof source.systemDisplay === "object")
       ? source.systemDisplay as Record<string, { aspectRatio?: string; integerScale?: boolean; shader?: string }>
       : {},
+    uiGamepadMapping: (source.uiGamepadMapping && typeof source.uiGamepadMapping === "object")
+      ? source.uiGamepadMapping as Record<string, number>
+      : { select: 0, back: 1, favorite: 3, menu: 9 },
   };
 }
 
@@ -184,12 +189,23 @@ function configsEqual(a: IntegrationConfig, b: IntegrationConfig): boolean {
   if (a.pcCpuEntityId !== b.pcCpuEntityId) return false;
   if (a.pcRamEntityId !== b.pcRamEntityId) return false;
   if (a.pcAppEntityId !== b.pcAppEntityId) return false;
+  if (a.gamepadRumble !== b.gamepadRumble) return false;
+
   const aKeys = Object.keys(a.endpoints);
   const bKeys = Object.keys(b.endpoints);
   if (aKeys.length !== bKeys.length) return false;
   for (const k of aKeys) {
     if (a.endpoints[k] !== b.endpoints[k]) return false;
   }
+
+  const aMap = a.uiGamepadMapping || {};
+  const bMap = b.uiGamepadMapping || {};
+  const mapKeys = Object.keys(aMap);
+  if (mapKeys.length !== Object.keys(bMap).length) return false;
+  for (const k of mapKeys) {
+    if (aMap[k] !== bMap[k]) return false;
+  }
+
   return true;
 }
 

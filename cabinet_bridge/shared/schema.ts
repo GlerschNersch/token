@@ -148,6 +148,12 @@ export const integrationSettingsSchema = z.object({
     integerScale: z.boolean().optional(),
     shader: z.string().max(64).optional(),
   })).default({}),
+  uiGamepadMapping: z.record(z.string(), z.number().int()).default({
+    select: 0,   // A
+    back: 1,     // B
+    favorite: 3, // Y
+    menu: 9,     // Start
+  }),
 });
 
 export type IntegrationSettings = z.infer<typeof integrationSettingsSchema>;
@@ -173,6 +179,12 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   controlDefaults: {},
   gamepadRumble: true,
   systemDisplay: {},
+  uiGamepadMapping: {
+    select: 0,   // A
+    back: 1,     // B
+    favorite: 3, // Y
+    menu: 9,     // Start
+  },
 };
 
 export const userProfiles = sqliteTable("user_profiles", {
