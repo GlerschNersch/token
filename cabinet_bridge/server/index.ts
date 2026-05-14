@@ -2,7 +2,7 @@ import "dotenv/config";
 import compression from "compression";
 import express, { Response, NextFunction } from 'express';
 import type { Request } from 'express';
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes/index";
 import { attachNetplayServer } from "./netplay";
 import { serveStatic } from "./static";
 import { createServer } from "node:http";

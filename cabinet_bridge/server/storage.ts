@@ -19,102 +19,121 @@ import Database from "better-sqlite3";
 import { and, desc, eq } from "drizzle-orm";
 import { dataPath, ensureDir, getDataDir } from "./data-dir";
 
-ensureDir(getDataDir());
-const sqlite = new Database(dataPath("data.db"));
-sqlite.pragma("journal_mode = WAL");
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS uploaded_roms (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    system TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
-    original_name TEXT NOT NULL,
-    file_name TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    size INTEGER NOT NULL,
-    mime_type TEXT NOT NULL,
-    art_url TEXT,
-    scrape_status TEXT NOT NULL DEFAULT 'not_scraped',
-    scrape_message TEXT,
-    favorite INTEGER NOT NULL DEFAULT 1,
-    rating INTEGER NOT NULL DEFAULT 0,
-    last_played INTEGER NOT NULL DEFAULT 0,
-    play_count INTEGER NOT NULL DEFAULT 0,
-    created_at INTEGER NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS game_collections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
-    created_at INTEGER NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS collection_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    collection_id INTEGER NOT NULL,
-    rom_id INTEGER NOT NULL,
-    created_at INTEGER NOT NULL,
-    UNIQUE(collection_id, rom_id)
-  );
-  CREATE TABLE IF NOT EXISTS rom_save_slots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    rom_id INTEGER NOT NULL,
-    slot INTEGER NOT NULL,
-    label TEXT NOT NULL,
-    updated_at INTEGER NOT NULL,
-    UNIQUE(rom_id, slot)
-  );
-  CREATE TABLE IF NOT EXISTS app_settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at INTEGER NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS play_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    rom_id INTEGER NOT NULL,
-    rom_title TEXT NOT NULL,
-    rom_system TEXT NOT NULL,
-    started_at INTEGER NOT NULL,
-    ended_at INTEGER,
-    duration_seconds INTEGER
-  );
-`);
-for (const statement of [
-  "ALTER TABLE uploaded_roms ADD COLUMN art_url TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN scrape_status TEXT NOT NULL DEFAULT 'not_scraped'",
-  "ALTER TABLE uploaded_roms ADD COLUMN scrape_message TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN rating INTEGER NOT NULL DEFAULT 0",
-  "ALTER TABLE uploaded_roms ADD COLUMN last_played INTEGER NOT NULL DEFAULT 0",
-  "ALTER TABLE uploaded_roms ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0",
-  "ALTER TABLE uploaded_roms ADD COLUMN disc_number INTEGER",
-  "ALTER TABLE uploaded_roms ADD COLUMN disc_group TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN description TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN release_year INTEGER",
-  "ALTER TABLE uploaded_roms ADD COLUMN developer TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN publisher TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN genre TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN players TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN rom_hash TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN minutes_played INTEGER NOT NULL DEFAULT 0",
-  "ALTER TABLE uploaded_roms ADD COLUMN play_status TEXT NOT NULL DEFAULT 'unset'",
-  "ALTER TABLE uploaded_roms ADD COLUMN community_score INTEGER",
-  "ALTER TABLE uploaded_roms ADD COLUMN wheel_art_url TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN video_url TEXT",
-  "ALTER TABLE uploaded_roms ADD COLUMN ra_game_id INTEGER",
-  "ALTER TABLE game_collections ADD COLUMN smart_filter TEXT",
-    // Per-user save state isolation
-  "ALTER TABLE rom_save_slots ADD COLUMN user_id TEXT NOT NULL DEFAULT \'default\'",
-  "CREATE UNIQUE INDEX IF NOT EXISTS rom_save_slots_user_idx ON rom_save_slots (rom_id, user_id, slot)",
-  "CREATE TABLE IF NOT EXISTS play_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, rom_title TEXT NOT NULL, rom_system TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER, duration_seconds INTEGER)",
-  "CREATE TABLE IF NOT EXISTS user_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#8b5cf6', created_at INTEGER NOT NULL)",
-  "INSERT OR IGNORE INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', " + String(Date.now()) + ")",
-  "CREATE TABLE IF NOT EXISTS game_cheat_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, profile_id INTEGER NOT NULL DEFAULT 1, description TEXT NOT NULL, code TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL)",
-]) {
-  try {
-    sqlite.exec(statement);
-  } catch {
-    // Column already exists in previously-created prototype databases.
+let _sqlite: Database.Database | null = null;
+function getSqlite() {
+  if (!_sqlite || (process.env.NODE_ENV === "test" && _sqlite.name !== dataPath("data.db"))) {
+    ensureDir(getDataDir());
+    const dbPath = dataPath("data.db");
+    _sqlite = new Database(dbPath);
+    _sqlite.pragma("journal_mode = WAL");
+    _sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS uploaded_roms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        system TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        original_name TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        mime_type TEXT NOT NULL,
+        art_url TEXT,
+        scrape_status TEXT NOT NULL DEFAULT 'not_scraped',
+        scrape_message TEXT,
+        favorite INTEGER NOT NULL DEFAULT 1,
+        rating INTEGER NOT NULL DEFAULT 0,
+        last_played INTEGER NOT NULL DEFAULT 0,
+        play_count INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS game_collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS collection_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        collection_id INTEGER NOT NULL,
+        rom_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        UNIQUE(collection_id, rom_id)
+      );
+      CREATE TABLE IF NOT EXISTS rom_save_slots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rom_id INTEGER NOT NULL,
+        slot INTEGER NOT NULL,
+        label TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE(rom_id, slot)
+      );
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS play_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rom_id INTEGER NOT NULL,
+        rom_title TEXT NOT NULL,
+        rom_system TEXT NOT NULL,
+        started_at INTEGER NOT NULL,
+        ended_at INTEGER,
+        duration_seconds INTEGER
+      );
+    `);
+    for (const statement of [
+      "ALTER TABLE uploaded_roms ADD COLUMN art_url TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN scrape_status TEXT NOT NULL DEFAULT 'not_scraped'",
+      "ALTER TABLE uploaded_roms ADD COLUMN scrape_message TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN rating INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE uploaded_roms ADD COLUMN last_played INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE uploaded_roms ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE uploaded_roms ADD COLUMN disc_number INTEGER",
+      "ALTER TABLE uploaded_roms ADD COLUMN disc_group TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN description TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN release_year INTEGER",
+      "ALTER TABLE uploaded_roms ADD COLUMN developer TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN publisher TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN genre TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN players TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN rom_hash TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN minutes_played INTEGER NOT NULL DEFAULT 0",
+      "ALTER TABLE uploaded_roms ADD COLUMN play_status TEXT NOT NULL DEFAULT 'unset'",
+      "ALTER TABLE uploaded_roms ADD COLUMN community_score INTEGER",
+      "ALTER TABLE uploaded_roms ADD COLUMN wheel_art_url TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN video_url TEXT",
+      "ALTER TABLE uploaded_roms ADD COLUMN ra_game_id INTEGER",
+      "ALTER TABLE game_collections ADD COLUMN smart_filter TEXT",
+      "ALTER TABLE rom_save_slots ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default'",
+      "CREATE UNIQUE INDEX IF NOT EXISTS rom_save_slots_user_idx ON rom_save_slots (rom_id, user_id, slot)",
+      "CREATE TABLE IF NOT EXISTS play_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, rom_title TEXT NOT NULL, rom_system TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER, duration_seconds INTEGER)",
+      "CREATE TABLE IF NOT EXISTS user_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#8b5cf6', created_at INTEGER NOT NULL)",
+      "INSERT OR IGNORE INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', " + String(Date.now()) + ")",
+      "CREATE TABLE IF NOT EXISTS game_cheat_codes (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, profile_id INTEGER NOT NULL DEFAULT 1, description TEXT NOT NULL, code TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS profile_game_state (id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL, rom_id INTEGER NOT NULL, favorite INTEGER, rating INTEGER, play_status TEXT, updated_at INTEGER NOT NULL, UNIQUE(profile_id, rom_id))",
+      "CREATE TABLE IF NOT EXISTS profile_control_bindings (id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL, core TEXT NOT NULL, bindings TEXT NOT NULL, updated_at INTEGER NOT NULL, UNIQUE(profile_id, core))",
+      "CREATE TABLE IF NOT EXISTS gamepad_bindings (id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL DEFAULT 1, gamepad_id TEXT NOT NULL DEFAULT 'default', bindings TEXT NOT NULL DEFAULT '{}', updated_at INTEGER NOT NULL, UNIQUE(profile_id, gamepad_id))",
+      "CREATE TABLE IF NOT EXISTS cheat_index_cache (id INTEGER PRIMARY KEY AUTOINCREMENT, folder TEXT NOT NULL UNIQUE, files_json TEXT NOT NULL, cached_at INTEGER NOT NULL)",
+      "CREATE TABLE IF NOT EXISTS cheat_file_cache (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT NOT NULL UNIQUE, cheats_json TEXT NOT NULL, cached_at INTEGER NOT NULL)",
+    ]) {
+      try {
+        _sqlite.exec(statement);
+      } catch {
+        // Column already exists
+      }
+    }
   }
+  return _sqlite;
 }
+
+const sqlite = new Proxy({} as Database.Database, {
+  get: (target, prop) => {
+    const s = getSqlite();
+    const val = (s as any)[prop];
+    return typeof val === "function" ? val.bind(s) : val;
+  }
+});
 
 export const db = drizzle(sqlite);
 
