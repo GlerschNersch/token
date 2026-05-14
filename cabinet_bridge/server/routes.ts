@@ -1,4 +1,4 @@
-import type { Express } from "express";
+himport type { Express } from "express";
 import type { Server } from 'node:http';
 import { storage } from "./storage"
 import * as scanner from './scanner';
@@ -150,6 +150,13 @@ function getUserFromRequest(req: import("express").Request): { userId: string; u
   return { userId, userName };
 }
 
+function titleFromFileName(filename: string): string {
+    return filename
+      .replace(/(\.[a-zA-Z0-9]+)+$/, '') // strip extension(s)
+      .replace(/[_\-.]+/g, ' ')           // underscores/hyphens/dots to spaces
+      .trim()
+      .replace(/\s+/g, ' ');
+}
 
 // ---------------------------------------------------------------------------
 // Auto-configure HA panel_iframe so HomeArcade is accessible to all HA users.
@@ -157,7 +164,7 @@ function getUserFromRequest(req: import("express").Request): { userId: string; u
 // Writes a panel_iframe entry to /config/configuration.yaml if not already
 // present, then asks HA to reload integrations so the panel appears immediately.
 // ---------------------------------------------------------------------------
-async function ensurePanelIframe(): Promise<void> {
+function titleFromFileName(filename: string): string {  return filename(): Promise<void> {
   const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
   if (!SUPERVISOR_TOKEN) return; // not running inside HA add-on
 
