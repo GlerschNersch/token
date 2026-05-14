@@ -37,6 +37,10 @@ function VisualEffectManager() {
     // 2. Adaptive Background Base (if not on Home page or no focus)
     if (config.adaptiveBackground) {
       document.documentElement.style.setProperty("--adaptive-opacity", "0.18");
+      if (!document.documentElement.style.getPropertyValue("--adaptive-1")) {
+        document.documentElement.style.setProperty("--adaptive-1", "hsl(322 92% 30%)");
+        document.documentElement.style.setProperty("--adaptive-2", "hsl(188 90% 30%)");
+      }
     } else {
       document.documentElement.style.setProperty("--adaptive-opacity", "0");
     }
