@@ -1,0 +1,163 @@
+{
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "history": "History",
+    "achievements": "Achievements",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "save": "Save",
+    "copy": "Copy",
+    "reset": "Reset to Defaults",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "xDaysAgo": "{{count}} days ago"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "ja": "日本語",
+    "zh": "中文"
+  },
+  "home": {
+    "search": "Search… (press /)",
+    "sort": {
+      "recent": "Recent",
+      "az": "A–Z",
+      "year": "Year",
+      "rating": "Rating",
+      "plays": "Plays"
+    },
+    "sections": {
+      "jumpBackIn": "Jump Back In",
+      "browseSystems": "Browse Systems",
+      "recentlyPlayed": "Recently Played",
+      "favorites": "Your Favorites",
+      "allGames": "All Games",
+      "continuePlaying": "Continue Playing"
+    },
+    "play": "Play",
+    "details": "Details"
+  },
+  "player": {
+    "library": "Library",
+    "playingOn": "Playing on HomeArcade",
+    "loadingRom": "Loading ROM...",
+    "romUnavailable": "ROM unavailable",
+    "remapControls": "Remap controls",
+    "hideControls": "Hide controls",
+    "popOut": "Pop-out",
+    "controls": {
+      "dpad": "D-Pad",
+      "ab": "A / B",
+      "startSelect": "Start / Select",
+      "saveLoad": "Save / Load"
+    }
+  },
+  "achievements": {
+    "title": "RetroAchievements",
+    "trophies": "{{user}}'s Trophies",
+    "dashboard": "Achievement Dashboard",
+    "noAccount": "No RetroAchievements account connected",
+    "stats": {
+      "hardcorePoints": "Hardcore Points",
+      "softcorePoints": "Softcore Points",
+      "globalRank": "Global Rank",
+      "recentGames": "Recent Games"
+    },
+    "recentAchievements": "Recent Achievements",
+    "noRecentAchievements": "No recent achievements found. Play some games!"
+  },
+  "history": {
+    "title": "Play History",
+    "exportCsv": "Export CSV",
+    "noSessions": "No sessions yet",
+    "startTracking": "Play a game to start tracking your history.",
+    "stats": {
+      "totalPlaytime": "Total Playtime",
+      "mostPlayed": "Most Played",
+      "lastSession": "Last Session",
+      "totalTime": "Total Time",
+      "sessions": "Sessions",
+      "avgSession": "Avg Session",
+      "firstPlayed": "First Played"
+    },
+    "topGames": "Top Games by Playtime",
+    "sessionLog": "Session Log",
+    "allSessions": "All Sessions"
+  },
+  "dashboard": {
+    "stats": {
+      "hoursPlayed": "Hours played",
+      "completed": "Completed",
+      "backlog": "Backlog",
+      "thisWeek": "This week"
+    },
+    "sections": {
+      "overview": "Overview",
+      "libraryBreakdown": "Library breakdown",
+      "highlights": "Highlights",
+      "inProgress": "In Progress",
+      "recentlyPlayed": "Recently Played",
+      "newThisWeek": "New This Week",
+      "recentActivity": "Recent activity",
+      "browseSystems": "Browse Systems",
+      "continuePlaying": "Continue Playing"
+    },
+    "liveNow": "Live — Playing Now",
+    "highlights": {
+      "mostPlayed": "Most played",
+      "highestRated": "Highest rated",
+      "communityFav": "Community favourite"
+    },
+    "status": {
+      "playing": "Playing",
+      "completed": "Completed",
+      "backlog": "Backlog",
+      "dropped": "Dropped",
+      "untracked": "Untracked"
+    },
+    "activity": {
+      "lastWeek": "Last week",
+      "thisWeek": "This week"
+    }
+  },
+  "settings": {
+    "language": "Language",
+    "tabs": {
+      "connection": "Connection",
+      "display": "Display",
+      "automation": "Automation",
+      "controls": "Controls",
+      "library": "Library",
+      "help": "Help"
+    },
+    "display": {
+      "theme": "Theme",
+      "crtEffect": "CRT Effect",
+      "adaptiveBackground": "Adaptive Background",
+      "dynamicTheming": "Dynamic Theming"
+    },
+    "buttons": {
+      "test": "Test",
+      "copy": "Copy",
+      "resetDefaults": "Reset to Defaults",
+      "scanNow": "Scan now",
+      "create": "Create",
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  }
+}
