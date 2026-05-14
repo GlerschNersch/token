@@ -69,6 +69,8 @@ export interface IntegrationConfig {
   adaptiveBackground?: boolean;
   /** Intensity of the CRT scanline overlay (0-100) */
   crtIntensity?: number;
+  /** UI language (ISO 639-1 code, e.g. "en", "es") */
+  language?: string;
 }
 
 export type IntegrationSaveStatus = "idle" | "loading" | "saving" | "saved" | "error";
@@ -120,6 +122,7 @@ const defaultConfig: IntegrationConfig = {
   uiGamepadMapping: { select: 0, back: 1, favorite: 3, menu: 9 },
   adaptiveBackground: true,
   crtIntensity: 30,
+  language: undefined,
 };
 
 const defaultPc: PcStatus = {
@@ -179,6 +182,7 @@ function normalizeConfig(raw: unknown): IntegrationConfig {
       : { select: 0, back: 1, favorite: 3, menu: 9 },
     adaptiveBackground: typeof source.adaptiveBackground === "boolean" ? source.adaptiveBackground : true,
     crtIntensity: typeof source.crtIntensity === "number" ? source.crtIntensity : 30,
+    language: raw.language ?? undefined,
   };
 }
 
@@ -201,6 +205,7 @@ function configsEqual(a: IntegrationConfig, b: IntegrationConfig): boolean {
   if (a.gamepadRumble !== b.gamepadRumble) return false;
   if (a.adaptiveBackground !== b.adaptiveBackground) return false;
   if (a.crtIntensity !== b.crtIntensity) return false;
+    a.language === b.language &&
 
   const aKeys = Object.keys(a.endpoints);
   const bKeys = Object.keys(b.endpoints);
