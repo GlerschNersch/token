@@ -1,5 +1,4 @@
-import { useMemo, useRef, useState, useEffect, memo } from "react";
-import Fuse from "fuse.js";
+import { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
