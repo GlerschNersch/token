@@ -4,6 +4,17 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.1.2] — 2026-05-14
+
+### Fix: Scraping & Cheats Restoration
+
+- **Art Scraping Fix** — Resolved a ReferenceError in the Libretro fallback that caused art scraping to fail for many titles.
+- **Cheat Retrieval** — Restored the missing `/api/roms/:id/fetch-cheats` route, allowing the UI to pull codes from the Libretro database.
+- **Cheat Toggling** — Fixed a bug where enabling/disabling a cheat code would fail due to an incorrect database method name.
+- **API Consistency** — Updated the scrape response format to match frontend expectations for immediate UI updates.
+
+---
+
 ## [1.1.1] — 2026-05-14
 
 ### Fix: Automatic Scraping & RetroAchievements
