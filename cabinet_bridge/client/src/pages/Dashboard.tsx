@@ -10,7 +10,7 @@ import { MobileTopBar } from "@/components/MobileNav";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { Button } from "@/components/ui/button";
 import { apiUrl } from "@/lib/queryClient";
-import { formatRelative } from "@/lib/integration";
+import { formatRelative, useIntegration } from "@/lib/integration";
 import { useGameDialogState } from "@/lib/useGameDialogState";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
 import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap, History, Radio } from "lucide-react";
