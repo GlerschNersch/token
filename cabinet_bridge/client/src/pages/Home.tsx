@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import { useLocation } from "wouter";
+import Fuse from "fuse.js";
 import { Sidebar, type Filter } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { GameCard, GameCardSkeleton } from "@/components/GameCard";
@@ -872,10 +873,12 @@ const ListView = memo(function ListView({
   games,
   onOpen,
   onToggleFav,
+  onFocusChange,
 }: {
   games: Game[];
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
+  onFocusChange?: (index: number) => void;
 }) {
   const STATUS_LABELS: Record<string, string> = {
     unset: "",
@@ -1092,7 +1095,7 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
             src={game.artUrl}
             alt=""
             // LCP Optimization: tell the browser to prioritize this image
-            fetchpriority="high"
+            fetchPriority="high"
             className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"
           />
         )}

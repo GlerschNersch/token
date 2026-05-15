@@ -337,6 +337,7 @@ export class DatabaseStorage implements IStorage {
     const items = db.select().from(collectionItems).all();
     return collections.map((collection) => ({
       ...collection,
+      smartFilter: collection.smartFilter ? JSON.parse(collection.smartFilter) : undefined,
       romIds: items
         .filter((item) => item.collectionId === collection.id)
         .map((item) => item.romId),

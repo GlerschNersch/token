@@ -8,7 +8,7 @@ export function registerKioskRoutes(app: Express) {
     const settings = await storage.getIntegrationSettings();
     res.json({
       enabled: settings.kioskMode ?? false,
-      lockSettings: settings.kioskLockSettings ?? false,
+      collectionId: settings.kioskCollectionId ?? null,
       hasPin: !!settings.kioskPin,
     });
   });

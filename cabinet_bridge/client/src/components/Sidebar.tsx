@@ -22,7 +22,7 @@ import { useState } from "react";
 import { useProfile } from "@/lib/useProfile";
 import type { UserProfile } from "@shared/schema";
 
-export type Filter = SystemId | `collection:${number}`;
+export type Filter = SystemId | `collection:${number}` | "settings";
 
 interface SidebarProps {
   active: Filter;

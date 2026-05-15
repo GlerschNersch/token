@@ -133,8 +133,8 @@ export function useGridNav({
     let heldDir: "up" | "down" | "left" | "right" | null = null;
     let holdStart = 0;
     let lastRepeat = 0;
-    let prevA = false;
-    let prevY = false;
+    let prevSelect = false;
+    let prevFav = false;
 
     const tick = (now: number) => {
       rafId = requestAnimationFrame(tick);

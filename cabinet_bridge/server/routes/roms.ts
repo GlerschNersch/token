@@ -171,7 +171,7 @@ export function registerRomRoutes(app: Express) {
   });
 
   app.get("/api/emulatorjs/*path", async (req, res) => {
-    const filePath = Array.isArray(req.params.path) ? (req.params.path as string[]).join("/") : ((req.params as Record<string, string>).path ?? "");
+    const filePath = Array.isArray(req.params.path) ? (req.params.path as string[]).join("/") : ((req.params as any).path ?? "");
     if (!filePath || filePath.includes("..")) {
       return res.status(400).send("Invalid path");
     }

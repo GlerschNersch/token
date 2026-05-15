@@ -182,7 +182,7 @@ function normalizeConfig(raw: unknown): IntegrationConfig {
       : { select: 0, back: 1, favorite: 3, menu: 9 },
     adaptiveBackground: typeof source.adaptiveBackground === "boolean" ? source.adaptiveBackground : true,
     crtIntensity: typeof source.crtIntensity === "number" ? source.crtIntensity : 30,
-    language: raw.language ?? undefined,
+    language: typeof source.language === "string" ? source.language : undefined,
   };
 }
 

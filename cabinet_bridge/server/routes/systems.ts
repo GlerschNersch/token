@@ -11,7 +11,7 @@ import { existsSync } from "node:fs";
 
 export function registerSystemRoutes(app: Express) {
   app.get("/api/system-images", (_req, res) => {
-    res.json(Object.keys(SYSTEM_IMAGES).map(id => ({ id, ...SYSTEM_IMAGES[id as keyof typeof SYSTEM_IMAGES] })));
+    res.json(Object.keys(SYSTEM_IMAGES).map(id => ({ ...SYSTEM_IMAGES[id as keyof typeof SYSTEM_IMAGES], id })));
   });
 
   app.get("/api/system-images/:id", async (req, res) => {

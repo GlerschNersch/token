@@ -17,7 +17,7 @@ export function registerCheatRoutes(app: Express) {
     const { description, code, profileId } = req.body;
     if (!description || !code) return res.status(400).json({ message: "Description and code required." });
     try {
-      const created = await storage.createCheat({ romId, profileId: profileId || 1, description, code, enabled: true });
+      const created = await storage.createCheat({ romId, profileId: profileId || 1, description, code, enabled: true, createdAt: Date.now() });
       res.json(created);
     } catch {
       res.status(409).json({ message: "Cheat already exists." });

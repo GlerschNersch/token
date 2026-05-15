@@ -29,6 +29,8 @@ import {
   Plus,
   Sparkles,
   ScanLine,
+  Image,
+  Trophy,
   HelpCircle,
   Activity,
   Database,
@@ -37,10 +39,12 @@ import {
   Keyboard,
   Palette,
   Monitor,
+  RefreshCw,
 } from "lucide-react";
-import type { SmartFilterRules } from "@shared/schema";
+import type { SmartFilterRules, GameCollectionWithItems } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 
 export default function Settings() {
   const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
@@ -1085,6 +1089,226 @@ function Shortcut({ keyName, action }: { keyName: string; action: string }) {
     <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-sidebar/10">
        <span className="text-xs text-muted-foreground">{action}</span>
        <kbd className="px-2 py-1 rounded bg-muted font-mono text-[10px] font-bold text-foreground border-b-2 border-muted-foreground/30">{keyName}</kbd>
+    </div>
+  );
+}
+
+function ServicesSettings() {
+  const { config, setConfig } = useIntegration();
+  const { toast } = useToast();
+  const [scraping, setScraping] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number; title?: string } | null>(null);
+
+  const handleBulkScrape = async () => {
+    if (scraping) return;
+    setScraping(true);
+    setProgress(null);
+
+    try {
+      const res = await fetch("/api/roms/scrape-all", { method: "POST" });
+      if (!res.ok) throw new Error(res.statusText);
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("Body reader not available");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === "progress") {
+                setProgress({ current: data.current, total: data.total, title: data.title });
+              } else if (data.type === "complete") {
+                toast({ title: "Bulk scrape complete", description: "Successfully refreshed art for all ROMs." });
+                await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+              }
+            } catch (err) {
+              console.error("Failed to parse SSE line", err);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Bulk scrape failed",
+        description: err instanceof Error ? err.message : "Network error during bulk scrape.",
+      });
+    } finally {
+      setScraping(false);
+      setProgress(null);
+    }
+  };
+
+  return (
+    <div className="space-y-10">
+      <Section
+        title="Scraper Services"
+        description="Enter your credentials for online metadata and artwork providers."
+      >
+        <div className="grid sm:grid-cols-2 gap-6">
+          <Field label="TheGamesDB API Key" hint="Get a free key at thegamesdb.net">
+            <Input
+              value={config.tgdbApiKey}
+              onChange={(e) => setConfig({ tgdbApiKey: e.target.value })}
+              placeholder="Your API Key"
+              className="font-mono text-sm"
+            />
+          </Field>
+          <div className="grid gap-4">
+            <Field label="ScreenScraper.fr User ID">
+              <Input
+                value={config.ssUserId}
+                onChange={(e) => setConfig({ ssUserId: e.target.value })}
+                placeholder="Username"
+                className="font-mono text-sm"
+              />
+            </Field>
+            <Field label="ScreenScraper.fr Password">
+              <Input
+                type="password"
+                value={config.ssPassword}
+                onChange={(e) => setConfig({ ssPassword: e.target.value })}
+                placeholder="••••••••"
+                className="font-mono text-sm"
+              />
+            </Field>
+          </div>
+        </div>
+      </Section>
+
+      <Section
+        title="RetroAchievements"
+        description="Connect your account to track trophies and progress."
+      >
+        <div className="grid sm:grid-cols-2 gap-6">
+          <Field label="Username">
+            <div className="relative">
+              <Trophy className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={config.raUsername}
+                onChange={(e) => setConfig({ raUsername: e.target.value })}
+                placeholder="RA Username"
+                className="pl-9 font-mono text-sm"
+              />
+            </div>
+          </Field>
+          <Field label="Web API Key" hint="Found in your RetroAchievements settings.">
+            <Input
+              type="password"
+              value={config.raToken}
+              onChange={(e) => setConfig({ raToken: e.target.value })}
+              placeholder="RA API Key"
+              className="font-mono text-sm"
+            />
+          </Field>
+        </div>
+      </Section>
+
+      <Section
+        title="Bulk Actions"
+        description="Process multiple ROMs at once. These operations can take several minutes."
+      >
+        <div className="p-5 rounded-xl border border-border bg-sidebar/20 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <div className="font-display font-semibold text-sm flex items-center gap-2">
+                <Image className="size-4 text-primary" />
+                Scrape All ROMs
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Iterates through all unscraped or failed ROMs and attempts to fetch metadata.
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkScrape}
+              disabled={scraping}
+              className="gap-2"
+            >
+              {scraping ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
+              Scrape All
+            </Button>
+          </div>
+
+          {progress && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex justify-between text-[10px] font-mono uppercase tracking-wider">
+                <span className="text-primary truncate max-w-[200px]">{progress.title || "Processing..."}</span>
+                <span className="text-muted-foreground">{progress.current} / {progress.total}</span>
+              </div>
+              <Progress value={(progress.current / progress.total) * 100} className="h-1.5" />
+            </div>
+          )}
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+function KioskSettings() {
+  const { config, setConfig } = useIntegration();
+  const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
+
+  return (
+    <div className="space-y-10">
+      <Section
+        title="Kiosk Mode"
+        description="Lock the interface to a single collection and require a PIN to exit or enter settings."
+      >
+        <div className="grid gap-6">
+          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
+            <div className="space-y-0.5">
+              <div className="font-display font-semibold text-sm">Enable Kiosk Mode</div>
+              <div className="text-xs text-muted-foreground">Restricts navigation and hides technical settings.</div>
+            </div>
+            <Switch
+              checked={config.kioskMode}
+              onCheckedChange={(v) => setConfig({ kioskMode: v })}
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            <Field label="Kiosk Exit PIN" hint="Up to 8 characters.">
+              <Input
+                value={config.kioskPin}
+                onChange={(e) => setConfig({ kioskPin: e.target.value })}
+                placeholder="e.g. 1234"
+                className="font-mono text-sm"
+                maxLength={8}
+              />
+            </Field>
+
+            <Field label="Target Collection" hint="The only collection visible in Kiosk Mode.">
+              <Select
+                value={config.kioskCollectionId?.toString() ?? "all"}
+                onValueChange={(v) => setConfig({ kioskCollectionId: v === "all" ? null : parseInt(v, 10) })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Games" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Games</SelectItem>
+                  {collections.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }
