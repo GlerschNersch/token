@@ -8,19 +8,10 @@ import { apiUrl } from "@/lib/queryClient";
  * ConsoleSilhouette if the server can't reach Wikimedia.
  */
 
-// IDs that have a logo available via the server proxy
-const LOGO_IDS = new Set([
-  "nes", "snes", "n64", "gba", "genesis",
-  "ps1", "ps2", "psp", "dreamcast",
-  "gb", "gbc", "nds", "arcade",
-  "atari2600", "saturn", "gamegear", "sms", "pce",
-  "sega32x", "segacd", "neogeo", "virtualboy", "atari7800", "lynx",
-]);
-
 export function SystemLogo({ systemId }: { systemId: string }) {
   const [failed, setFailed] = useState(false);
 
-  if (!LOGO_IDS.has(systemId) || failed) {
+  if (failed) {
     return <ConsoleSilhouette systemId={systemId} />;
   }
 

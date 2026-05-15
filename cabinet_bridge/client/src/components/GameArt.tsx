@@ -100,33 +100,31 @@ export function SystemTile({
         }}
       />
 
-      {showImage ? (
-        <>
-          <img
-            src={system.image!.url}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover mix-blend-soft-light"
-            loading="lazy"
-            decoding="async"
-            onError={() => setImageFailed(true)}
-            data-testid={`img-system-${system.id}`}
-            style={{ zIndex: 0 }}
-          />
-        </>
-      ) : (
-        <>
-          {/* Large silhouette watermark behind logo */}
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            style={{ opacity: 0.18, zIndex: 0 }}
-          >
-            <ConsoleSilhouette systemId={system.id} />
-          </div>
-          {/* Logo floating above the silhouette */}
-          <div className="absolute inset-0" style={{ zIndex: 3 }}>
-            <SystemLogo systemId={system.id} />
-          </div>
-        </>
+      {showImage && (
+        <img
+          src={system.image!.url}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover mix-blend-soft-light"
+          loading="lazy"
+          decoding="async"
+          onError={() => setImageFailed(true)}
+          data-testid={`img-system-${system.id}`}
+          style={{ zIndex: 0 }}
+        />
+      )}
+
+      {/* Branding Logo - Always shown for clarity */}
+      <div className="absolute inset-0" style={{ zIndex: 3 }}>
+        <SystemLogo systemId={system.id} />
+      </div>
+
+      {!showImage && (
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ opacity: 0.18, zIndex: 0 }}
+        >
+          <ConsoleSilhouette systemId={system.id} />
+        </div>
       )}
 
       {/* Bottom vignette */}

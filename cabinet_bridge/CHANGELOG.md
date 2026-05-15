@@ -1,3 +1,8 @@
+## 1.1.4 – 2026-05-14
+
+- **Feature**: **Official System Logos** — Replaced hardware photos with official branding logos on all system tiles for much clearer navigation. Logos are automatically fetched and cached from Libretro assets.
+- **Improved**: **System Tiles** — Redesigned tiles to overlay branding logos on top of hardware photos (when available), creating a premium, high-contrast look.
+
 ## 1.1.3 – 2026-05-14
 
 - **New**: **Bulk Scrape** — Added a "Scrape All" button in Settings → Services to refresh metadata and art for all unscraped or failed ROMs.
