@@ -1,3 +1,10 @@
+## 1.1.2 – 2026-05-14
+
+- **Fix**: Art Scraping — Resolved a ReferenceError in the Libretro fallback that caused art scraping to fail for many titles.
+- **Fix**: Cheat Retrieval — Restored the missing `/api/roms/:id/fetch-cheats` route, allowing the UI to pull codes from the Libretro database.
+- **Fix**: Cheat Toggling — Fixed a bug where enabling/disabling a cheat code would fail due to an incorrect database method name.
+- **Fix**: API Consistency — Updated the scrape response format to match frontend expectations for immediate UI updates.
+
 ## 1.1.1 – 2026-05-14
 
 - **Fix**: Corrected automatic art scraping and RetroAchievements settings lookup. Fixed a bug where incorrect field names were used to retrieve service credentials, which prevented automatic art fetching during upload and RA progress tracking.

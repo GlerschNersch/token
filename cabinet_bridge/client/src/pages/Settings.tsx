@@ -149,6 +149,12 @@ export default function Settings() {
               <TabsTrigger value="library" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Database className="size-4" /> Library
               </TabsTrigger>
+              <TabsTrigger value="services" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
+                <Wifi className="size-4" /> Services
+              </TabsTrigger>
+              <TabsTrigger value="kiosk" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
+                <Lock className="size-4" /> Kiosk
+              </TabsTrigger>
               <TabsTrigger value="help" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <HelpCircle className="size-4" /> Help
               </TabsTrigger>
@@ -390,6 +396,14 @@ export default function Settings() {
               <ScannerStatusSection />
               <Separator className="bg-border/60" />
               <SmartFilterCollectionCreator />
+            </TabsContent>
+
+            <TabsContent value="services" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <ServicesSettings />
+            </TabsContent>
+
+            <TabsContent value="kiosk" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <KioskSettings />
             </TabsContent>
 
             <TabsContent value="help" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">

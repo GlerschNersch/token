@@ -238,7 +238,7 @@ export async function findLibretroBoxArt(system: string, title: string) {
       const numberMismatch = targetNumbers.length > 0 && candidateNumbers.length > 0 && !targetNumbers.some(t => candidateNumbers.includes(t));
       const overlap = targetTokens.filter(t => candidateTokens.includes(t));
       const textScore = numberMismatch ? 0 : normalizedBase === normalizedTitle ? 100 : normalizedFile.startsWith(normalizedTitle) ? 82 : overlap.length >= Math.min(2, targetTokens.length) ? (overlap.length/Math.max(1,targetTokens.length))*65 + (overlap.length/Math.max(1,candidateTokens.length))*25 : 0;
-      let score = score = textScore;
+      let score = textScore;
       if (score > 0) {
         if (/\(USA\)|\(US\)/i.test(decoded)) score += 20;
         if (/\(World\)/i.test(decoded)) score += 12;
@@ -287,7 +287,7 @@ export function registerScrapeRoutes(app: Express) {
 
     if (meta) {
       const updated = await storage.updateUploadedRomMetadata(id, meta);
-      return res.json({ success: true, rom: updated });
+      return res.json(updated);
     }
     res.json({ success: false, message: "No match found." });
   });
