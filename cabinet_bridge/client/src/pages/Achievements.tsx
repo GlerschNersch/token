@@ -5,6 +5,7 @@ import { useIntegration } from "@/lib/integration";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Trophy, Star, Zap, Clock } from "lucide-react";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 
 interface RARecentAchievement {
   Title: string;
@@ -44,6 +45,7 @@ function formatDate(dateStr: string) {
 
 export default function Achievements() {
   const { config } = useIntegration();
+  const { t } = useTranslation();
   const raUsername = config.raUsername ?? "";
   const raToken = config.raToken ?? "";
   const hasCredentials = !!(raUsername && raToken);
@@ -77,39 +79,39 @@ export default function Achievements() {
             href="/"
             className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground mb-4"
           >
-            <ArrowLeft className="size-3.5" /> Back to Library
+            <ArrowLeft className="size-3.5" /> {t("nav.home")}
           </Link>
 
           <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-            RetroAchievements
+            {t("achievements.title")}
           </div>
           <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight mt-1 mb-2 flex items-center gap-2">
             <Trophy className="size-6 text-yellow-400" />
-            {raUsername ? `${raUsername}'s Trophies` : "Achievement Dashboard"}
+            {raUsername ? t("achievements.trophies", { user: raUsername }) : t("achievements.dashboard")}
           </h1>
 
           {!hasCredentials && (
             <div className="mt-6 rounded-md border border-border bg-background/50 p-6 text-center" data-testid="state-no-ra-credentials">
               <Trophy className="size-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-medium mb-1">No RetroAchievements account connected</p>
+              <p className="text-sm font-medium mb-1">{t("achievements.noAccount")}</p>
               <p className="text-xs text-muted-foreground mb-4">
-                Add your RA username and API token in Settings to track your achievement progress.
+                {t("achievements.credentialsHint")}
               </p>
               <Link href="/settings" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
-                Go to Settings →
+                {t("nav.settings")} →
               </Link>
             </div>
           )}
 
           {hasCredentials && isLoading && (
             <div className="mt-8 text-sm text-muted-foreground animate-pulse" data-testid="state-ra-loading">
-              Loading achievements…
+              {t("common.loading")}
             </div>
           )}
 
           {hasCredentials && error && (
             <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive" data-testid="state-ra-error">
-              Could not load RetroAchievements data. Check your credentials in Settings.
+              {t("achievements.error")}
             </div>
           )}
 
@@ -117,16 +119,16 @@ export default function Achievements() {
             <>
               {/* Stats row */}
               <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="ra-stats">
-                <StatCard icon={<Trophy className="size-4 text-yellow-400" />} label="Hardcore Points" value={summary.TotalPoints?.toLocaleString() ?? "—"} />
-                <StatCard icon={<Star className="size-4 text-blue-400" />} label="Softcore Points" value={summary.TotalSoftcorePoints?.toLocaleString() ?? "—"} />
-                <StatCard icon={<Zap className="size-4 text-purple-400" />} label="Global Rank" value={summary.Rank ? `#${summary.Rank.toLocaleString()}` : "—"} />
-                <StatCard icon={<Clock className="size-4 text-emerald-400" />} label="Recent Games" value={summary.RecentlyPlayedCount?.toString() ?? "—"} />
+                <StatCard icon={<Trophy className="size-4 text-yellow-400" />} label={t("achievements.stats.hardcorePoints")} value={summary.TotalPoints?.toLocaleString() ?? "—"} />
+                <StatCard icon={<Star className="size-4 text-blue-400" />} label={t("achievements.stats.softcorePoints")} value={summary.TotalSoftcorePoints?.toLocaleString() ?? "—"} />
+                <StatCard icon={<Zap className="size-4 text-purple-400" />} label={t("achievements.stats.globalRank")} value={summary.Rank ? `#${summary.Rank.toLocaleString()}` : "—"} />
+                <StatCard icon={<Clock className="size-4 text-emerald-400" />} label={t("achievements.stats.recentGames")} value={summary.RecentlyPlayedCount?.toString() ?? "—"} />
               </div>
 
               {/* Recent achievements */}
               {recentAchievements.length > 0 && (
                 <section className="mt-8" data-testid="ra-recent-achievements">
-                  <h2 className="font-display text-base font-semibold tracking-tight mb-3">Recent Achievements</h2>
+                  <h2 className="font-display text-base font-semibold tracking-tight mb-3">{t("achievements.recentAchievements")}</h2>
                   <ul className="space-y-2">
                     {recentAchievements.map((ach) => (
                       <li
@@ -158,7 +160,7 @@ export default function Achievements() {
 
               {recentAchievements.length === 0 && (
                 <div className="mt-8 text-sm text-muted-foreground" data-testid="state-no-achievements">
-                  No recent achievements found. Play some games!
+                  {t("achievements.noRecentAchievements")}
                 </div>
               )}
             </>

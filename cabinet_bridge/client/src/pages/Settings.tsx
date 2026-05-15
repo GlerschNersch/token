@@ -49,6 +49,7 @@ import { THEMES } from "@/lib/themes";
 
 export default function Settings() {
   const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [copied, setCopied] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
@@ -57,11 +58,11 @@ export default function Settings() {
     navigator.clipboard.writeText(text);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
-    toast({ title: "Copied to clipboard", description: "Endpoint URL is ready to paste." });
+    toast({ title: t("common.copy"), description: "Endpoint URL is ready to paste." });
   };
 
   const handleReset = () => {
-    if (confirm("Reset all integration settings to default? Your HA base URL and token will be cleared.")) {
+    if (confirm(t("common.reset") + "?")) {
       resetConfig();
       toast({ title: "Settings reset", description: "Integration defaults restored." });
     }
@@ -80,7 +81,6 @@ export default function Settings() {
   const testConnection = async () => {
     setTesting(true);
     try {
-      // Small artificial delay to show state
       await new Promise(r => setTimeout(r, 800));
       const res = await fetch(`${config.haBaseUrl}/api/config`, {
         headers: config.haToken ? { Authorization: `Bearer ${config.haToken}` } : undefined
@@ -114,24 +114,24 @@ export default function Settings() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Integration
+                {t("settings.header")}
               </div>
-              <h1 className="font-display text-2xl font-bold leading-tight mt-1 text-neon">Settings</h1>
+              <h1 className="font-display text-2xl font-bold leading-tight mt-1 text-neon">{t("settings.title")}</h1>
             </div>
             <div className="flex items-center gap-3">
               {saveStatus === "saving" && (
                 <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-                  <Loader2 className="size-3 animate-spin" /> Saving...
+                  <Loader2 className="size-3 animate-spin" /> {t("common.saveStatus.saving")}
                 </div>
               )}
               {saveStatus === "saved" && (
                 <div className="flex items-center gap-2 font-mono text-[10px] text-accent uppercase tracking-wider">
-                  <Check className="size-3" /> All changes saved
+                  <Check className="size-3" /> {t("common.saveStatus.saved")}
                 </div>
               )}
               {saveStatus === "error" && (
                 <div className="flex items-center gap-2 font-mono text-[10px] text-destructive uppercase tracking-wider">
-                  <ShieldAlert className="size-3" /> Save failed
+                  <ShieldAlert className="size-3" /> {t("common.saveStatus.error")}
                 </div>
               )}
             </div>
@@ -140,42 +140,38 @@ export default function Settings() {
           <Tabs defaultValue="connection" className="w-full">
             <TabsList className="w-full justify-start bg-sidebar/40 border border-border/50 h-auto p-1 mb-8 overflow-x-auto scrollbar-none flex-nowrap shrink-0">
               <TabsTrigger value="connection" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Globe className="size-4" /> Connection
+                <Globe className="size-4" /> {t("settings.tabs.connection")}
               </TabsTrigger>
               <TabsTrigger value="display" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Palette className="size-4" /> Display
+                <Palette className="size-4" /> {t("settings.tabs.display")}
               </TabsTrigger>
               <TabsTrigger value="automation" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Zap className="size-4" /> Automation
+                <Zap className="size-4" /> {t("settings.tabs.automation")}
               </TabsTrigger>
               <TabsTrigger value="controls" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Gamepad2 className="size-4" /> Controls
+                <Gamepad2 className="size-4" /> {t("settings.tabs.controls")}
               </TabsTrigger>
               <TabsTrigger value="library" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Database className="size-4" /> Library
+                <Database className="size-4" /> {t("settings.tabs.library")}
               </TabsTrigger>
               <TabsTrigger value="services" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Wifi className="size-4" /> Services
+                <Wifi className="size-4" /> {t("settings.tabs.services")}
               </TabsTrigger>
               <TabsTrigger value="kiosk" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Lock className="size-4" /> Kiosk
+                <Lock className="size-4" /> {t("settings.tabs.kiosk")}
               </TabsTrigger>
               <TabsTrigger value="help" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <HelpCircle className="size-4" /> Help
+                <HelpCircle className="size-4" /> {t("settings.tabs.help")}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="connection" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {/* Connection Section */}
               <Section
-                title="Home Assistant Connection"
-                description="Configure how Cabinet Bridge talks to your Home Assistant instance. Use the internal URL if this is running as an add-on."
+                title={t("settings.sections.connection.title")}
+                description={t("settings.sections.connection.description")}
               >
                 <div className="grid gap-6">
-                  <Field
-                    label="Base URL"
-                    hint="External or internal URL including port (e.g. http://192.168.1.50:8123)"
-                  >
+                  <Field label={t("settings.fields.haBaseUrl.label")} hint={t("settings.fields.haBaseUrl.hint")}>
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Globe className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -184,7 +180,6 @@ export default function Settings() {
                           onChange={(e) => setConfig({ haBaseUrl: e.target.value })}
                           placeholder="https://homeassistant.local:8123"
                           className="pl-9 font-mono text-sm"
-                          data-testid="input-ha-base"
                         />
                       </div>
                       <Button
@@ -194,15 +189,12 @@ export default function Settings() {
                         className="gap-2 shrink-0 min-w-[100px]"
                       >
                         {testing ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
-                        Test
+                        {t("settings.buttons.test")}
                       </Button>
                     </div>
                   </Field>
 
-                  <Field
-                    label="Long-lived Access Token"
-                    hint="Required for certain actions, but often not needed for simple webhooks."
-                  >
+                  <Field label={t("settings.fields.haToken.label")} hint={t("settings.fields.haToken.hint")}>
                     <div className="relative">
                       <Lock className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <Input
@@ -211,7 +203,6 @@ export default function Settings() {
                         onChange={(e) => setConfig({ haToken: e.target.value })}
                         placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                         className="pl-9 font-mono text-sm"
-                        data-testid="input-ha-token"
                       />
                     </div>
                   </Field>
@@ -220,20 +211,19 @@ export default function Settings() {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2 font-display font-semibold text-sm">
                         <Zap className="size-4 text-accent" />
-                        Live Mode
+                        {t("settings.fields.liveMode.label")}
                       </div>
                       <div className="text-xs text-muted-foreground max-w-sm">
-                        When enabled, actions will fire real network requests to Home Assistant.
+                        {t("settings.fields.liveMode.hint")}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {config.liveMode ? "Active" : "Simulation"}
+                        {config.liveMode ? t("settings.fields.liveMode.active") : t("settings.fields.liveMode.simulation")}
                       </span>
                       <Switch
                         checked={config.liveMode}
                         onCheckedChange={handleLiveModeToggle}
-                        data-testid="switch-live-mode"
                       />
                     </div>
                   </div>
@@ -242,9 +232,7 @@ export default function Settings() {
                     <div className="flex items-start gap-3 p-4 rounded-lg border border-accent/20 bg-accent/5">
                       <AlertTriangle className="size-4 text-accent mt-0.5 shrink-0" />
                       <div className="text-xs text-accent/90 leading-relaxed">
-                        <strong>Cabinet is in Simulation Mode.</strong> Clicks will be logged in the
-                        activity panel but no webhooks will be fired. This is great for testing the UI
-                        without triggering hardware actions.
+                        {t("settings.fields.liveMode.notice")}
                       </div>
                     </div>
                   )}
@@ -257,55 +245,49 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="automation" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {/* PC Status Settings */}
               <Section
-                title="PC Status Monitoring"
-                description="Link Home Assistant entities to the dashboard meters for CPU, RAM, and Online status."
+                title={t("settings.sections.automation.title")}
+                description={t("settings.sections.automation.description")}
               >
                 <div className="grid sm:grid-cols-2 gap-6">
-                  <Field label="PC Hostname" hint="Shown at the top of the right panel.">
+                  <Field label={t("settings.fields.pcHostname.label")} hint={t("settings.fields.pcHostname.hint")}>
                     <Input
                       value={config.pcHostname}
                       onChange={(e) => setConfig({ pcHostname: e.target.value })}
                       placeholder="GAMING-PC"
                       className="font-mono text-sm"
-                      data-testid="input-pc-hostname"
                     />
                   </Field>
-                  <Field label="Online Entity ID" hint="binary_sensor showing if PC is up.">
+                  <Field label={t("settings.fields.pcOnline.label")} hint={t("settings.fields.pcOnline.hint")}>
                     <Input
                       value={config.pcOnlineEntityId}
                       onChange={(e) => setConfig({ pcOnlineEntityId: e.target.value })}
                       placeholder="binary_sensor.gaming_pc_status"
                       className="font-mono text-sm"
-                      data-testid="input-pc-online-id"
                     />
                   </Field>
-                  <Field label="CPU Entity ID" hint="sensor providing percentage value.">
+                  <Field label={t("settings.fields.pcCpu.label")} hint={t("settings.fields.pcCpu.hint")}>
                     <Input
                       value={config.pcCpuEntityId}
                       onChange={(e) => setConfig({ pcCpuEntityId: e.target.value })}
                       placeholder="sensor.gaming_pc_cpu_usage"
                       className="font-mono text-sm"
-                      data-testid="input-pc-cpu-id"
                     />
                   </Field>
-                  <Field label="RAM Entity ID" hint="sensor providing percentage value.">
+                  <Field label={t("settings.fields.pcRam.label")} hint={t("settings.fields.pcRam.hint")}>
                     <Input
                       value={config.pcRamEntityId}
                       onChange={(e) => setConfig({ pcRamEntityId: e.target.value })}
                       placeholder="sensor.gaming_pc_ram_usage"
                       className="font-mono text-sm"
-                      data-testid="input-pc-ram-id"
                     />
                   </Field>
-                  <Field label="Current App Entity ID" hint="sensor showing foreground window.">
+                  <Field label={t("settings.fields.pcApp.label")} hint={t("settings.fields.pcApp.hint")}>
                     <Input
                       value={config.pcAppEntityId}
                       onChange={(e) => setConfig({ pcAppEntityId: e.target.value })}
                       placeholder="sensor.gaming_pc_current_app"
                       className="font-mono text-sm"
-                      data-testid="input-pc-app-id"
                     />
                   </Field>
                 </div>
@@ -313,10 +295,9 @@ export default function Settings() {
 
               <Separator className="bg-border/60" />
 
-              {/* Endpoints */}
               <Section
-                title="Webhook Endpoints"
-                description="URLs automatically generated for your Home Assistant automations. Copy these to use as Webhook triggers."
+                title={t("settings.sections.endpoints.title")}
+                description={t("settings.sections.endpoints.description")}
               >
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg border border-border bg-sidebar/20">
@@ -340,13 +321,11 @@ export default function Settings() {
                               value={config.endpoints[a.id] || a.default}
                               onChange={(e) => setEndpoint(a.id, e.target.value)}
                               className="font-mono text-[12px] bg-background/40"
-                              data-testid={`input-endpoint-${a.id}`}
                             />
                             <Button
                               variant="secondary"
                               size="icon"
                               onClick={() => copy(config.endpoints[a.id] || a.default, a.id)}
-                              data-testid={`button-copy-${a.id}`}
                             >
                               {copied === a.id ? (
                                 <Check className="size-3.5 text-accent" />
@@ -412,10 +391,9 @@ export default function Settings() {
             </TabsContent>
 
             <TabsContent value="help" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {/* Wiring Guide */}
               <Section
-                title="Wiring Guide"
-                description="Follow these steps to connect Cabinet Bridge to your physical hardware using Home Assistant."
+                title={t("settings.sections.help.title")}
+                description={t("settings.sections.help.description")}
               >
                 <ul className="space-y-6">
                   <Step n={1} title="Create a Wake-on-LAN Script">
@@ -466,16 +444,15 @@ export default function Settings() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
               <ShieldAlert className="size-3.5" />
-              Settings are saved automatically to the local database.
+              {t("settings.autoSaved")}
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleReset}
               className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
-              data-testid="button-reset-settings"
             >
-              <RotateCcw className="size-3.5" /> Reset to Defaults
+              <RotateCcw className="size-3.5" /> {t("settings.buttons.resetDefaults")}
             </Button>
           </div>
         </div>
@@ -491,11 +468,11 @@ function DisplaySettings() {
   return (
     <div className="space-y-10">
       <Section
-        title="Global Preferences"
-        description="Default settings that apply to all games unless overridden."
+        title={t("settings.sections.display.title")}
+        description={t("settings.sections.display.description")}
       >
         <div className="grid sm:grid-cols-2 gap-6">
-          <Field label={t("settings.language")} hint="Choose your preferred display language.">
+          <Field label={t("settings.fields.language.label")} hint={t("settings.fields.language.hint")}>
             <div className="flex items-center gap-4">
               <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
               <Select
@@ -518,9 +495,9 @@ function DisplaySettings() {
             </div>
           </Field>
 
-          <Field label="System Labels" hint="Show or hide console names on game cards.">
+          <Field label={t("settings.fields.systemLabels.label")} hint={t("settings.fields.systemLabels.hint")}>
             <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-sidebar/40 h-10 mt-1">
-              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Show Labels</span>
+              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">{t("settings.fields.systemLabels.show")}</span>
               <Switch
                 checked={config.showSystemLabels}
                 onCheckedChange={(v) => setConfig({ showSystemLabels: v })}
@@ -528,7 +505,7 @@ function DisplaySettings() {
             </div>
           </Field>
 
-          <Field label="UI Theme" hint="Choose a visual style for the interface.">
+          <Field label={t("settings.fields.uiTheme.label")} hint={t("settings.fields.uiTheme.hint")}>
             <div className="flex items-center gap-4">
               <Palette className="w-4 h-4 text-muted-foreground shrink-0" />
               <Select
@@ -551,37 +528,37 @@ function DisplaySettings() {
 
           <div />
 
-          <Field label="Default Aspect Ratio" hint="Used if no system-specific override is set.">
+          <Field label={t("settings.fields.aspectRatio.label")} hint={t("settings.fields.aspectRatio.hint")}>
             <Select
               value={config.globalAspectRatio || "auto"}
               onValueChange={(v) => setConfig({ globalAspectRatio: v })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Auto" />
+                <SelectValue placeholder={t("settings.fields.aspectRatio.placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Auto (Default)</SelectItem>
-                <SelectItem value="4/3">4:3 (Standard)</SelectItem>
-                <SelectItem value="16/9">16:9 (Widescreen)</SelectItem>
-                <SelectItem value="3/2">3:2 (GBA)</SelectItem>
-                <SelectItem value="8/7">8:7 (SNES Pixel)</SelectItem>
-                <SelectItem value="1/1">1:1 (Square)</SelectItem>
+                <SelectItem value="auto">{t("settings.fields.aspectRatio.placeholder")} ({t("common.ui.reset")})</SelectItem>
+                <SelectItem value="4/3">4:3</SelectItem>
+                <SelectItem value="16/9">16:9</SelectItem>
+                <SelectItem value="3/2">3:2</SelectItem>
+                <SelectItem value="8/7">8:7</SelectItem>
+                <SelectItem value="1/1">1:1</SelectItem>
               </SelectContent>
             </Select>
           </Field>
 
-          <Field label="Default Shader" hint="Global visual filter for the emulator.">
+          <Field label={t("settings.fields.shader.label")} hint={t("settings.fields.shader.hint")}>
             <Select
               value={config.globalShader || "none"}
               onValueChange={(v) => setConfig({ globalShader: v })}
             >
               <SelectTrigger>
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder={t("settings.fields.shader.placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">{t("settings.fields.shader.placeholder")}</SelectItem>
                 <SelectItem value="crt">CRT</SelectItem>
-                <SelectItem value="smooth">Smooth (Linear)</SelectItem>
+                <SelectItem value="smooth">Smooth</SelectItem>
                 <SelectItem value="scanlines">Scanlines</SelectItem>
                 <SelectItem value="lcd">LCD</SelectItem>
                 <SelectItem value="phosphor">Phosphor</SelectItem>
@@ -592,8 +569,8 @@ function DisplaySettings() {
       </Section>
 
       <Section
-        title="Per-System Overrides"
-        description="Customize display settings for specific consoles. These apply when launching a game."
+        title={t("settings.sections.overrides.title")}
+        description={t("settings.sections.overrides.description")}
       >
         <div className="space-y-3">
           {ALL_SYSTEMS.map((system) => {
@@ -622,44 +599,44 @@ function DisplaySettings() {
                     }}
                     disabled={!config.systemDisplay?.[system.id]}
                   >
-                    Reset
+                    {t("common.ui.reset")}
                   </Button>
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-mono text-muted-foreground">Aspect Ratio</Label>
+                    <Label className="text-[10px] uppercase font-mono text-muted-foreground">{t("settings.fields.aspectRatio.label")}</Label>
                     <Select
                       value={display.aspectRatio || "auto"}
                       onValueChange={(v) => update({ aspectRatio: v === "auto" ? undefined : v })}
                     >
                       <SelectTrigger className="h-8 text-xs bg-background/40">
-                        <SelectValue placeholder="Auto" />
+                        <SelectValue placeholder={t("settings.fields.aspectRatio.placeholder")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">Auto (Default)</SelectItem>
-                        <SelectItem value="4/3">4:3 (Standard)</SelectItem>
-                        <SelectItem value="16/9">16:9 (Widescreen)</SelectItem>
-                        <SelectItem value="3/2">3:2 (GBA)</SelectItem>
-                        <SelectItem value="8/7">8:7 (SNES Pixel)</SelectItem>
-                        <SelectItem value="1/1">1:1 (Square)</SelectItem>
+                        <SelectItem value="auto">{t("settings.fields.aspectRatio.placeholder")} ({t("common.ui.reset")})</SelectItem>
+                        <SelectItem value="4/3">4:3</SelectItem>
+                        <SelectItem value="16/9">16:9</SelectItem>
+                        <SelectItem value="3/2">3:2</SelectItem>
+                        <SelectItem value="8/7">8:7</SelectItem>
+                        <SelectItem value="1/1">1:1</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-[10px] uppercase font-mono text-muted-foreground">Shader</Label>
+                    <Label className="text-[10px] uppercase font-mono text-muted-foreground">{t("settings.fields.shader.label")}</Label>
                     <Select
                       value={display.shader || "none"}
                       onValueChange={(v) => update({ shader: v === "none" ? undefined : v })}
                     >
                       <SelectTrigger className="h-8 text-xs bg-background/40">
-                        <SelectValue placeholder="None" />
+                        <SelectValue placeholder={t("settings.fields.shader.placeholder")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="none">{t("settings.fields.shader.placeholder")}</SelectItem>
                         <SelectItem value="crt">CRT</SelectItem>
-                        <SelectItem value="smooth">Smooth (Linear)</SelectItem>
+                        <SelectItem value="smooth">Smooth</SelectItem>
                         <SelectItem value="scanlines">Scanlines</SelectItem>
                         <SelectItem value="lcd">LCD</SelectItem>
                         <SelectItem value="phosphor">Phosphor</SelectItem>
@@ -702,6 +679,8 @@ const ALL_STATUSES = [
 ];
 
 function SmartFilterCollectionCreator() {
+  const { config, setConfig } = useIntegration();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -731,7 +710,7 @@ function SmartFilterCollectionCreator() {
       const res = await apiRequest("POST", "/api/collections/smart", { name: name.trim(), rules });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Error");
       await queryClient.invalidateQueries({ queryKey: ["/api/collections"] });
-      toast({ title: "Smart filter created", description: `"\${name.trim()}" will update automatically.` });
+      toast({ title: "Smart filter created", description: `"${name.trim()}" will update automatically.` });
       setOpen(false);
       setName(""); setSystems([]); setStatuses([]);
       setMinRating(0); setMinMinutes(0); setFavoritesOnly(false); setGenre("");
@@ -743,17 +722,17 @@ function SmartFilterCollectionCreator() {
   };
 
   return (
-    <Section title="Smart filter collections"
-      description="Collections that auto-populate based on rules — system, play status, rating, or playtime. They update whenever your library changes.">
+    <Section title={t("settings.sections.smartFilters.title")}
+      description={t("settings.sections.smartFilters.description")}>
       {!open ? (
         <Button variant="outline" size="sm" onClick={() => setOpen(true)}
           className="gap-1.5" data-testid="button-create-smart-filter">
-          <Sparkles className="size-3.5" /> New smart filter
+          <Sparkles className="size-3.5" /> {t("settings.buttons.create")}
         </Button>
       ) : (
         <div className="rounded-xl border border-border bg-black/30 p-4 space-y-4">
           <div className="space-y-1">
-            <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Collection name</Label>
+            <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{t("home.prompts.collectionName")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -765,13 +744,13 @@ function SmartFilterCollectionCreator() {
 
           <div className="space-y-1.5">
             <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Systems <span className="opacity-50">(empty = all)</span>
+              {t("nav.browseSystems")} <span className="opacity-50">(empty = all)</span>
             </Label>
             <div className="flex flex-wrap gap-1.5">
               {ALL_SYSTEMS.map(({ id, label }) => (
                 <button key={id} type="button"
                   onClick={() => setSystems((s) => toggle(s, id))}
-                  className={`px-2.5 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all \${
+                  className={`px-2.5 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all ${
                     systems.includes(id)
                       ? "bg-primary/20 border-primary text-primary"
                       : "border-border text-muted-foreground hover:border-primary/40"
@@ -784,13 +763,13 @@ function SmartFilterCollectionCreator() {
 
           <div className="space-y-1.5">
             <Label className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              Play status <span className="opacity-50">(empty = any)</span>
+              {t("history.stats.playStatus")} <span className="opacity-50">(empty = any)</span>
             </Label>
             <div className="flex flex-wrap gap-1.5">
               {ALL_STATUSES.map(({ id, label }) => (
                 <button key={id} type="button"
                   onClick={() => setStatuses((s) => toggle(s, id))}
-                  className={`px-2.5 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all \${
+                  className={`px-2.5 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-all ${
                     statuses.includes(id)
                       ? "bg-primary/20 border-primary text-primary"
                       : "border-border text-muted-foreground hover:border-primary/40"
@@ -841,9 +820,9 @@ function SmartFilterCollectionCreator() {
             <Button onClick={handleCreate} disabled={!name.trim() || saving} className="gap-1.5"
               data-testid="button-save-smart-filter">
               {saving ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-              Create
+              {t("settings.buttons.create")}
             </Button>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>{t("settings.buttons.cancel")}</Button>
           </div>
         </div>
       )}
@@ -862,6 +841,7 @@ interface ScannerStatusData {
 }
 
 function ScannerStatusSection() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [scanning, setScanning] = useState(false);
   const { data: status } = useQuery<ScannerStatusData>({
@@ -875,7 +855,7 @@ function ScannerStatusSection() {
       await apiRequest("POST", "/api/scanner/scan-now");
       await queryClient.invalidateQueries({ queryKey: ["/api/scanner/status"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-      toast({ title: "Scan complete", description: `Found \${status?.lastScanFound ?? 0} new ROM(s).` });
+      toast({ title: "Scan complete", description: `Found ${status?.lastScanFound ?? 0} new ROM(s).` });
     } catch (err) {
       toast({ title: "Scan failed", description: String(err), variant: "destructive" });
     } finally {
@@ -885,8 +865,8 @@ function ScannerStatusSection() {
 
   if (!status?.enabled) {
     return (
-      <Section title="ROM scanner"
-        description="Auto-import ROMs dropped into a watched folder. Set CABINET_ROM_WATCH_DIR in your HA add-on environment to enable.">
+      <Section title={t("settings.sections.scanner.title")}
+        description={t("settings.sections.scanner.disabledDescription")}>
         <p className="text-sm text-muted-foreground">
           Not active — set{" "}
           <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">CABINET_ROM_WATCH_DIR</code>{" "}
@@ -897,15 +877,15 @@ function ScannerStatusSection() {
   }
 
   return (
-    <Section title="ROM scanner"
-      description="Auto-imports new ROM files found in the watched folder every 60 seconds.">
+    <Section title={t("settings.sections.scanner.title")}
+      description={t("settings.sections.scanner.enabledDescription")}>
       <div className="space-y-3">
         <div className="flex items-center gap-x-3 gap-y-1 text-sm font-mono">
           <span className="text-muted-foreground">Watch dir:</span>
           <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{status.watchDir}</code>
           {status.watching && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-400">
-              <span className="size-1.5 rounded-full bg-green-400 animate-pulse" /> Active
+              <span className="size-1.5 rounded-full bg-green-400 animate-pulse" /> {t("common.ui.active")}
             </span>
           )}
         </div>
@@ -927,7 +907,7 @@ function ScannerStatusSection() {
         <Button variant="outline" size="sm" onClick={handleScanNow} disabled={scanning}
           className="gap-1.5" data-testid="button-scan-now">
           {scanning ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5" />}
-          Scan now
+          {t("settings.buttons.scanNow")}
         </Button>
       </div>
     </Section>
@@ -980,6 +960,7 @@ function Code({ children }: { children: string }) {
 
 function ControlsSettings() {
   const { config, setConfig } = useIntegration();
+  const { t } = useTranslation();
   const [gamepads, setGamepads] = useState<Gamepad[]>([]);
   const [pressedButtons, setPressedButtons] = useState<Record<number, number[]>>({});
 
@@ -1012,14 +993,14 @@ function ControlsSettings() {
   return (
     <div className="space-y-10">
       <Section
-        title="Input Preferences"
-        description="Configure global behavior for controllers and keyboards."
+        title={t("settings.sections.input.title")}
+        description={t("settings.sections.input.description")}
       >
         <div className="grid gap-6">
           <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
             <div className="space-y-0.5">
-              <div className="font-display font-semibold text-sm">Gamepad Haptics</div>
-              <div className="text-xs text-muted-foreground">Enable vibration/rumble during gameplay (if supported).</div>
+              <div className="font-display font-semibold text-sm">{t("settings.fields.rumble.label")}</div>
+              <div className="text-xs text-muted-foreground">{t("settings.fields.rumble.hint")}</div>
             </div>
             <Switch
               checked={config.gamepadRumble}
@@ -1030,8 +1011,8 @@ function ControlsSettings() {
       </Section>
 
       <Section
-        title="Connected Controllers"
-        description="Detect and test gamepads connected to this device. Press buttons to see them light up."
+        title={t("settings.sections.controllers.title")}
+        description={t("settings.sections.controllers.description")}
       >
         {gamepads.length === 0 ? (
           <div className="p-8 rounded-lg border border-dashed border-border bg-sidebar/10 flex flex-col items-center text-center gap-3">
@@ -1065,7 +1046,7 @@ function ControlsSettings() {
                    {gp.buttons.map((_, idx) => (
                      <div
                        key={idx}
-                       className={`size-7 rounded flex items-center justify-center font-mono text-[10px] border transition-colors \${
+                       className={`size-7 rounded flex items-center justify-center font-mono text-[10px] border transition-colors ${
                          pressedButtons[gp.index]?.includes(idx)
                            ? "bg-primary border-primary text-primary-foreground scale-110 shadow-[0_0_12px_hsl(var(--primary))]"
                            : "bg-background/40 border-border text-muted-foreground"
@@ -1082,8 +1063,8 @@ function ControlsSettings() {
       </Section>
 
       <Section
-        title="Keyboard Shortcuts"
-        description="Global hotkeys for navigating the interface without a mouse."
+        title={t("settings.sections.shortcuts.title")}
+        description={t("settings.sections.shortcuts.description")}
       >
         <div className="grid sm:grid-cols-2 gap-3">
            <Shortcut keyName="Arrow Keys" action="Navigate Grid" />
@@ -1098,8 +1079,8 @@ function ControlsSettings() {
       </Section>
 
       <Section
-        title="UI Navigation Mapping"
-        description="Remap the buttons used for navigating the HomeArcade interface."
+        title={t("settings.sections.mapping.title")}
+        description={t("settings.sections.mapping.description")}
       >
         <div className="grid gap-3">
           {[
@@ -1131,6 +1112,7 @@ function ControlsSettings() {
 }
 
 function RemapButton({ actionId, currentValue, onMap }: { actionId: string; currentValue?: number; onMap: (btn: number) => void }) {
+  const { t } = useTranslation();
   const [listening, setListening] = useState(false);
 
   useEffect(() => {
@@ -1158,7 +1140,7 @@ function RemapButton({ actionId, currentValue, onMap }: { actionId: string; curr
       variant={listening ? "default" : "outline"}
       size="sm"
       onClick={() => setListening(!listening)}
-      className={`min-w-[100px] gap-2 \${listening ? "animate-pulse ring-2 ring-primary" : ""}`}
+      className={`min-w-[100px] gap-2 ${listening ? "animate-pulse ring-2 ring-primary" : ""}`}
     >
       {listening ? (
         <>
@@ -1168,7 +1150,7 @@ function RemapButton({ actionId, currentValue, onMap }: { actionId: string; curr
       ) : (
         <>
           <kbd className="font-mono text-[10px] opacity-70">BTN {currentValue ?? "?"}</kbd>
-          Remap
+          {t("settings.buttons.remap")}
         </>
       )}
     </Button>
@@ -1186,6 +1168,7 @@ function Shortcut({ keyName, action }: { keyName: string; action: string }) {
 
 function ServicesSettings() {
   const { config, setConfig } = useIntegration();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [scraping, setScraping] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number; title?: string } | null>(null);
@@ -1244,11 +1227,11 @@ function ServicesSettings() {
   return (
     <div className="space-y-10">
       <Section
-        title="Scraper Services"
-        description="Enter your credentials for online metadata and artwork providers."
+        title={t("settings.sections.scrapers.title")}
+        description={t("settings.sections.scrapers.description")}
       >
         <div className="grid sm:grid-cols-2 gap-6">
-          <Field label="TheGamesDB API Key" hint="Get a free key at thegamesdb.net">
+          <Field label={t("settings.fields.tgdbApiKey.label")} hint={t("settings.fields.tgdbApiKey.hint")}>
             <Input
               value={config.tgdbApiKey}
               onChange={(e) => setConfig({ tgdbApiKey: e.target.value })}
@@ -1257,7 +1240,7 @@ function ServicesSettings() {
             />
           </Field>
           <div className="grid gap-4">
-            <Field label="ScreenScraper.fr User ID">
+            <Field label={t("settings.fields.ssUserId.label")}>
               <Input
                 value={config.ssUserId}
                 onChange={(e) => setConfig({ ssUserId: e.target.value })}
@@ -1265,7 +1248,7 @@ function ServicesSettings() {
                 className="font-mono text-sm"
               />
             </Field>
-            <Field label="ScreenScraper.fr Password">
+            <Field label={t("settings.fields.ssPassword.label")}>
               <Input
                 type="password"
                 value={config.ssPassword}
@@ -1279,11 +1262,11 @@ function ServicesSettings() {
       </Section>
 
       <Section
-        title="RetroAchievements"
-        description="Connect your account to track trophies and progress."
+        title={t("settings.sections.retroachievements.title")}
+        description={t("settings.sections.retroachievements.description")}
       >
         <div className="grid sm:grid-cols-2 gap-6">
-          <Field label="Username">
+          <Field label={t("settings.fields.raUsername.label")}>
             <div className="relative">
               <Trophy className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -1294,7 +1277,7 @@ function ServicesSettings() {
               />
             </div>
           </Field>
-          <Field label="Web API Key" hint="Found in your RetroAchievements settings.">
+          <Field label={t("settings.fields.raToken.label")} hint={t("settings.fields.raToken.hint")}>
             <Input
               type="password"
               value={config.raToken}
@@ -1307,8 +1290,8 @@ function ServicesSettings() {
       </Section>
 
       <Section
-        title="Bulk Actions"
-        description="Process multiple ROMs at once. These operations can take several minutes."
+        title={t("settings.sections.bulk.title")}
+        description={t("settings.sections.bulk.description")}
       >
         <div className="p-5 rounded-xl border border-border bg-sidebar/20 space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -1329,7 +1312,7 @@ function ServicesSettings() {
               className="gap-2"
             >
               {scraping ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
-              Scrape All
+              {t("settings.buttons.scrapeAll")}
             </Button>
           </div>
 
@@ -1350,13 +1333,14 @@ function ServicesSettings() {
 
 function KioskSettings() {
   const { config, setConfig } = useIntegration();
+  const { t } = useTranslation();
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
 
   return (
     <div className="space-y-10">
       <Section
-        title="Kiosk Mode"
-        description="Lock the interface to a single collection and require a PIN to exit or enter settings."
+        title={t("settings.sections.kiosk.title")}
+        description={t("settings.sections.kiosk.description")}
       >
         <div className="grid gap-6">
           <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
@@ -1371,7 +1355,7 @@ function KioskSettings() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-6">
-            <Field label="Kiosk Exit PIN" hint="Up to 8 characters.">
+            <Field label={t("settings.fields.kioskPin.label")} hint={t("settings.fields.kioskPin.hint")}>
               <Input
                 value={config.kioskPin}
                 onChange={(e) => setConfig({ kioskPin: e.target.value })}
@@ -1381,16 +1365,16 @@ function KioskSettings() {
               />
             </Field>
 
-            <Field label="Target Collection" hint="The only collection visible in Kiosk Mode.">
+            <Field label={t("settings.fields.kioskCollection.label")} hint={t("settings.fields.kioskCollection.hint")}>
               <Select
                 value={config.kioskCollectionId?.toString() ?? "all"}
                 onValueChange={(v) => setConfig({ kioskCollectionId: v === "all" ? null : parseInt(v, 10) })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="All Games" />
+                  <SelectValue placeholder={t("settings.fields.kioskCollection.placeholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Games</SelectItem>
+                  <SelectItem value="all">{t("settings.fields.kioskCollection.placeholder")}</SelectItem>
                   {collections.map((c) => (
                     <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                   ))}

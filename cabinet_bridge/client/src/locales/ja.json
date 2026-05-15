@@ -9,14 +9,33 @@
   "common": {
     "loading": "読み込み中...",
     "error": "エラー",
-    "save": "保存",
+    "retry": "再試行",
     "cancel": "キャンセル",
-    "close": "閉じる",
-    "search": "検索",
-    "back": "戻る",
-    "next": "次へ",
-    "previous": "前へ",
-    "noData": "データなし"
+    "save": "保存",
+    "copy": "コピー",
+    "reset": "デフォルトに戻す",
+    "justNow": "たった今",
+    "minutesAgo": "{{count}}分前",
+    "hoursAgo": "{{count}}時間前",
+    "daysAgo": "{{count}}日前",
+    "today": "今日",
+    "yesterday": "昨日",
+    "xDaysAgo": "{{count}}日前",
+    "saveStatus": {
+      "saving": "保存中...",
+      "saved": "すべての変更を保存しました",
+      "error": "保存に失敗しました"
+    },
+    "ui": {
+      "details": "詳細",
+      "play": "プレイ",
+      "new": "新規",
+      "reset": "リセット",
+      "multiDisc": "マルチディスク",
+      "you": "あなた",
+      "ready": "準備完了",
+      "active": "アクティブ"
+    }
   },
   "languages": {
     "en": "English",
@@ -28,93 +47,314 @@
     "zh": "中文"
   },
   "home": {
-    "title": "ホーム",
-    "searchPlaceholder": "ゲームを検索...",
-    "allGames": "すべてのゲーム",
-    "recentlyPlayed": "最近プレイ",
-    "favorites": "お気に入り",
-    "noGamesFound": "ゲームが見つかりません",
-    "noGamesMessage": "検索に一致するゲームがありません。",
-    "lastPlayed": "最後にプレイ",
-    "playTime": "プレイ時間",
-    "timesPlayed": "プレイ回数"
+    "search": "検索… (/ を押す)",
+    "sort": {
+      "label": "ゲームを並べ替え",
+      "recent": "最近",
+      "az": "A–Z",
+      "year": "年",
+      "rating": "評価",
+      "plays": "プレイ回数"
+    },
+    "view": {
+      "grid": "グリッド表示に切り替え",
+      "list": "リスト表示に切り替え"
+    },
+    "sections": {
+      "jumpBackIn": "すぐに再開",
+      "browseSystems": "システムから探す",
+      "recentlyPlayed": "最近プレイしたゲーム",
+      "favorites": "お気に入り",
+      "allGames": "すべてのゲーム",
+      "continuePlaying": "プレイを続ける",
+      "newThisWeek": "今週の新着",
+      "collectionGames": "コレクション内のゲーム",
+      "library": "ライブラリ"
+    },
+    "status": {
+      "noMatches": "一致するゲームなし",
+      "noMatchesDetail": "\"{{query}}\" に一致するゲームはありません。",
+      "noFavorites": "お気に入りはまだありません。",
+      "noFavoritesDetail": "ゲームカードのハートをタップしてお気に入りに追加するか、すべてのタイトルをブラウズしてください。",
+      "noGames": "このビューにゲームはありません。",
+      "browseAll": "すべてのゲームをブラウズ",
+      "searchingScope": "全 {{total}} ゲーム中から検索中 — ",
+      "results_one": "{{count}} 件の結果",
+      "results_other": "{{count}} 件の結果",
+      "clear": "クリア"
+    },
+    "actions": {
+      "surprise": "おまかせ — ランダムに選ぶ",
+      "newCollection": "+ 新規コレクション",
+      "save": "保存",
+      "cancel": "キャンセル"
+    },
+    "prompts": {
+      "collectionName": "コレクション名…"
+    }
   },
   "player": {
-    "nowPlaying": "プレイ中",
-    "score": "スコア",
-    "highScore": "ハイスコア",
-    "lives": "残機",
-    "level": "レベル",
-    "time": "時間",
-    "credits": "クレジット",
-    "insertCoin": "コインを入れる",
-    "gameOver": "ゲームオーバー",
-    "paused": "一時停止中",
-    "quit": "終了",
-    "exitGame": "ゲームを終了",
-    "fullscreen": "全画面",
-    "exitFullscreen": "全画面を終了"
+    "library": "ライブラリ",
+    "playingOn": "HomeArcade でプレイ中",
+    "loadingRom": "ROMを読み込み中...",
+    "romUnavailable": "ROMを利用できません",
+    "remapControls": "操作の割り当て",
+    "hideControls": "操作を隠す",
+    "popOut": "ポップアウト",
+    "controls": {
+      "dpad": "方向キー",
+      "ab": "A / B",
+      "startSelect": "スタート / セレクト",
+      "saveLoad": "保存 / 読み込み"
+    }
   },
   "achievements": {
-    "title": "実績",
-    "unlocked": "解除済み",
-    "locked": "未解除",
-    "progress": "進捗",
-    "noAchievements": "実績はまだありません",
-    "noAchievementsMessage": "ゲームをプレイして実績を解除しましょう！",
-    "unlockedOn": "解除日",
-    "points": "ポイント",
-    "total": "合計",
-    "recent": "最近"
+    "title": "RetroAchievements",
+    "trophies": "{{user}} のトロフィー",
+    "dashboard": "実績ダッシュボード",
+    "noAccount": "RetroAchievements アカウントが接続されていません",
+    "stats": {
+      "hardcorePoints": "ハードコアポイント",
+      "softcorePoints": "ソフトコアポイント",
+      "globalRank": "世界ランク",
+      "recentGames": "最近のゲーム"
+    },
+    "recentAchievements": "最近獲得した実績",
+    "noRecentAchievements": "最近の実績は見つかりませんでした。ゲームをプレイしましょう！"
   },
   "history": {
-    "title": "履歴",
-    "noHistory": "履歴はまだありません",
-    "noHistoryMessage": "ゲームの履歴がここに表示されます。",
-    "playedOn": "プレイ日",
-    "duration": "時間",
-    "sessions": "セッション",
-    "totalTime": "合計時間",
-    "lastSession": "最後のセッション",
-    "clearHistory": "履歴を消去",
-    "confirmClear": "履歴を消去してもよいですか？"
+    "title": "プレイ履歴",
+    "exportCsv": "CSVエクスポート",
+    "noSessions": "履歴はまだありません",
+    "startTracking": "ゲームをプレイして履歴の記録を開始しましょう。",
+    "stats": {
+      "totalPlaytime": "合計プレイ時間",
+      "mostPlayed": "最もプレイしたゲーム",
+      "lastSession": "最後のセッション",
+      "totalTime": "合計時間",
+      "sessions": "セッション数",
+      "avgSession": "平均セッション時間",
+      "firstPlayed": "最初のプレイ"
+    },
+    "topGames": "プレイ時間トップのゲーム",
+    "sessionLog": "セッションログ",
+    "allSessions": "すべてのセッション"
   },
   "dashboard": {
-    "title": "ダッシュボード",
-    "totalGames": "ゲーム総数",
-    "totalPlayTime": "総プレイ時間",
-    "mostPlayed": "最もプレイ",
-    "recentActivity": "最近のアクティビティ",
-    "topGames": "トップゲーム",
-    "statistics": "統計",
-    "thisWeek": "今週",
-    "thisMonth": "今月",
-    "allTime": "全期間",
-    "averageSession": "平均セッション",
-    "gamesPlayed": "プレイしたゲーム",
-    "achievementsUnlocked": "解除した実績"
+    "stats": {
+      "hoursPlayed": "プレイ時間（時間）",
+      "completed": "完了",
+      "backlog": "積みゲー",
+      "thisWeek": "今週",
+      "gamesInLibrary_one": "ライブラリに {{count}} 個のゲーム",
+      "gamesInLibrary_other": "ライブラリに {{count}} 個のゲーム",
+      "completionRate": "完了率 {{count}}%",
+      "backlogClear": "バックログを解消しました！",
+      "backlogGames": "{{count}} 個のゲームが待機中",
+      "sameAsLastWeek": "先週と同じ",
+      "vsLastWeek": "先週比 {{count}}"
+    },
+    "sections": {
+      "overview": "概要",
+      "libraryBreakdown": "ライブラリ内訳",
+      "highlights": "ハイライト",
+      "inProgress": "プレイ中",
+      "recentlyPlayed": "最近プレイ",
+      "newThisWeek": "今週の新着",
+      "recentActivity": "最近のアクティビティ",
+      "browseSystems": "システムから探す",
+      "continuePlaying": "プレイを続ける"
+    },
+    "liveNow": "ライブ — 現在プレイ中",
+    "highlights": {
+      "mostPlayed": "最もプレイ",
+      "highestRated": "最高評価",
+      "communityFav": "コミュニティのお気に入り"
+    },
+    "status": {
+      "playing": "プレイ中",
+      "completed": "完了",
+      "backlog": "バックログ",
+      "dropped": "中断",
+      "untracked": "未追跡"
+    },
+    "activity": {
+      "lastWeek": "先週",
+      "thisWeek": "今週",
+      "trend": "プレイしたゲーム — 今週 vs 先週",
+      "more_one": "↑ 先週より {{count}} 個多い",
+      "more_other": "↑ 先週より {{count}} 個多い",
+      "fewer": "↓ 先週より {{count}} 個少ない",
+      "same": "先週と同じ"
+    },
+    "charts": {
+      "playTimeBySystem": "システム別プレイ時間"
+    }
   },
   "settings": {
     "title": "設定",
-    "display": "表示",
-    "audio": "オーディオ",
-    "controls": "コントロール",
-    "system": "システム",
-    "language": "言語",
-    "selectLanguage": "言語を選択",
-    "theme": "テーマ",
-    "crtEffect": "CRTエフェクト",
-    "dynamicTheming": "ダイナミックテーマ",
-    "scanlines": "スキャンライン",
-    "volume": "音量",
-    "musicVolume": "音楽の音量",
-    "sfxVolume": "効果音の音量",
-    "mute": "ミュート",
-    "brightness": "明るさ",
-    "contrast": "コントラスト",
-    "saveSettings": "設定を保存",
-    "resetDefaults": "デフォルトに戻す",
-    "about": "について",
-    "version": "バージョン"
+    "header": "統合設定",
+    "autoSaved": "設定はローカルデータベースに自動的に保存されます。",
+    "tabs": {
+      "connection": "接続",
+      "display": "表示",
+      "automation": "自動化",
+      "controls": "コントロール",
+      "library": "ライブラリ",
+      "services": "サービス",
+      "kiosk": "キオスク",
+      "help": "ヘルプ"
+    },
+    "sections": {
+      "connection": {
+        "title": "Home Assistant 接続",
+        "description": "Cabinet Bridge が Home Assistant インスタンスと通信する方法を設定します。アドオンとして実行している場合は、内部 URL を使用してください。"
+      },
+      "display": {
+        "title": "グローバル設定",
+        "description": "上書きされない限り、すべてのゲームに適用されるデフォルト設定です。"
+      },
+      "overrides": {
+        "title": "システムごとの上書き",
+        "description": "特定のコンソールの表示設定をカスタマイズします。これらはゲームの起動時に適用されます。"
+      },
+      "automation": {
+        "title": "PC ステータス監視",
+        "description": "Home Assistant エンティティをダッシュボードの CPU、RAM、およびオンラインステータスのメーターにリンクします。"
+      },
+      "endpoints": {
+        "title": "Webhook エンドポイント",
+        "description": "Home Assistant の自動化用に自動生成された URL です。これらをコピーして Webhook トリガーとして使用します。"
+      },
+      "input": {
+        "title": "入力設定",
+        "description": "コントローラーとキーボードのグローバルな動作を設定します。"
+      },
+      "controllers": {
+        "title": "接続されているコントローラー",
+        "description": "このデバイスに接続されているゲームパッドを検出してテストします。ボタンを押して点灯を確認してください。"
+      },
+      "shortcuts": {
+        "title": "キーボードショートカット",
+        "description": "マウスを使わずにインターフェースを操作するためのグローバルホットキーです。"
+      },
+      "mapping": {
+        "title": "UI ナビゲーションマッピング",
+        "description": "HomeArcade インターフェースの操作に使用するボタンを再割り当てします。"
+      },
+      "smartFilters": {
+        "title": "スマートフィルターコレクション",
+        "description": "システム、プレイステータス、評価、またはプレイ時間に基づいて自動的に生成されるコレクションです。ライブラリが変更されるたびに更新されます。"
+      },
+      "scanner": {
+        "title": "ROM スキャナー",
+        "enabledDescription": "監視対象フォルダーで見つかった新しい ROM ファイルを 60 秒ごとに自動的にインポートします。",
+        "disabledDescription": "監視フォルダーにドロップされた ROM を自動インポートします。有効にするには、HA アドオン環境で CABINET_ROM_WATCH_DIR を設定してください。"
+      },
+      "scrapers": {
+        "title": "スクレイパーサービス",
+        "description": "オンラインのメタデータおよびアートワークプロバイダーの認証情報を入力してください。"
+      },
+      "retroachievements": {
+        "title": "RetroAchievements",
+        "description": "アカウントを接続して、トロフィーと進捗を追跡します。"
+      },
+      "bulk": {
+        "title": "一括操作",
+        "description": "複数の ROM を一度に処理します。これらの操作には数分かかる場合があります。"
+      },
+      "kiosk": {
+        "title": "キオスクモード",
+        "description": "インターフェースを単一のコレクションにロックし、終了や設定へのアクセスに PIN を要求するようにします。"
+      },
+      "help": {
+        "title": "配線ガイド",
+        "description": "Home Assistant を使用して、Cabinet Bridge を物理ハードウェアに接続するための手順に従ってください。"
+      }
+    },
+    "fields": {
+      "haBaseUrl": {
+        "label": "ベース URL",
+        "hint": "ポートを含む外部または内部 URL (例: http://192.168.1.50:8123)"
+      },
+      "haToken": {
+        "label": "長期アクセストークン",
+        "hint": "特定の操作に必要ですが、単純な Webhook では不要な場合が多いです。"
+      },
+      "liveMode": {
+        "label": "ライブモード",
+        "hint": "有効にすると、Home Assistant に対して実際のネットワークリクエストが送信されます。",
+        "active": "アクティブ",
+        "simulation": "シミュレーション",
+        "notice": "Cabinet はシミュレーションモードです。クリックはアクティビティパネルに記録されますが、Webhook は送信されません。ハードウェアを動作させずに UI をテストするのに適しています。"
+      },
+      "pcHostname": {
+        "label": "PC ホスト名",
+        "hint": "右パネルの上部に表示されます。"
+      },
+      "pcOnline": {
+        "label": "オンラインエンティティ ID",
+        "hint": "PC が起動しているかどうかを示す binary_sensor。"
+      },
+      "pcCpu": {
+        "label": "CPU エンティティ ID",
+        "hint": "パーセント値を提供するセンサー。"
+      },
+      "pcRam": {
+        "label": "RAM エンティティ ID",
+        "hint": "パーセント値を提供するセンサー。"
+      },
+      "pcApp": {
+        "label": "現在のアプリエンティティ ID",
+        "hint": "最前面のウィンドウを示すセンサー。"
+      },
+      "language": {
+        "label": "言語",
+        "hint": "優先する表示言語を選択してください。"
+      },
+      "systemLabels": {
+        "label": "システムラベル",
+        "hint": "ゲームカードにコンソール名を表示または非表示にします。",
+        "show": "ラベルを表示"
+      },
+      "uiTheme": {
+        "label": "UI テーマ",
+        "hint": "インターフェースのビジュアルスタイルを選択してください。"
+      },
+      "aspectRatio": {
+        "label": "デフォルトのアスペクト比",
+        "hint": "システムごとの上書きが設定されていない場合に使用されます。",
+        "placeholder": "自動"
+      },
+      "shader": {
+        "label": "デフォルトのシェーダー",
+        "hint": "エミュレーターのグローバルなビジュアルフィルター。",
+        "placeholder": "なし"
+      },
+      "rumble": {
+        "label": "ゲームパッドのハプティクス",
+        "hint": "ゲーム中の振動/ランブルを有効にします（サポートされている場合）。"
+      },
+      "kioskPin": {
+        "label": "キオスク終了 PIN",
+        "hint": "最大 8 文字。"
+      },
+      "kioskCollection": {
+        "label": "ターゲットコレクション",
+        "hint": "キオスクモードで表示される唯一のコレクション。",
+        "placeholder": "すべてのゲーム"
+      }
+    },
+    "buttons": {
+      "test": "テスト",
+      "copy": "コピー",
+      "resetDefaults": "デフォルトに戻す",
+      "scanNow": "今すぐスキャン",
+      "create": "作成",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "remap": "再割り当て",
+      "scrapeAll": "すべてスクレイプ"
+    }
   }
 }

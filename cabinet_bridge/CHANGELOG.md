@@ -1,3 +1,14 @@
+## 1.1.14 – 2026-05-15
+
+- **Major**: **Full Localization Support** — Replaced all hardcoded English strings with dynamic translation keys across the entire application.
+- **Improved**: **Multi-language Synchronization** — All 7 supported languages (EN, ES, FR, DE, PT, JA, ZH) are now 100% synchronized and up-to-date.
+- **Improved**: **Settings UI** — Every label and hint in the Settings page is now fully translatable.
+- **Improved**: **Dashboard & Home** — Localized all stats, headers, and UI elements.
+
+## 1.1.13 – 2026-05-15
+
+- **Improved**: **Performance** — Applied priority rendering flags to game cards in the Dashboard shelves and Home page "Jump Back In" sections for faster above-the-fold loading.
+
 ## 1.1.12 – 2026-05-15
 
 - **Improved**: **Performance** — Implemented Intersection Observer for library game cards to reduce memory/CPU load.

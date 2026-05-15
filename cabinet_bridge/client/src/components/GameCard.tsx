@@ -5,16 +5,19 @@ import { formatRelative } from "@/lib/integration";
 import { Heart, Info, Star, Clock } from "lucide-react";
 import { queryClient, apiUrl } from "@/lib/queryClient";
 import { useIntegration } from "@/lib/integration";
+import { useTranslation } from "react-i18next";
 
 // ── Play-status badge ─────────────────────────────────────────────────────────
-const STATUS_META: Record<string, { label: string; color: string }> = {
-  playing:   { label: "Playing",   color: "bg-amber-400" },
-  beaten:    { label: "Beaten",    color: "bg-green-500" },
-  completed: { label: "Completed", color: "bg-violet-500" },
-};
-
 function PlayStatusDot({ status }: { status?: string | null }) {
+  const { t } = useTranslation();
   if (!status || status === "unset") return null;
+  
+  const STATUS_META: Record<string, { label: string; color: string }> = {
+    playing:   { label: t("dashboard.status.playing"),   color: "bg-amber-400" },
+    beaten:    { label: t("dashboard.status.beaten"),    color: "bg-green-500" },
+    completed: { label: t("dashboard.status.completed"), color: "bg-violet-500" },
+  };
+
   const meta = STATUS_META[status];
   if (!meta) return null;
   return (
@@ -45,6 +48,7 @@ export const GameCard = memo(function GameCard({
   priority?: boolean;
 }) {
   const { config } = useIntegration();
+  const { t } = useTranslation();
   const system = SYSTEMS.find((s) => s.id === game.system);
   const videoRef = useRef<HTMLVideoElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -167,7 +171,7 @@ export const GameCard = memo(function GameCard({
             )}
             {game.isMultiDisc && (
               <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold uppercase tracking-wider bg-black/60 text-white border border-white/20 backdrop-blur-sm">
-                Multi-Disc
+                {t("common.ui.multiDisc")}
               </div>
             )}
             {showVideo && (
@@ -184,7 +188,7 @@ export const GameCard = memo(function GameCard({
           {/* ── "New" badge ── */}
           {isNew && (
             <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider bg-primary-container/80 text-[hsl(var(--on-primary-container))] pointer-events-none backdrop-blur-sm">
-              New
+              {t("common.ui.new")}
             </div>
           )}
 
@@ -224,7 +228,7 @@ export const GameCard = memo(function GameCard({
               <span />
             )}
             <span className="self-center flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-[hsl(var(--on-primary-container))] font-mono text-xs font-bold uppercase tracking-wider">
-              <Info className="size-3.5" /> Details
+              <Info className="size-3.5" /> {t("common.ui.details")}
             </span>
           </button>
 

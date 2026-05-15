@@ -8,6 +8,7 @@ import type { UploadedRom } from "@shared/schema";
 import { Clock, Gamepad2, TrendingUp, Calendar, ArrowLeft, BarChart2, ChevronLeft, Download } from "lucide-react";
 import { apiUrl } from "@/lib/queryClient";
 import { useIntegration } from "@/lib/integration";
+import { useTranslation } from "react-i18next";
 
 interface PlaySession {
   id: number;
@@ -29,14 +30,14 @@ function fmtDuration(sec: number | null) {
   return `${s}s`;
 }
 
-function fmtDate(ts: number) {
+function fmtDate(ts: number, t: any) {
   const d = new Date(ts);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays === 0) return t("common.today");
+  if (diffDays === 1) return t("common.yesterday");
+  if (diffDays < 7) return t("common.xDaysAgo", { count: diffDays });
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: diffDays > 300 ? "numeric" : undefined });
 }
 
@@ -55,6 +56,8 @@ function systemColor(systemId: string) {
 }
 
 export default function History() {
+  const { t } = useTranslation();
+  const { config } = useIntegration();
   const { data: sessions = [], isLoading } = useQuery<PlaySession[]>({
     queryKey: ["/api/sessions"],
   });
@@ -92,13 +95,13 @@ export default function History() {
   const grouped = useMemo(() => {
     const groups = new Map<string, PlaySession[]>();
     for (const s of [...sessions].sort((a, b) => b.startedAt - a.startedAt)) {
-      const label = fmtDate(s.startedAt);
+      const label = fmtDate(s.startedAt, t);
       const arr = groups.get(label) ?? [];
       arr.push(s);
       groups.set(label, arr);
     }
     return Array.from(groups.entries());
-  }, [sessions]);
+  }, [sessions, t]);
 
   const systemLabel = (id: string) => SYSTEMS.find((s) => s.id === id)?.name ?? id;
 
@@ -165,9 +168,9 @@ export default function History() {
               <ArrowLeft className="size-4" />
             </Link>
             <div className="flex-1">
-              <h1 className="font-display text-2xl font-bold text-foreground">Play History</h1>
+              <h1 className="font-display text-2xl font-bold text-foreground">{t("history.title")}</h1>
               <p className="text-sm text-muted-foreground font-mono">
-                {sessions.length} session{sessions.length !== 1 ? "s" : ""} tracked
+                {t("history.sessionsCount", { count: sessions.length })}
               </p>
             </div>
             {sessions.length > 0 && (
@@ -175,9 +178,9 @@ export default function History() {
                 type="button"
                 onClick={exportCsv}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                title="Export play history as CSV"
+                title={t("history.exportCsv")}
               >
-                <Download className="size-3.5" /> Export CSV
+                <Download className="size-3.5" /> {t("history.exportCsv")}
               </button>
             )}
           </div>
@@ -191,7 +194,7 @@ export default function History() {
                 onClick={() => setSelectedGameKey(null)}
                 className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
               >
-                <ChevronLeft className="size-3.5" /> All Games
+                <ChevronLeft className="size-3.5" /> {t("history.allGames")}
               </button>
 
               {/* Game header */}
@@ -222,10 +225,10 @@ export default function History() {
                 {/* Stats grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                { label: "Total Time", icon: <Clock className="size-3" />, value: fmtDuration(selectedGameInfo.totalSec), color: "text-primary" },
-                { label: "Sessions", icon: <BarChart2 className="size-3" />, value: String(selectedGameInfo.sessionCount), color: "text-blue-400" },
-                { label: "Avg Session", icon: <TrendingUp className="size-3" />, value: fmtDuration(selectedGameInfo.avgSec), color: "text-yellow-400" },
-                { label: "First Played", icon: <Calendar className="size-3" />, value: fmtDate(selectedGameInfo.firstPlayed), color: "text-green-400" },
+                { label: t("history.stats.totalTime"), icon: <Clock className="size-3" />, value: fmtDuration(selectedGameInfo.totalSec), color: "text-primary" },
+                { label: t("history.stats.sessions"), icon: <BarChart2 className="size-3" />, value: String(selectedGameInfo.sessionCount), color: "text-blue-400" },
+                { label: t("history.stats.avgSession"), icon: <TrendingUp className="size-3" />, value: fmtDuration(selectedGameInfo.avgSec), color: "text-yellow-400" },
+                { label: t("history.stats.firstPlayed"), icon: <Calendar className="size-3" />, value: fmtDate(selectedGameInfo.firstPlayed, t), color: "text-green-400" },
                 ].map((stat) => (
                 <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5">
                 <div className={`flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] ${stat.color}`}>
@@ -238,7 +241,7 @@ export default function History() {
 
                 {/* Session list */}
                 <div className="space-y-2">
-                <h3 className="font-display text-sm font-semibold text-foreground">All Sessions</h3>
+                <h3 className="font-display text-sm font-semibold text-foreground">{t("history.allSessions")}</h3>
                 {gameSessions.map((s, i) => (
                 <div key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-card/60 px-4 py-3">
                 <div className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right shrink-0">
@@ -249,7 +252,7 @@ export default function History() {
                 style={{ backgroundColor: systemColor(s.romSystem) }}
                 />
                 <div className="flex-1 min-w-0">
-                <div className="font-mono text-[10px] text-muted-foreground">{fmtDate(s.startedAt)}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">{fmtDate(s.startedAt, t)}</div>
                 <div className="font-mono text-[9px] text-muted-foreground/50">{fmtTime(s.startedAt)}</div>
                 </div>
                 <div className="font-mono text-sm font-semibold text-foreground shrink-0">
@@ -268,8 +271,8 @@ export default function History() {
                 ) : !selectedGameKey && sessions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
                 <Gamepad2 className="size-10 opacity-30" />
-                <p className="font-mono text-sm uppercase tracking-wider">No sessions yet</p>
-                <p className="text-sm">Play a game to start tracking your history.</p>
+                <p className="font-mono text-sm uppercase tracking-wider">{t("history.noSessions")}</p>
+                <p className="text-sm">{t("history.startTracking")}</p>
                 </div>
                 ) : !selectedGameKey ? (
                 <>
@@ -277,14 +280,14 @@ export default function History() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
-                <Clock className="size-3" /> Total Playtime
+                <Clock className="size-3" /> {t("history.stats.totalPlaytime")}
                 </div>
                 <div className="font-display text-2xl font-bold">{fmtDuration(totalSeconds)}</div>
-                <div className="font-mono text-[10px] text-muted-foreground">{sessions.length} sessions</div>
+                <div className="font-mono text-[10px] text-muted-foreground">{t("history.sessionsCount", { count: sessions.length })}</div>
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-yellow-400">
-                <TrendingUp className="size-3" /> Most Played
+                <TrendingUp className="size-3" /> {t("history.stats.mostPlayed")}
                 </div>
                 <div className="font-display text-lg font-bold leading-tight line-clamp-1">
                 {topGames[0]?.title ?? "—"}
@@ -295,13 +298,13 @@ export default function History() {
                 </div>
                 <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5 col-span-2 md:col-span-1">
                 <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-green-400">
-                <Calendar className="size-3" /> Last Session
+                <Calendar className="size-3" /> {t("history.stats.lastSession")}
                 </div>
                 <div className="font-display text-lg font-bold leading-tight line-clamp-1">
                 {sessions[0]?.romTitle ?? "—"}
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground">
-                {sessions[0] ? fmtDate(sessions[0].startedAt) : ""}
+                {sessions[0] ? fmtDate(sessions[0].startedAt, t) : ""}
                 </div>
                 </div>
                 </div>
@@ -309,7 +312,7 @@ export default function History() {
                 {/* Top games bar chart */}
                 {topGames.length > 0 && (
                 <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="font-display text-sm font-semibold text-foreground mb-4">Top Games by Playtime</h2>
+                <h2 className="font-display text-sm font-semibold text-foreground mb-4">{t("history.topGames")}</h2>
                 <div className="space-y-3">
                 {topGames.map((g) => (
                 <div key={`${g.system}:${g.title}`} className="space-y-1 cursor-pointer group" onClick={() => setSelectedGameKey(`${g.system}:${g.title}`)}>
@@ -327,7 +330,7 @@ export default function History() {
                     />
                   </div>
                   <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                    {config.showSystemLabels && `${systemLabel(g.system)} · `}{g.sessions} session{g.sessions !== 1 ? "s" : ""}
+                    {config.showSystemLabels && `${systemLabel(g.system)} · `}{t("history.stats.sessionsCount", { count: g.sessions })}
                   </div>
                 </div>
                 ))}
@@ -337,7 +340,7 @@ export default function History() {
 
                 {/* Session log grouped by day */}
                 <div className="space-y-6">
-                <h2 className="font-display text-sm font-semibold text-foreground">Session Log</h2>
+                <h2 className="font-display text-sm font-semibold text-foreground">{t("history.sessionLog")}</h2>
                 {grouped.map(([dateLabel, daySessions]) => (
                 <div key={dateLabel} className="space-y-2">
                 <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border-b border-border pb-1.5">

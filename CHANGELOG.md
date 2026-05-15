@@ -4,6 +4,25 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.1.14] — 2026-05-15
+
+### Major: Full Localization Support
+
+- **I18n Architecture** — Fully internationalized the application by replacing all hardcoded English strings with dynamic translation keys.
+- **Settings Overhaul** — Localized the entire Settings page, including all tabs, field labels, and hint text.
+- **Dashboard & Home** — Localized all stats cards, section headers, search placeholders, and sort options.
+- **Multi-language Support** — Synchronized translations across all 7 supported languages (English, Spanish, French, German, Portuguese, Japanese, Simplified Chinese).
+
+---
+
+## [1.1.13] — 2026-05-15
+
+### Polish: Priority Rendering
+
+- **Above-the-fold Optimization** — Applied the `priority` flag to game cards in the Dashboard shelves (In Progress, Recently Played) and the Home page "Jump Back In" section. These items now bypass lazy-loading and use high-priority fetching to ensure the top of the app is always instantly interactive.
+
+---
+
 ## [1.1.12] — 2026-05-15
 
 ### Feature: Performance & Mobile Optimization

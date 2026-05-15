@@ -20,7 +20,22 @@
     "daysAgo": "{{count}}d ago",
     "today": "Today",
     "yesterday": "Yesterday",
-    "xDaysAgo": "{{count}} days ago"
+    "xDaysAgo": "{{count}} days ago",
+    "saveStatus": {
+      "saving": "Saving...",
+      "saved": "All changes saved",
+      "error": "Save failed"
+    },
+    "ui": {
+      "details": "Details",
+      "play": "Play",
+      "new": "New",
+      "reset": "Reset",
+      "multiDisc": "Multi-Disc",
+      "you": "you",
+      "ready": "Ready",
+      "active": "Active"
+    }
   },
   "languages": {
     "en": "English",
@@ -34,11 +49,16 @@
   "home": {
     "search": "Search… (press /)",
     "sort": {
+      "label": "Sort games",
       "recent": "Recent",
       "az": "A–Z",
       "year": "Year",
       "rating": "Rating",
       "plays": "Plays"
+    },
+    "view": {
+      "grid": "Switch to grid view",
+      "list": "Switch to list view"
     },
     "sections": {
       "jumpBackIn": "Jump Back In",
@@ -46,10 +66,32 @@
       "recentlyPlayed": "Recently Played",
       "favorites": "Your Favorites",
       "allGames": "All Games",
-      "continuePlaying": "Continue Playing"
+      "continuePlaying": "Continue Playing",
+      "newThisWeek": "New This Week",
+      "collectionGames": "Collection Games",
+      "library": "Library"
     },
-    "play": "Play",
-    "details": "Details"
+    "status": {
+      "noMatches": "No matches",
+      "noMatchesDetail": "No games match \"{{query}}\".",
+      "noFavorites": "You have no favorites yet.",
+      "noFavoritesDetail": "Add favorites by tapping the heart on any game card, or browse all titles.",
+      "noGames": "No games in this view.",
+      "browseAll": "Browse all games",
+      "searchingScope": "Searching all {{total}} games — ",
+      "results_one": "{{count}} result",
+      "results_other": "{{count}} results",
+      "clear": "Clear"
+    },
+    "actions": {
+      "surprise": "Surprise me — pick a random game",
+      "newCollection": "+ New collection",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "prompts": {
+      "collectionName": "Collection name…"
+    }
   },
   "player": {
     "library": "Library",
@@ -103,7 +145,14 @@
       "hoursPlayed": "Hours played",
       "completed": "Completed",
       "backlog": "Backlog",
-      "thisWeek": "This week"
+      "thisWeek": "This week",
+      "gamesInLibrary_one": "{{count}} game in library",
+      "gamesInLibrary_other": "{{count}} games in library",
+      "completionRate": "{{count}}% completion rate",
+      "backlogClear": "backlog is clear!",
+      "backlogGames": "{{count}} games waiting to play",
+      "sameAsLastWeek": "same as last week",
+      "vsLastWeek": "{{count}} vs last week"
     },
     "sections": {
       "overview": "Overview",
@@ -131,24 +180,170 @@
     },
     "activity": {
       "lastWeek": "Last week",
-      "thisWeek": "This week"
+      "thisWeek": "This week",
+      "trend": "Games played — this week vs last",
+      "more_one": "↑ {{count}} more game than last week",
+      "more_other": "↑ {{count}} more games than last week",
+      "fewer": "↓ {{count}} fewer than last week",
+      "same": "Same as last week"
+    },
+    "charts": {
+      "playTimeBySystem": "Play time by system"
     }
   },
   "settings": {
-    "language": "Language",
+    "title": "Settings",
+    "header": "Integration",
+    "autoSaved": "Settings are saved automatically to the local database.",
     "tabs": {
       "connection": "Connection",
       "display": "Display",
       "automation": "Automation",
       "controls": "Controls",
       "library": "Library",
+      "services": "Services",
+      "kiosk": "Kiosk",
       "help": "Help"
     },
-    "display": {
-      "theme": "Theme",
-      "crtEffect": "CRT Effect",
-      "adaptiveBackground": "Adaptive Background",
-      "dynamicTheming": "Dynamic Theming"
+    "sections": {
+      "connection": {
+        "title": "Home Assistant Connection",
+        "description": "Configure how Cabinet Bridge talks to your Home Assistant instance. Use the internal URL if this is running as an add-on."
+      },
+      "display": {
+        "title": "Global Preferences",
+        "description": "Default settings that apply to all games unless overridden."
+      },
+      "overrides": {
+        "title": "Per-System Overrides",
+        "description": "Customize display settings for specific consoles. These apply when launching a game."
+      },
+      "automation": {
+        "title": "PC Status Monitoring",
+        "description": "Link Home Assistant entities to the dashboard meters for CPU, RAM, and Online status."
+      },
+      "endpoints": {
+        "title": "Webhook Endpoints",
+        "description": "URLs automatically generated for your Home Assistant automations. Copy these to use as Webhook triggers."
+      },
+      "input": {
+        "title": "Input Preferences",
+        "description": "Configure global behavior for controllers and keyboards."
+      },
+      "controllers": {
+        "title": "Connected Controllers",
+        "description": "Detect and test gamepads connected to this device. Press buttons to see them light up."
+      },
+      "shortcuts": {
+        "title": "Keyboard Shortcuts",
+        "description": "Global hotkeys for navigating the interface without a mouse."
+      },
+      "mapping": {
+        "title": "UI Navigation Mapping",
+        "description": "Remap the buttons used for navigating the HomeArcade interface."
+      },
+      "smartFilters": {
+        "title": "Smart filter collections",
+        "description": "Collections that auto-populate based on rules — system, play status, rating, or playtime. They update whenever your library changes."
+      },
+      "scanner": {
+        "title": "ROM scanner",
+        "enabledDescription": "Auto-imports new ROM files found in the watched folder every 60 seconds.",
+        "disabledDescription": "Auto-import ROMs dropped into a watched folder. Set CABINET_ROM_WATCH_DIR in your HA add-on environment to enable."
+      },
+      "scrapers": {
+        "title": "Scraper Services",
+        "description": "Enter your credentials for online metadata and artwork providers."
+      },
+      "retroachievements": {
+        "title": "RetroAchievements",
+        "description": "Connect your account to track trophies and progress."
+      },
+      "bulk": {
+        "title": "Bulk Actions",
+        "description": "Process multiple ROMs at once. These operations can take several minutes."
+      },
+      "kiosk": {
+        "title": "Kiosk Mode",
+        "description": "Lock the interface to a single collection and require a PIN to exit or enter settings."
+      },
+      "help": {
+        "title": "Wiring Guide",
+        "description": "Follow these steps to connect Cabinet Bridge to your physical hardware using Home Assistant."
+      }
+    },
+    "fields": {
+      "haBaseUrl": {
+        "label": "Base URL",
+        "hint": "External or internal URL including port (e.g. http://192.168.1.50:8123)"
+      },
+      "haToken": {
+        "label": "Long-lived Access Token",
+        "hint": "Required for certain actions, but often not needed for simple webhooks."
+      },
+      "liveMode": {
+        "label": "Live Mode",
+        "hint": "When enabled, actions will fire real network requests to Home Assistant.",
+        "active": "Active",
+        "simulation": "Simulation",
+        "notice": "Cabinet is in Simulation Mode. Clicks will be logged in the activity panel but no webhooks will be fired. This is great for testing the UI without triggering hardware actions."
+      },
+      "pcHostname": {
+        "label": "PC Hostname",
+        "hint": "Shown at the top of the right panel."
+      },
+      "pcOnline": {
+        "label": "Online Entity ID",
+        "hint": "binary_sensor showing if PC is up."
+      },
+      "pcCpu": {
+        "label": "CPU Entity ID",
+        "hint": "sensor providing percentage value."
+      },
+      "pcRam": {
+        "label": "RAM Entity ID",
+        "hint": "sensor providing percentage value."
+      },
+      "pcApp": {
+        "label": "Current App Entity ID",
+        "hint": "sensor showing foreground window."
+      },
+      "language": {
+        "label": "Language",
+        "hint": "Choose your preferred display language."
+      },
+      "systemLabels": {
+        "label": "System Labels",
+        "hint": "Show or hide console names on game cards.",
+        "show": "Show Labels"
+      },
+      "uiTheme": {
+        "label": "UI Theme",
+        "hint": "Choose a visual style for the interface."
+      },
+      "aspectRatio": {
+        "label": "Default Aspect Ratio",
+        "hint": "Used if no system-specific override is set.",
+        "placeholder": "Auto"
+      },
+      "shader": {
+        "label": "Default Shader",
+        "hint": "Global visual filter for the emulator.",
+        "placeholder": "None"
+      },
+      "rumble": {
+        "label": "Gamepad Haptics",
+        "hint": "Enable vibration/rumble during gameplay (if supported)."
+      },
+      "kioskPin": {
+        "label": "Kiosk Exit PIN",
+        "hint": "Up to 8 characters."
+      },
+      "kioskCollection": {
+        "label": "Target Collection",
+        "hint": "The only collection visible in Kiosk Mode.",
+        "placeholder": "All Games"
+      }
     },
     "buttons": {
       "test": "Test",
@@ -157,7 +352,9 @@
       "scanNow": "Scan now",
       "create": "Create",
       "cancel": "Cancel",
-      "save": "Save"
+      "save": "Save",
+      "remap": "Remap",
+      "scrapeAll": "Scrape All"
     }
   }
 }

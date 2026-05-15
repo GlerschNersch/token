@@ -30,18 +30,12 @@ import type { GameCollectionWithItems, UploadedRom, ProfileGameState } from "@sh
 import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { useGridNav } from "@/lib/useGridNav";
 import { formatRelative } from "@/lib/integration";
+import { useTranslation } from "react-i18next";
 
 type Sort = "title" | "year" | "recent" | "rating" | "plays";
 
-const SORT_OPTIONS: { id: Sort; label: string }[] = [
-  { id: "recent", label: "Recent" },
-  { id: "title", label: "A–Z" },
-  { id: "year", label: "Year" },
-  { id: "rating", label: "Rating" },
-  { id: "plays", label: "Plays" },
-];
-
 export default function Home({ filter }: { filter: Filter }) {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const goToFilter = (next: Filter) => navigate(filterToPath(next));
 
@@ -58,7 +52,7 @@ export default function Home({ filter }: { filter: Filter }) {
   const persistGenre = (g: string) => { setGenreFilter(g); try { localStorage.setItem("ha-genre", g); } catch {} };
   const [newCollectionName, setNewCollectionName] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const { currentProfileId, setCurrentProfileId } = useProfile();
+  const { currentProfileId } = useProfile();
 
   // "/" or Cmd+K focuses search
   useEffect(() => {
@@ -91,7 +85,6 @@ export default function Home({ filter }: { filter: Filter }) {
     enabled: currentProfileId > 0,
   });
 
-  // Build a quick lookup: romId -> profile override
   const profileStateMap = useMemo(() => {
     const m = new Map<number, ProfileGameState>();
     for (const s of profileGameStates) m.set(s.romId, s);
@@ -125,7 +118,6 @@ export default function Home({ filter }: { filter: Filter }) {
   const favoriteUploadedRom = useMutation({
     mutationFn: async ({ game, favorite }: { game: Game; favorite: boolean }) => {
       if (!game.romId) return null;
-      // Write to profile-specific state if not default profile
       if (currentProfileId !== 1) {
         await apiRequest("PATCH", `/api/profiles/${currentProfileId}/game-states/${game.romId}`, { favorite });
       } else {
@@ -211,7 +203,6 @@ export default function Home({ filter }: { filter: Filter }) {
         };
       });
 
-      // Group multi-disc games
       const groups: Record<string, Game[]> = {};
       const singletons: Game[] = [];
       for (const g of allGames) {
@@ -253,7 +244,6 @@ export default function Home({ filter }: { filter: Filter }) {
   const filtered = useMemo(() => {
     let list = games;
 
-    // Apply primary filter (System, Collection, Favorites, Recent)
     if (typeof effectiveFilter === "string" && effectiveFilter.startsWith("collection:")) {
       const collectionId = Number(effectiveFilter.replace("collection:", ""));
       const collection = collections.find((item) => item.id === collectionId);
@@ -264,13 +254,11 @@ export default function Home({ filter }: { filter: Filter }) {
     } else if (effectiveFilter === "recent") {
       list = list.filter((g) => g.lastPlayed && g.lastPlayed > 0);
     } else if (effectiveFilter !== "all") {
-      // Robust system matching (supports ID and Slug)
       const sys = SYSTEMS.find(s => s.id === effectiveFilter || s.slug === effectiveFilter);
       const targetId = sys?.id || effectiveFilter;
       list = list.filter((g) => g.system === targetId || g.system === effectiveFilter);
     }
 
-    // Fuzzy search (breaks out of filter to search across entire library)
     if (query.trim()) {
       const fuse = new Fuse(games, {
         keys: ["title", "genre", "system", "developer", "publisher"],
@@ -280,12 +268,10 @@ export default function Home({ filter }: { filter: Filter }) {
       list = fuse.search(query.trim()).map((r) => r.item);
     }
 
-    // Secondary filters (Genre)
     if (genreFilter) {
       list = list.filter((g) => g.genre === genreFilter);
     }
 
-    // Sorting
     const sorted = [...list].sort((a, b) => {
       switch (sort) {
         case "title":
@@ -302,7 +288,6 @@ export default function Home({ filter }: { filter: Filter }) {
       }
     });
 
-    console.info(`[Library] Filter: ${effectiveFilter}, Total: ${games.length}, Match: ${sorted.length}`);
     return sorted;
   }, [collections, games, effectiveFilter, query, sort, genreFilter]);
 
@@ -362,13 +347,13 @@ export default function Home({ filter }: { filter: Filter }) {
   const heading = useMemo(() => {
     if (typeof filter === "string" && filter.startsWith("collection:")) {
       const collectionId = Number(filter.replace("collection:", ""));
-      return collections.find((collection) => collection.id === collectionId)?.name ?? "Collection";
+      return collections.find((collection) => collection.id === collectionId)?.name ?? t("home.sections.collectionGames");
     }
-    if (filter === "favorites") return "Favorites";
-    if (filter === "recent") return "Recently Played";
-    if (filter === "all") return "All Games";
-    return SYSTEMS.find((s) => s.id === filter)?.name ?? "Games";
-  }, [collections, filter]);
+    if (filter === "favorites") return t("home.sections.favorites");
+    if (filter === "recent") return t("home.sections.recentlyPlayed");
+    if (filter === "all") return t("home.sections.allGames");
+    return SYSTEMS.find((s) => s.id === filter)?.name ?? t("home.sections.library");
+  }, [collections, filter, t]);
 
   const showHero = filter === "favorites" && !query;
 
@@ -437,7 +422,7 @@ export default function Home({ filter }: { filter: Filter }) {
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
             <div>
               <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Library
+                {t("home.sections.library")}
               </div>
               <h1
                 className="font-display text-xl sm:text-2xl font-bold leading-tight mt-1"
@@ -455,7 +440,7 @@ export default function Home({ filter }: { filter: Filter }) {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search… (press /)"
+                  placeholder={t("home.search")}
                   className="pl-9 pr-8 font-mono text-sm"
                   ref={searchRef}
                   data-testid="input-search"
@@ -474,14 +459,12 @@ export default function Home({ filter }: { filter: Filter }) {
                 )}
               </div>
 
-              {/* Sort — desktop pills (hidden on mobile, shown via MobileSortBar below) */}
               <SortMenu sort={sort} setSort={persistSort} />
 
-              {/* Surprise me */}
               <button
                 type="button"
                 onClick={pickRandom}
-                title="Surprise me — pick a random game"
+                title={t("home.actions.surprise")}
                 disabled={filtered.length === 0}
                 className="size-9 flex items-center justify-center rounded-md border border-border bg-background/40 text-muted-foreground hover:text-foreground hover-elevate disabled:opacity-40"
                 data-testid="button-surprise"
@@ -489,11 +472,10 @@ export default function Home({ filter }: { filter: Filter }) {
                 <Shuffle className="size-4" />
               </button>
 
-              {/* View toggle */}
               <button
                 type="button"
                 onClick={() => setViewMode((v) => (v === "grid" ? "list" : "grid"))}
-                title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+                title={viewMode === "grid" ? t("home.view.list") : t("home.view.grid")}
                 className="size-9 flex items-center justify-center rounded-md border border-border bg-background/40 text-muted-foreground hover:text-foreground hover-elevate"
                 data-testid="button-view-toggle"
               >
@@ -513,20 +495,20 @@ export default function Home({ filter }: { filter: Filter }) {
           <div className="px-4 sm:px-8 py-1.5 border-b border-border flex items-center gap-2 bg-primary/5">
             <Search className="size-3 text-primary/60 shrink-0" />
             <span className="font-mono text-[10px] text-muted-foreground flex-1">
-              Searching all {games.length} games —{" "}
-              <span className="text-foreground font-semibold">{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+              {t("home.status.searchingScope", { total: games.length })}
+              <span className="text-foreground font-semibold">{t("home.status.results", { count: filtered.length })}</span>
             </span>
             <button
               type="button"
               onClick={() => setQuery("")}
               className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
             >
-              Clear
+              {t("home.status.clear")}
             </button>
           </div>
         )}
 
-        {/* ── Mobile sort bar (visible only below sm) ── */}
+        {/* ── Mobile sort bar ── */}
         <div
           className="sm:hidden flex items-center gap-2 px-4 py-2 border-b border-border overflow-x-auto scrollbar-none"
           data-testid="group-sort-mobile"
@@ -534,13 +516,19 @@ export default function Home({ filter }: { filter: Filter }) {
           aria-label="Sort games"
         >
           <SlidersHorizontal className="size-3.5 text-muted-foreground shrink-0" />
-          {SORT_OPTIONS.map((o) => (
+          {[
+            { id: "recent", label: t("home.sort.recent") },
+            { id: "title", label: t("home.sort.az") },
+            { id: "year", label: t("home.sort.year") },
+            { id: "rating", label: t("home.sort.rating") },
+            { id: "plays", label: t("home.sort.plays") },
+          ].map((o) => (
             <button
               key={o.id}
               type="button"
               role="radio"
               aria-checked={sort === o.id}
-              onClick={() => persistSort(o.id)}
+              onClick={() => persistSort(o.id as Sort)}
               className={`shrink-0 px-3 py-1 rounded-full border font-mono text-[10px] uppercase tracking-wider transition-colors ${
                 sort === o.id
                   ? "border-primary/60 bg-primary/15 text-primary"
@@ -566,7 +554,7 @@ export default function Home({ filter }: { filter: Filter }) {
               }`}
               data-testid="button-genre-all"
             >
-              All
+              {t("common.ui.all")}
             </button>
             {availableGenres.map((g) => (
               <button
@@ -586,17 +574,15 @@ export default function Home({ filter }: { filter: Filter }) {
           </div>
         )}
 
-        {/* ── Scrollable content area — pb-20 reserves space for mobile bottom nav ── */}
+        {/* ── Content area ── */}
         <div className="flex-1 overflow-y-auto pb-20 lg:pb-0 overscroll-y-contain scroll-smooth">
-          {/* Hero — Continue Playing */}
           {showHero && pc.online && recentlyPlayed[0] ? (
             <ContinueHero game={recentlyPlayed[0]} onOpen={setOpenGame} profileId={currentProfileId} />
           ) : null}
 
-          {/* Jump Back In — Continue Playing */}
           {recentlyPlayed.length > 0 && (filter === "favorites" || filter === "all") && !query && (
             <section className="px-4 sm:px-8 pt-5 pb-1">
-              <SectionHeading title="Jump Back In" action={null} />
+              <SectionHeading title={t("home.sections.jumpBackIn")} action={null} />
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {recentlyPlayed.slice(0, 6).map((g) => (
                   <GameCard
@@ -605,17 +591,17 @@ export default function Home({ filter }: { filter: Filter }) {
                     showSaveThumb={true}
                     onOpen={setOpenGame}
                     onToggleFav={toggleFav}
+                    priority={true}
                   />
                 ))}
               </div>
             </section>
           )}
 
-          {/* Systems strip */}
           {(filter === "favorites" || filter === "all") && !query ? (
             <section className="px-4 sm:px-8 pt-5 pb-1">
               <SectionHeading
-                title="Browse Systems"
+                title={t("home.sections.browseSystems")}
                 action={
                   <button
                     type="button"
@@ -623,7 +609,7 @@ export default function Home({ filter }: { filter: Filter }) {
                     className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                     data-testid="button-see-all-systems"
                   >
-                    See all <ChevronRight className="inline size-3" />
+                    {t("common.ui.seeAll")} <ChevronRight className="inline size-3" />
                   </button>
                 }
               />
@@ -644,10 +630,7 @@ export default function Home({ filter }: { filter: Filter }) {
                       <SystemTile system={s} />
                       <div className="absolute inset-x-0 bottom-0 px-3 py-1.5 bg-gradient-to-t from-black/75 to-transparent flex items-end justify-between">
                         <div className="font-mono text-[11px] text-white tabular-nums">
-                          {count.toLocaleString()}
-                          <span className="text-white/60 ml-1">
-                            title{count === 1 ? "" : "s"}
-                          </span>
+                          {t("dashboard.stats.gamesCount", { count })}
                         </div>
                         <ChevronRight className="size-3.5 text-white/70 group-hover:text-white transition" />
                       </div>
@@ -658,7 +641,6 @@ export default function Home({ filter }: { filter: Filter }) {
             </section>
           ) : null}
 
-          {/* Recently Played strip */}
           {(filter === "favorites" ||
             filter === "all" ||
             (typeof filter === "string" &&
@@ -668,7 +650,7 @@ export default function Home({ filter }: { filter: Filter }) {
           !query ? (
             <section className="px-4 sm:px-8 pt-5 pb-1">
               <SectionHeading
-                title={filter === "favorites" ? "Recently Played Favorites" : "Recently Played"}
+                title={filter === "favorites" ? t("home.sections.favoritesRecentlyPlayed") : t("home.sections.recentlyPlayed")}
                 action={
                   <button
                     type="button"
@@ -676,7 +658,7 @@ export default function Home({ filter }: { filter: Filter }) {
                     className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                     data-testid="button-see-all-recent"
                   >
-                    See all <ChevronRight className="inline size-3" />
+                    {t("common.ui.seeAll")} <ChevronRight className="inline size-3" />
                   </button>
                 }
               />
@@ -684,26 +666,24 @@ export default function Home({ filter }: { filter: Filter }) {
             </section>
           ) : null}
 
-          {/* Upload */}
           {!kioskMode && (systemFilter || filter === "all") && !query ? (
             <section className="px-4 sm:px-8 pt-5 pb-1" data-testid="section-rom-upload">
               <RomUpload system={systemFilter} variant="inline" />
             </section>
           ) : null}
 
-          {/* Main grid */}
           <section className="px-4 sm:px-8 pt-5 pb-8">
             <SectionHeading
               title={
                 filter === "favorites"
-                  ? "Your Favorites"
+                  ? t("home.sections.favorites")
                   : filter === "all"
-                    ? "All Games"
+                    ? t("home.sections.allGames")
                     : filter === "recent"
-                      ? "Recently Played"
+                      ? t("home.sections.recentlyPlayed")
                       : isCollectionFilter
-                        ? "Collection Games"
-                        : `${SYSTEMS.find((s) => s.id === filter)?.shortName} Library`
+                        ? t("home.sections.collectionGames")
+                        : t("home.sections.systemLibrary", { system: SYSTEMS.find((s) => s.id === filter)?.shortName })
               }
               action={
                 <div className="flex items-center gap-3">
@@ -719,7 +699,7 @@ export default function Home({ filter }: { filter: Filter }) {
                             if (e.key === "Enter") submitNewCollection();
                             if (e.key === "Escape") setNewCollectionName(null);
                           }}
-                          placeholder="Collection name…"
+                          placeholder={t("home.prompts.collectionName")}
                           className="h-6 w-32 rounded border border-border bg-background/70 px-2 font-mono text-[11px] focus:outline-none focus:ring-1 focus:ring-ring"
                           data-testid="input-new-collection"
                         />
@@ -739,7 +719,7 @@ export default function Home({ filter }: { filter: Filter }) {
                         className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                         data-testid="button-create-collection"
                       >
-                        + New collection
+                        {t("home.actions.newCollection")}
                       </button>
                     )
                   )}
@@ -747,7 +727,7 @@ export default function Home({ filter }: { filter: Filter }) {
                     className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground"
                     data-testid="text-result-count"
                   >
-                    {filtered.length} title{filtered.length === 1 ? "" : "s"}
+                    {t("home.status.results", { count: filtered.length })}
                   </span>
                 </div>
               }
@@ -782,13 +762,12 @@ export default function Home({ filter }: { filter: Filter }) {
           <footer className="px-4 sm:px-8 py-6 border-t border-border">
             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-muted-foreground">
               <span>
-                {favorites.length} favorited · {games.length} uploaded title
-                {games.length === 1 ? "" : "s"}
+                {t("home.status.summary", { favorites: favorites.length, uploaded: games.length })}
               </span>
               <span>
                 HomeArcade ·{" "}
                 <a className="underline-offset-2 hover:underline" href="#/settings">
-                  settings →
+                  {t("nav.settings")} →
                 </a>
               </span>
             </div>
@@ -811,7 +790,6 @@ export default function Home({ filter }: { filter: Filter }) {
   );
 }
 
-// ─── Grid ─────────────────────────────────────────────────────────────────────
 const Grid = memo(function Grid({
   games,
   onOpen,
@@ -848,7 +826,6 @@ const Grid = memo(function Grid({
   );
 });
 
-// ─── List view ────────────────────────────────────────────────────────────────
 const ListView = memo(function ListView({
   games,
   onOpen,
@@ -858,12 +835,13 @@ const ListView = memo(function ListView({
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
 }) {
+  const { t } = useTranslation();
   const STATUS_LABELS: Record<string, string> = {
     unset: "",
-    backlog: "Backlog",
-    playing: "Playing",
-    completed: "Completed",
-    dropped: "Dropped",
+    backlog: t("dashboard.status.backlog"),
+    playing: t("dashboard.status.playing"),
+    completed: t("dashboard.status.completed"),
+    dropped: t("dashboard.status.dropped"),
   };
   const STATUS_COLORS: Record<string, string> = {
     backlog: "text-blue-400",
@@ -896,7 +874,6 @@ const ListView = memo(function ListView({
             className="flex items-center gap-3 px-4 py-2.5 bg-card hover:bg-card/80 cursor-pointer group"
             data-testid={`row-game-${g.id}`}
           >
-            {/* Thumbnail */}
             <div className="shrink-0 w-12 h-8 rounded overflow-hidden border border-card-border">
               {g.artUrl ? (
                 <img src={g.artUrl} alt="" className="w-full h-full object-cover" />
@@ -912,13 +889,12 @@ const ListView = memo(function ListView({
               )}
             </div>
 
-            {/* Title + badges */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="font-medium text-sm truncate">{g.title}</span>
                 {isNew && (
                   <span className="shrink-0 px-1.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/30">
-                    New
+                    {t("common.ui.new")}
                   </span>
                 )}
                 {g.playStatus && g.playStatus !== "unset" && (
@@ -932,7 +908,7 @@ const ListView = memo(function ListView({
               <div className="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">
                 {system?.shortName ?? g.system}
                 {g.genre && g.genre !== "Uploaded ROM" ? ` · ${g.genre}` : ""}
-                {(g.minutesPlayed ?? 0) > 0 ? ` · ${g.minutesPlayed}m played` : ""}
+                {(g.minutesPlayed ?? 0) > 0 ? ` · ${g.minutesPlayed}m ${t("common.played")}` : ""}
               </div>
               {g.description && (
                 <div className="text-[11px] text-foreground/50 mt-0.5 truncate leading-tight">
@@ -941,7 +917,6 @@ const ListView = memo(function ListView({
               )}
             </div>
 
-            {/* Rating + fav */}
             <div className="shrink-0 flex items-center gap-3">
               {g.rating > 0 && (
                 <div className="flex items-center gap-0.5 font-mono text-[11px] text-chart-3">
@@ -967,7 +942,6 @@ const ListView = memo(function ListView({
   );
 });
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function SectionHeading({
   title,
   action,
@@ -984,6 +958,14 @@ function SectionHeading({
 }
 
 function SortMenu({ sort, setSort }: { sort: Sort; setSort: (s: Sort) => void }) {
+  const { t } = useTranslation();
+  const options = [
+    { id: "recent", label: t("home.sort.recent") },
+    { id: "title", label: t("home.sort.az") },
+    { id: "year", label: t("home.sort.year") },
+    { id: "rating", label: t("home.sort.rating") },
+    { id: "plays", label: t("home.sort.plays") },
+  ];
   return (
     <div
       className="hidden sm:flex items-center gap-1 rounded-md border border-border bg-background/40 p-1"
@@ -992,13 +974,13 @@ function SortMenu({ sort, setSort }: { sort: Sort; setSort: (s: Sort) => void })
       aria-label="Sort games"
     >
       <SlidersHorizontal className="size-3.5 text-muted-foreground ml-1.5 mr-0.5" />
-      {SORT_OPTIONS.map((o) => (
+      {options.map((o) => (
         <button
           key={o.id}
           type="button"
           role="radio"
           aria-checked={sort === o.id}
-          onClick={() => setSort(o.id)}
+          onClick={() => setSort(o.id as Sort)}
           className={`px-2.5 py-1 rounded font-mono text-[11px] uppercase tracking-wider hover-elevate ${
             sort === o.id ? "bg-secondary text-foreground" : "text-muted-foreground"
           }`}
@@ -1020,32 +1002,34 @@ function EmptyState({
   filter: Filter;
   onResetFilter: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="rounded-lg border border-dashed border-border bg-card/40 px-6 py-16 text-center"
       data-testid="state-empty"
     >
       <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        No matches
+        {t("home.status.noMatches")}
       </div>
       <p className="mt-2 font-display text-base text-foreground">
         {query
-          ? `No games match "${query}".`
+          ? t("home.status.noMatchesDetail", { query })
           : filter === "favorites"
-            ? "You have no favorites yet."
-            : "No games in this view."}
+            ? t("home.status.noFavorites")
+            : t("home.status.noGames")}
       </p>
       <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-        Add favorites by tapping the heart on any game card, or browse all titles.
+        {filter === "favorites" ? t("home.status.noFavoritesDetail") : ""}
       </p>
       <Button variant="outline" className="mt-4" onClick={onResetFilter} data-testid="button-empty-reset">
-        Browse all games
+        {t("home.status.browseAll")}
       </Button>
     </div>
   );
 }
 
 function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g: Game) => void; profileId?: number }) {
+  const { t } = useTranslation();
   const launch = () => {
     if (game.romId) {
       const returnTo = encodeURIComponent(window.location.href);
@@ -1057,7 +1041,6 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
 
   return (
     <section className="px-4 sm:px-8 pt-5">
-      {/* Container with min-height prevents CLS when the hero appears/disappears based on PC state */}
       <div
         className="relative rounded-xl overflow-hidden border border-card-border min-h-[168px] sm:min-h-[188px] transition-[height] duration-300 ease-in-out"
         data-testid="hero-continue"
@@ -1072,7 +1055,6 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
           <img
             src={game.artUrl}
             alt=""
-            // LCP Optimization: tell the browser to prioritize this image
             fetchPriority="high"
             className="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-overlay"
           />
@@ -1080,13 +1062,13 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.7)_0%,rgba(0,0,0,0.4)_50%,rgba(0,0,0,0.1)_100%)]" />
         <div className="relative p-5 sm:p-7 flex flex-col gap-2.5 max-w-xl">
           <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/80">
-            Continue Playing
+            {t("home.sections.continuePlaying")}
           </div>
           <h2 className="font-display text-xl sm:text-2xl font-bold text-white leading-tight">
             {game.title}
           </h2>
           <p className="text-sm text-white/80 max-w-sm">
-            Pick up where you left off — your save state loads automatically.
+            {t("home.status.continueHeroDetail")}
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-1">
             <Button
@@ -1096,7 +1078,7 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
               data-testid="button-hero-launch"
             >
               <Play className="size-4 fill-current" />
-              Play
+              {t("common.ui.play")}
             </Button>
             <Button
               size="lg"
@@ -1105,7 +1087,7 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
               className="bg-black/70 border-white/35 text-white hover:bg-black/85 shadow-sm"
               data-testid="button-hero-details"
             >
-              Details
+              {t("common.ui.details")}
             </Button>
           </div>
         </div>

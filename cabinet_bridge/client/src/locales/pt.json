@@ -9,14 +9,33 @@
   "common": {
     "loading": "Carregando...",
     "error": "Erro",
-    "save": "Salvar",
+    "retry": "Tentar novamente",
     "cancel": "Cancelar",
-    "close": "Fechar",
-    "search": "Pesquisar",
-    "back": "Voltar",
-    "next": "Próximo",
-    "previous": "Anterior",
-    "noData": "Nenhum dado disponível"
+    "save": "Salvar",
+    "copy": "Copiar",
+    "reset": "Redefinir padrões",
+    "justNow": "agora mesmo",
+    "minutesAgo": "{{count}}m atrás",
+    "hoursAgo": "{{count}}h atrás",
+    "daysAgo": "{{count}}d atrás",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "xDaysAgo": "{{count}} dias atrás",
+    "saveStatus": {
+      "saving": "Salvando...",
+      "saved": "Alterações salvas",
+      "error": "Falha ao salvar"
+    },
+    "ui": {
+      "details": "Detalhes",
+      "play": "Jogar",
+      "new": "Novo",
+      "reset": "Redefinir",
+      "multiDisc": "Multi-Disco",
+      "you": "você",
+      "ready": "Pronto",
+      "active": "Ativo"
+    }
   },
   "languages": {
     "en": "English",
@@ -28,93 +47,314 @@
     "zh": "中文"
   },
   "home": {
-    "title": "Início",
-    "searchPlaceholder": "Pesquisar jogos...",
-    "allGames": "Todos os jogos",
-    "recentlyPlayed": "Jogados recentemente",
-    "favorites": "Favoritos",
-    "noGamesFound": "Nenhum jogo encontrado",
-    "noGamesMessage": "Nenhum jogo corresponde à sua pesquisa.",
-    "lastPlayed": "Última vez jogado",
-    "playTime": "Tempo de jogo",
-    "timesPlayed": "Vezes jogado"
+    "search": "Pesquisar… (pressione /)",
+    "sort": {
+      "label": "Ordenar jogos",
+      "recent": "Recentes",
+      "az": "A–Z",
+      "year": "Ano",
+      "rating": "Avaliação",
+      "plays": "Partidas"
+    },
+    "view": {
+      "grid": "Mudar para grade",
+      "list": "Mudar para lista"
+    },
+    "sections": {
+      "jumpBackIn": "Voltar a jogar",
+      "browseSystems": "Explorar sistemas",
+      "recentlyPlayed": "Jogados recentemente",
+      "favorites": "Seus favoritos",
+      "allGames": "Todos os jogos",
+      "continuePlaying": "Continuar jogando",
+      "newThisWeek": "Novidades da semana",
+      "collectionGames": "Jogos da coleção",
+      "library": "Biblioteca"
+    },
+    "status": {
+      "noMatches": "Sem correspondências",
+      "noMatchesDetail": "Nenhum jogo corresponde a \"{{query}}\".",
+      "noFavorites": "Você ainda não tem favoritos.",
+      "noFavoritesDetail": "Adicione favoritos tocando no coração em qualquer cartão de jogo, ou explore todos os títulos.",
+      "noGames": "Nenhum jogo nesta visualização.",
+      "browseAll": "Explorar todos os jogos",
+      "searchingScope": "Pesquisando em todos os {{total}} jogos — ",
+      "results_one": "{{count}} resultado",
+      "results_other": "{{count}} resultados",
+      "clear": "Limpar"
+    },
+    "actions": {
+      "surprise": "Surpreenda-me — escolha um jogo aleatório",
+      "newCollection": "+ Nova coleção",
+      "save": "Salvar",
+      "cancel": "Cancelar"
+    },
+    "prompts": {
+      "collectionName": "Nome da coleção…"
+    }
   },
   "player": {
-    "nowPlaying": "Jogando agora",
-    "score": "Pontuação",
-    "highScore": "Recorde",
-    "lives": "Vidas",
-    "level": "Nível",
-    "time": "Tempo",
-    "credits": "Créditos",
-    "insertCoin": "Inserir moeda",
-    "gameOver": "Fim de jogo",
-    "paused": "Pausado",
-    "quit": "Sair",
-    "exitGame": "Sair do jogo",
-    "fullscreen": "Tela cheia",
-    "exitFullscreen": "Sair da tela cheia"
+    "library": "Biblioteca",
+    "playingOn": "Jogando no HomeArcade",
+    "loadingRom": "Carregando ROM...",
+    "romUnavailable": "ROM indisponível",
+    "remapControls": "Remapear controles",
+    "hideControls": "Ocultar controles",
+    "popOut": "Pop-out",
+    "controls": {
+      "dpad": "D-Pad",
+      "ab": "A / B",
+      "startSelect": "Start / Select",
+      "saveLoad": "Salvar / Carregar"
+    }
   },
   "achievements": {
-    "title": "Conquistas",
-    "unlocked": "Desbloqueado",
-    "locked": "Bloqueado",
-    "progress": "Progresso",
-    "noAchievements": "Sem conquistas ainda",
-    "noAchievementsMessage": "Jogue alguns jogos para desbloquear conquistas!",
-    "unlockedOn": "Desbloqueado em",
-    "points": "Pontos",
-    "total": "Total",
-    "recent": "Recentes"
+    "title": "RetroAchievements",
+    "trophies": "Troféus de {{user}}",
+    "dashboard": "Painel de Conquistas",
+    "noAccount": "Nenhuma conta RetroAchievements conectada",
+    "stats": {
+      "hardcorePoints": "Pontos Hardcore",
+      "softcorePoints": "Pontos Softcore",
+      "globalRank": "Ranking Global",
+      "recentGames": "Jogos Recentes"
+    },
+    "recentAchievements": "Conquistas Recentes",
+    "noRecentAchievements": "Nenhuma conquista recente encontrada. Jogue alguns jogos!"
   },
   "history": {
-    "title": "Histórico",
-    "noHistory": "Sem histórico ainda",
-    "noHistoryMessage": "Seu histórico de jogos aparecerá aqui.",
-    "playedOn": "Jogado em",
-    "duration": "Duração",
-    "sessions": "Sessões",
-    "totalTime": "Tempo total",
-    "lastSession": "Última sessão",
-    "clearHistory": "Limpar histórico",
-    "confirmClear": "Tem certeza que deseja limpar seu histórico?"
+    "title": "Histórico de Jogo",
+    "exportCsv": "Exportar CSV",
+    "noSessions": "Nenhuma sessão ainda",
+    "startTracking": "Jogue um jogo para começar a rastrear seu histórico.",
+    "stats": {
+      "totalPlaytime": "Tempo de jogo total",
+      "mostPlayed": "Mais jogado",
+      "lastSession": "Última sessão",
+      "totalTime": "Tempo total",
+      "sessions": "Sessões",
+      "avgSession": "Média/sessão",
+      "firstPlayed": "Primeira partida"
+    },
+    "topGames": "Melhores jogos por tempo",
+    "sessionLog": "Log de sessões",
+    "allSessions": "Todas as sessões"
   },
   "dashboard": {
-    "title": "Painel",
-    "totalGames": "Total de jogos",
-    "totalPlayTime": "Tempo total de jogo",
-    "mostPlayed": "Mais jogado",
-    "recentActivity": "Atividade recente",
-    "topGames": "Melhores jogos",
-    "statistics": "Estatísticas",
-    "thisWeek": "Esta semana",
-    "thisMonth": "Este mês",
-    "allTime": "Todo o tempo",
-    "averageSession": "Sessão média",
-    "gamesPlayed": "Jogos jogados",
-    "achievementsUnlocked": "Conquistas desbloqueadas"
+    "stats": {
+      "hoursPlayed": "Horas jogadas",
+      "completed": "Concluídos",
+      "backlog": "Backlog",
+      "thisWeek": "Esta semana",
+      "gamesInLibrary_one": "{{count}} jogo na biblioteca",
+      "gamesInLibrary_other": "{{count}} jogos na biblioteca",
+      "completionRate": "{{count}}% de conclusão",
+      "backlogClear": "backlog está limpo!",
+      "backlogGames": "{{count}} jogos esperando",
+      "sameAsLastWeek": "mesmo que na semana passada",
+      "vsLastWeek": "{{count}} vs semana passada"
+    },
+    "sections": {
+      "overview": "Visão Geral",
+      "libraryBreakdown": "Divisão da biblioteca",
+      "highlights": "Destaques",
+      "inProgress": "Em progresso",
+      "recentlyPlayed": "Jogados recentemente",
+      "newThisWeek": "Novidades da semana",
+      "recentActivity": "Atividade recente",
+      "browseSystems": "Explorar sistemas",
+      "continuePlaying": "Continuar jogando"
+    },
+    "liveNow": "Ao vivo — Jogando agora",
+    "highlights": {
+      "mostPlayed": "Mais jogado",
+      "highestRated": "Melhor avaliado",
+      "communityFav": "Favorito da comunidade"
+    },
+    "status": {
+      "playing": "Jogando",
+      "completed": "Concluído",
+      "backlog": "Backlog",
+      "dropped": "Abandonado",
+      "untracked": "Não rastreado"
+    },
+    "activity": {
+      "lastWeek": "Semana passada",
+      "thisWeek": "Esta semana",
+      "trend": "Jogos jogados — esta semana vs última",
+      "more_one": "↑ {{count}} jogo a mais que na semana passada",
+      "more_other": "↑ {{count}} jogos a mais que na semana passada",
+      "fewer": "↓ {{count}} a menos que na semana passada",
+      "same": "Mesmo que na semana passada"
+    },
+    "charts": {
+      "playTimeBySystem": "Tempo de jogo por sistema"
+    }
   },
   "settings": {
     "title": "Configurações",
-    "display": "Exibição",
-    "audio": "Áudio",
-    "controls": "Controles",
-    "system": "Sistema",
-    "language": "Idioma",
-    "selectLanguage": "Selecionar idioma",
-    "theme": "Tema",
-    "crtEffect": "Efeito CRT",
-    "dynamicTheming": "Temas dinâmicos",
-    "scanlines": "Linhas de varredura",
-    "volume": "Volume",
-    "musicVolume": "Volume de música",
-    "sfxVolume": "Volume de efeitos sonoros",
-    "mute": "Mudo",
-    "brightness": "Brilho",
-    "contrast": "Contraste",
-    "saveSettings": "Salvar configurações",
-    "resetDefaults": "Restaurar padrões",
-    "about": "Sobre",
-    "version": "Versão"
+    "header": "Integração",
+    "autoSaved": "As configurações são salvas automaticamente no banco de dados local.",
+    "tabs": {
+      "connection": "Conexão",
+      "display": "Exibição",
+      "automation": "Automação",
+      "controls": "Controles",
+      "library": "Biblioteca",
+      "services": "Serviços",
+      "kiosk": "Quiosque",
+      "help": "Ajuda"
+    },
+    "sections": {
+      "connection": {
+        "title": "Conexão Home Assistant",
+        "description": "Configure como o Cabinet Bridge fala com sua instância do Home Assistant. Use a URL interna se estiver rodando como um add-on."
+      },
+      "display": {
+        "title": "Preferências Globais",
+        "description": "Configurações padrão que se aplicam a todos os jogos, a menos que sejam substituídas."
+      },
+      "overrides": {
+        "title": "Substituições por sistema",
+        "description": "Personalize as configurações de exibição para consoles específicos. Elas se aplicam ao iniciar um jogo."
+      },
+      "automation": {
+        "title": "Monitoramento de status do PC",
+        "description": "Vincule entidades do Home Assistant aos medidores do painel para CPU, RAM e status Online."
+      },
+      "endpoints": {
+        "title": "Endpoints de Webhook",
+        "description": "URLs geradas automaticamente para suas automações do Home Assistant. Copie estas para usar como gatilhos de Webhook."
+      },
+      "input": {
+        "title": "Preferências de entrada",
+        "description": "Configure o comportamento global para controles e teclados."
+      },
+      "controllers": {
+        "title": "Controles Conectados",
+        "description": "Detecte e teste gamepads conectados a este dispositivo. Pressione os botões para vê-los acender."
+      },
+      "shortcuts": {
+        "title": "Atalhos de teclado",
+        "description": "Teclas de atalho globais para navegar na interface sem um mouse."
+      },
+      "mapping": {
+        "title": "Mapeamento de navegação da IU",
+        "description": "Remapeie os botões usados para navegar na interface do HomeArcade."
+      },
+      "smartFilters": {
+        "title": "Coleções de filtros inteligentes",
+        "description": "Coleções que se autopopulam com base em regras — sistema, status de jogo, avaliação ou tempo de jogo. Elas atualizam sempre que sua biblioteca muda."
+      },
+      "scanner": {
+        "title": "Scanner de ROM",
+        "enabledDescription": "Importa automaticamente novos arquivos ROM encontrados na pasta monitorada a cada 60 segundos.",
+        "disabledDescription": "Importação automática de ROMs soltas em uma pasta monitorada. Defina CABINET_ROM_WATCH_DIR no seu ambiente de add-on HA para habilitar."
+      },
+      "scrapers": {
+        "title": "Serviços de Scraper",
+        "description": "Insira suas credenciais para provedores de metadados e artes online."
+      },
+      "retroachievements": {
+        "title": "RetroAchievements",
+        "description": "Conecte sua conta para rastrear troféus e progresso."
+      },
+      "bulk": {
+        "title": "Ações em Massa",
+        "description": "Processe múltiplas ROMs de uma vez. Estas operações podem levar vários minutos."
+      },
+      "kiosk": {
+        "title": "Modo Quiosque",
+        "description": "Bloqueie a interface em uma única coleção e exija um PIN para sair ou entrar nas configurações."
+      },
+      "help": {
+        "title": "Guia de Fiação",
+        "description": "Siga estes passos para conectar o Cabinet Bridge ao seu hardware físico usando o Home Assistant."
+      }
+    },
+    "fields": {
+      "haBaseUrl": {
+        "label": "URL Base",
+        "hint": "URL externa ou interna incluindo a porta (ex: http://192.168.1.50:8123)"
+      },
+      "haToken": {
+        "label": "Token de Acesso de Longa Duração",
+        "hint": "Necessário para certas ações, mas muitas vezes não necessário para webhooks simples."
+      },
+      "liveMode": {
+        "label": "Modo Live",
+        "hint": "Quando ativado, as ações dispararão requisições de rede reais para o Home Assistant.",
+        "active": "Ativo",
+        "simulation": "Simulação",
+        "notice": "O Cabinet está em Modo de Simulação. Os cliques serão registrados no painel de atividade, mas nenhum webhook será disparado. Ótimo para testar a IU sem acionar o hardware."
+      },
+      "pcHostname": {
+        "label": "Hostname do PC",
+        "hint": "Mostrado no topo do painel direito."
+      },
+      "pcOnline": {
+        "label": "ID da Entidade Online",
+        "hint": "binary_sensor mostrando se o PC está ligado."
+      },
+      "pcCpu": {
+        "label": "ID da Entidade CPU",
+        "hint": "sensor que fornece o valor percentual."
+      },
+      "pcRam": {
+        "label": "ID da Entidade RAM",
+        "hint": "sensor que fornece o valor percentual."
+      },
+      "pcApp": {
+        "label": "ID da Entidade da App Atual",
+        "hint": "sensor mostrando a janela em primeiro plano."
+      },
+      "language": {
+        "label": "Idioma",
+        "hint": "Escolha seu idioma de exibição preferido."
+      },
+      "systemLabels": {
+        "label": "Rótulos de Sistema",
+        "hint": "Mostrar ou ocultar nomes de consoles nos cartões de jogo.",
+        "show": "Mostrar Rótulos"
+      },
+      "uiTheme": {
+        "label": "Tema da IU",
+        "hint": "Escolha um estilo visual para a interface."
+      },
+      "aspectRatio": {
+        "label": "Proporção Padrão",
+        "hint": "Usado se nenhuma substituição específica por sistema for definida.",
+        "placeholder": "Auto"
+      },
+      "shader": {
+        "label": "Shader Padrão",
+        "hint": "Filtro visual global para o emulador.",
+        "placeholder": "Nenhum"
+      },
+      "rumble": {
+        "label": "Haptics do Controle",
+        "hint": "Ativar vibração/rumble durante o jogo (se suportado)."
+      },
+      "kioskPin": {
+        "label": "PIN de Saída do Quiosque",
+        "hint": "Até 8 caracteres."
+      },
+      "kioskCollection": {
+        "label": "Coleção Alvo",
+        "hint": "A única coleção visível no Modo Quiosque.",
+        "placeholder": "Todos os Jogos"
+      }
+    },
+    "buttons": {
+      "test": "Testar",
+      "copy": "Copiar",
+      "resetDefaults": "Redefinir padrões",
+      "scanNow": "Escanear agora",
+      "create": "Criar",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "remap": "Remapear",
+      "scrapeAll": "Scrape Tudo"
+    }
   }
 }

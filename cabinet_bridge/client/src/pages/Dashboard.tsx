@@ -14,14 +14,17 @@ import { formatRelative, useIntegration } from "@/lib/integration";
 import { useGameDialogState } from "@/lib/useGameDialogState";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
 import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap, History, Radio } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-function fmtHours(minutes: number) {
+function fmtHours(minutes: number, playedLabel: string) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
+  let time = "";
+  if (h === 0) time = `${m}m`;
+  else if (m === 0) time = `${h}h`;
+  else time = `${h}h ${m}m`;
+  return `${time} ${playedLabel}`;
 }
 
 function fmtHoursShort(minutes: number) {
@@ -69,13 +72,14 @@ function SectionHeader({
   href?: string;
   count?: number;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between mb-3">
       <h2 className="font-display text-base font-semibold text-foreground">{title}</h2>
       <div className="flex items-center gap-3">
         {count !== undefined && (
           <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {count} title{count !== 1 ? "s" : ""}
+            {t("dashboard.stats.gamesCount", { count })}
           </span>
         )}
         {href && (
@@ -83,7 +87,7 @@ function SectionHeader({
             href={href}
             className="font-mono text-[10px] uppercase tracking-wider text-primary hover:underline"
           >
-            See all →
+            {t("common.ui.seeAll")} →
           </Link>
         )}
       </div>
@@ -193,12 +197,13 @@ function StatusDonut({
   counts: Record<string, number>;
   total: number;
 }) {
+  const { t } = useTranslation();
   const items = [
-    { key: "playing", label: "Playing", color: "#3b82f6" },
-    { key: "completed", label: "Completed", color: "#00c87a" },
-    { key: "backlog", label: "Backlog", color: "#f59e0b" },
-    { key: "dropped", label: "Dropped", color: "#ef4444" },
-    { key: "unset", label: "Untracked", color: "#334155" },
+    { key: "playing", label: t("dashboard.status.playing"), color: "#3b82f6" },
+    { key: "completed", label: t("dashboard.status.completed"), color: "#00c87a" },
+    { key: "backlog", label: t("dashboard.status.backlog"), color: "#f59e0b" },
+    { key: "dropped", label: t("dashboard.status.dropped"), color: "#ef4444" },
+    { key: "unset", label: t("dashboard.status.untracked"), color: "#334155" },
   ];
   const unset = total - Object.values(counts).reduce((s, v) => s + v, 0);
   const all: Record<string, number> = { ...counts, unset };
@@ -264,6 +269,7 @@ function ActivityBar({
   thisWeek: number;
   lastWeek: number;
 }) {
+  const { t } = useTranslation();
   const max = Math.max(thisWeek, lastWeek, 1);
   const diff = thisWeek - lastWeek;
   return (
@@ -271,7 +277,7 @@ function ActivityBar({
       <div className="flex items-end gap-4">
         <div className="flex flex-col items-center gap-1.5">
           <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-            Last week
+            {t("dashboard.activity.lastWeek")}
           </div>
           <div className="w-12 bg-border rounded-sm overflow-hidden" style={{ height: 56 }}>
             <div
@@ -286,7 +292,7 @@ function ActivityBar({
         </div>
         <div className="flex flex-col items-center gap-1.5">
           <div className="font-mono text-[9px] uppercase tracking-wider text-primary">
-            This week
+            {t("dashboard.activity.thisWeek")}
           </div>
           <div className="w-12 bg-border rounded-sm overflow-hidden" style={{ height: 56 }}>
             <div
@@ -302,14 +308,14 @@ function ActivityBar({
         <div className="ml-2 flex-1">
           {diff > 0 ? (
             <div className="font-mono text-[11px] text-status-online">
-              ↑ {diff} more game{diff !== 1 ? "s" : ""} than last week
+              {t("dashboard.activity.more", { count: diff })}
             </div>
           ) : diff < 0 ? (
             <div className="font-mono text-[11px] text-destructive">
-              ↓ {Math.abs(diff)} fewer than last week
+              {t("dashboard.activity.fewer", { count: Math.abs(diff) })}
             </div>
           ) : (
-            <div className="font-mono text-[11px] text-muted-foreground">Same as last week</div>
+            <div className="font-mono text-[11px] text-muted-foreground">{t("dashboard.activity.same")}</div>
           )}
         </div>
       </div>
@@ -320,6 +326,7 @@ function ActivityBar({
 // ─── main page ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { config } = useIntegration();
+  const { t } = useTranslation();
   const { data: roms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
   const { data: sessions = [] } = useQuery<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>>({
     queryKey: ["/api/sessions"],
@@ -332,8 +339,11 @@ export default function Dashboard() {
   const { data: nowPlaying } = useQuery<{ playing: boolean; id?: number; title?: string; system?: string }>({
     queryKey: ["/api/now-playing"],
     queryFn: async () => { const res = await fetch("/api/now-playing"); return res.json(); },
-    refetchInterval: 5000,
-    staleTime: 0,
+    refetchInterval: (query) => {
+      if (document.hidden) return false;
+      return query.state.data?.playing ? 5000 : 15000;
+    },
+    staleTime: 5000,
   });
 
   const {
@@ -493,7 +503,7 @@ export default function Dashboard() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-primary/70 flex items-center gap-1.5">
-                    <Radio className="size-3" /> Live — Playing Now
+                    <Radio className="size-3" /> {t("dashboard.liveNow")}
                   </div>
                   <div className="font-display text-lg font-bold text-foreground leading-tight truncate">
                   {nowPlaying.title}
@@ -510,7 +520,7 @@ export default function Dashboard() {
                   onClick={() => openGame(nowPlayingGame)}
                   className="shrink-0 font-mono text-[10px] uppercase tracking-wider border border-border bg-background/60 px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                   >
-                  Details
+                  {t("common.ui.details")}
                   </button>
                   )}
                   </div>
@@ -541,7 +551,7 @@ export default function Dashboard() {
                   <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.75)_0%,rgba(0,0,0,0.4)_55%,rgba(0,0,0,0.1)_100%)]" />
                   <div className="relative p-6 sm:p-8 flex flex-col gap-2.5 max-w-xl">
                   <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/70">
-                  Continue Playing
+                  {t("dashboard.sections.continuePlaying")}
                   </div>
                   <h2 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">
                   {continueGame.title}
@@ -554,10 +564,10 @@ export default function Dashboard() {
                   </>
                   )}
                   {continueGame.lastPlayed
-                  ? `Last played ${formatRelative(continueGame.lastPlayed)}`
+                  ? `${t("common.lastPlayed")} ${formatRelative(continueGame.lastPlayed)}`
                   : ""}
                   {(continueGame.minutesPlayed ?? 0) > 0
-                  ? ` · ${fmtHours(continueGame.minutesPlayed ?? 0)} played`
+                  ? ` · ${fmtHours(continueGame.minutesPlayed ?? 0, t("common.played"))}`
                   : ""}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -568,7 +578,7 @@ export default function Dashboard() {
                   data-testid="button-hero-launch"
                   >
                   <Play className="size-4 fill-current" />
-                  Play
+                  {t("common.ui.play")}
                   </Button>
                   <Button
                   size="lg"
@@ -576,7 +586,7 @@ export default function Dashboard() {
                   onClick={() => openGame(continueGame)}
                   className="bg-black/70 border-white/35 text-white hover:bg-black/85"
                   >
-                  Details
+                  {t("common.ui.details")}
                   </Button>
                   </div>
                   </div>
@@ -587,37 +597,37 @@ export default function Dashboard() {
                   <div className="px-5 sm:px-8 py-6 space-y-8">
                   {/* ── Stats row ── */}
                   <section>
-                  <SectionHeader title="Overview" />
+                  <SectionHeader title={t("dashboard.sections.overview")} />
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <StatCard
                   icon={<Clock className="size-3" />}
-                  label="Hours played"
+                  label={t("dashboard.stats.hoursPlayed")}
                   value={fmtHoursShort(totalMinutes)}
-                  sub={`${games.length} game${games.length !== 1 ? "s" : ""} in library`}
+                  sub={t("dashboard.stats.gamesInLibrary", { count: games.length })}
                   accent="text-primary"
                   />
                   <StatCard
                   icon={<Trophy className="size-3" />}
-                  label="Completed"
+                  label={t("dashboard.stats.completed")}
                   value={String(completed)}
-                  sub={`${completionRate}% completion rate`}
+                  sub={t("dashboard.stats.completionRate", { count: completionRate })}
                   accent="text-status-online"
                   />
                   <StatCard
                   icon={<ListTodo className="size-3" />}
-                  label="Backlog"
+                  label={t("dashboard.stats.backlog")}
                   value={String(backlog)}
-                  sub={backlog > 0 ? "games waiting to play" : "backlog is clear!"}
+                  sub={backlog > 0 ? t("dashboard.stats.backlogGames", { count: backlog }) : t("dashboard.stats.backlogClear")}
                   accent="text-chart-3"
                   />
                   <StatCard
                   icon={<TrendingUp className="size-3" />}
-                  label="This week"
+                  label={t("dashboard.stats.thisWeek")}
                   value={String(thisWeek)}
                   sub={
                   thisWeek !== lastWeekCount
-                  ? `${thisWeek > lastWeekCount ? "+" : ""}${thisWeek - lastWeekCount} vs last week`
-                  : "same as last week"
+                  ? t("dashboard.stats.vsLastWeek", { count: (thisWeek > lastWeekCount ? "+" : "") + (thisWeek - lastWeekCount) })
+                  : t("dashboard.stats.sameAsLastWeek")
                   }
                   accent="text-accent"
                   />
@@ -627,12 +637,12 @@ export default function Dashboard() {
                   {/* ── Charts: system breakdown + status donut ── */}
                   {(showSystemChart || games.length > 0) && (
                   <section>
-                  <SectionHeader title="Library breakdown" />
+                  <SectionHeader title={t("dashboard.sections.libraryBreakdown")} />
                   <div className="grid sm:grid-cols-2 gap-4">
                   {showSystemChart && (
                   <div className="rounded-xl border border-border bg-card p-5 space-y-3">
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
-                  Play time by system
+                  {t("dashboard.charts.playTimeBySystem")}
                   </div>
                   {systemBreakdown.map(({ system, minutes }) => (
                   <SystemBar
@@ -644,14 +654,14 @@ export default function Dashboard() {
                   ))}
                   {systemBreakdown.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    Play some games to see your breakdown.
+                    {t("dashboard.status.startTracking")}
                   </p>
                   )}
                   </div>
                   )}
                   <div className="rounded-xl border border-border bg-card p-5">
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
-                  Status breakdown
+                  {t("dashboard.sections.statusBreakdown")}
                   </div>
                   <StatusDonut counts={statusCounts} total={games.length} />
                   </div>
@@ -661,10 +671,10 @@ export default function Dashboard() {
 
                   {/* ── Activity ── */}
                   <section>
-                  <SectionHeader title="Activity" />
+                  <SectionHeader title={t("dashboard.sections.activity")} />
                   <div className="rounded-xl border border-border bg-card p-5">
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
-                  Games played — this week vs last
+                  {t("dashboard.activity.trend")}
                   </div>
                   <ActivityBar thisWeek={thisWeek} lastWeek={lastWeekCount} />
                   </div>
@@ -673,14 +683,14 @@ export default function Dashboard() {
                   {/* ── Game highlights ── */}
                   {showHighlights && (
                   <section>
-                  <SectionHeader title="Highlights" />
+                  <SectionHeader title={t("dashboard.sections.highlights")} />
                   <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
                   {mostPlayed && (
                   <HighlightCard
-                  label="Most played"
+                  label={t("dashboard.highlights.mostPlayed")}
                   game={mostPlayed}
                   stat={fmtHoursShort(mostPlayed.minutesPlayed ?? 0)}
-                  statLabel="played"
+                  statLabel={t("common.played")}
                   icon={<Clock className="size-3" />}
                   onOpen={openGame}
                   showSystem={config.showSystemLabels}
@@ -688,10 +698,10 @@ export default function Dashboard() {
                   )}
                   {highestRated && (
                   <HighlightCard
-                  label="Highest rated"
+                  label={t("dashboard.highlights.highestRated")}
                   game={highestRated}
                   stat={`${highestRated.rating}/5`}
-                  statLabel="your rating"
+                  statLabel={t("dashboard.highlights.yourRating")}
                   icon={<Star className="size-3" />}
                   onOpen={openGame}
                   showSystem={config.showSystemLabels}
@@ -699,10 +709,10 @@ export default function Dashboard() {
                   )}
                   {bestCommunity && (
                   <HighlightCard
-                  label="Community favourite"
+                  label={t("dashboard.highlights.communityFav")}
                   game={bestCommunity}
                   stat={`${((bestCommunity.communityScore ?? 0) / 2).toFixed(1)}`}
-                  statLabel="/ 10 score"
+                  statLabel="/ 10"
                   icon={<Zap className="size-3" />}
                   onOpen={openGame}
                   showSystem={config.showSystemLabels}
@@ -714,54 +724,53 @@ export default function Dashboard() {
 
                   {/* ── In Progress ── */}
                   {inProgress.length > 0 && (
-                  <section>
-                  <SectionHeader title="In Progress" count={inProgress.length} />
-                  <HorizontalShelf>
-                  {inProgress.map((g) => (
-                  <div key={g.id} className="w-44 shrink-0">
-                  <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
-                  </div>
-                  ))}
-                  </HorizontalShelf>
-                  </section>
+                    <section>
+                      <SectionHeader title={t("dashboard.sections.inProgress")} count={inProgress.length} />
+                      <HorizontalShelf>
+                        {inProgress.map((g, i) => (
+                          <div key={g.id} className="w-44 shrink-0">
+                            <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} priority={i < 4} />
+                          </div>
+                        ))}
+                      </HorizontalShelf>
+                    </section>
                   )}
 
                   {/* ── Recently Played ── */}
                   {recentlyPlayed.length > 0 && (
-                  <section>
-                  <SectionHeader
-                  title="Recently Played"
-                  href="/library/recent"
-                  count={recentlyPlayed.length}
-                  />
-                  <HorizontalShelf>
-                  {recentlyPlayed.map((g) => (
-                  <div key={g.id} className="w-44 shrink-0">
-                  <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
-                  </div>
-                  ))}
-                  </HorizontalShelf>
-                  </section>
+                    <section>
+                      <SectionHeader
+                        title={t("dashboard.sections.recentlyPlayed")}
+                        href="/library/recent"
+                        count={recentlyPlayed.length}
+                      />
+                      <HorizontalShelf>
+                        {recentlyPlayed.map((g, i) => (
+                          <div key={g.id} className="w-44 shrink-0">
+                            <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} priority={i < 4} />
+                          </div>
+                        ))}
+                      </HorizontalShelf>
+                    </section>
                   )}
 
                   {/* ── New Additions ── */}
                   {newAdditions.length > 0 && (
-                  <section>
-                  <SectionHeader title="New This Week" count={newAdditions.length} />
-                  <HorizontalShelf>
-                  {newAdditions.map((g) => (
-                  <div key={g.id} className="w-44 shrink-0">
-                  <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
-                  </div>
-                  ))}
-                  </HorizontalShelf>
-                  </section>
+                    <section>
+                      <SectionHeader title={t("dashboard.sections.newThisWeek")} count={newAdditions.length} />
+                      <HorizontalShelf>
+                        {newAdditions.map((g, i) => (
+                          <div key={g.id} className="w-44 shrink-0">
+                            <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} priority={i < 4} />
+                          </div>
+                        ))}
+                      </HorizontalShelf>
+                    </section>
                   )}
-
                   {/* ── Recent Activity ── */}
                   {sessions.length > 0 && (
                   <section>
-                  <SectionHeader title="Recent activity" />
+                  <SectionHeader title={t("dashboard.sections.recentActivity")} />
                   <div className="rounded-xl border border-border bg-card overflow-hidden">
                   {sessions.slice(0, 12).map((s, i) => {
                   const system = SYSTEMS.find((sys) => sys.id === s.romSystem);
@@ -795,7 +804,7 @@ export default function Dashboard() {
                   )}
           {/* ── Browse Systems ── */}
           <section>
-            <SectionHeader title="Browse Systems" href="/library/all" />
+            <SectionHeader title={t("dashboard.sections.browseSystems")} href="/library/all" />
             <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
               {SYSTEMS.map((s) => {
                 const count = roms.filter((r) => r.system === s.id).length;
