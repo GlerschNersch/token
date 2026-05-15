@@ -4,6 +4,52 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.1.9] — 2026-05-15
+
+### Fix: Emulator Bootstrap
+
+- **Loader Logic** — Resolved "bootstrap.js blocked" error by correctly passing global display settings to the emulator loader script.
+- **Variable Scope** — Fixed a ReferenceError that prevented the dynamic generation of the emulator loading sequence.
+
+---
+
+## [1.1.8] — 2026-05-15
+
+### Feature: 18 UI Themes
+
+- **Thematic Styles** — Implemented full CSS definitions for 18 diverse aesthetics including Synthwave, Gameboy, OLED, Cyberpunk, and Win95.
+- **Performance Cleanup** — Removed unused adaptive background CSS to streamline the main stylesheet and improve rendering speed.
+
+---
+
+## [1.1.7] — 2026-05-15
+
+### Fix: Crash Recovery
+
+- **Import Fix** — Resolved a white screen crash caused by a missing `useIntegration` import in the Dashboard component.
+
+---
+
+## [1.1.6] — 2026-05-15
+
+### Fix: Application Boot
+
+- **Logic Restoration** — Restored essential library management code that was accidentally omitted during the display settings refactor.
+- **Dependency Isolation** — Broke a circular dependency between Settings and App modules by moving theme definitions to a dedicated shared utility.
+
+---
+
+## [1.1.5] — 2026-05-15
+
+### Major: Enhanced Display & i18n Sync
+
+- **Per-System Overrides** — Users can now set custom Aspect Ratios, Shaders, and Integer Scaling for each gaming system individually.
+- **Global Preferences** — Added global fallback settings for aspect ratio and shaders.
+- **System Labels Toggle** — New option to hide console names on game cards for a cleaner library aesthetic.
+- **Translation Sync** — Fixed a bug where changing the language in Settings would not immediately update the UI; translations now sync instantly via `LanguageManager`.
+
+---
+
 ## [1.1.2] — 2026-05-14
 
 ### Fix: Scraping & Cheats Restoration

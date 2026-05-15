@@ -1,3 +1,29 @@
+## 1.1.9 – 2026-05-15
+
+- **Fix**: **Emulator Bootstrap** — Resolved "bootstrap.js blocked" error by correctly passing global display settings (aspect ratio, shader) to the emulator loader script.
+- **Fix**: **Variable Scope** — Resolved a ReferenceError that prevented the dynamic generation of the emulator loading sequence.
+
+## 1.1.8 – 2026-05-15
+
+- **Feature**: **18 UI Themes** — Implemented full CSS definitions for 18 diverse aesthetics including Synthwave, Gameboy, OLED, Cyberpunk, and Win95.
+- **Improved**: **Performance** — Removed unused adaptive background CSS to streamline the main stylesheet and improve rendering speed.
+
+## 1.1.7 – 2026-05-15
+
+- **Fix**: **Dashboard Crash** — Resolved a white screen crash caused by a missing `useIntegration` import in the Dashboard component.
+
+## 1.1.6 – 2026-05-15
+
+- **Fix**: **Logic Restoration** — Restored essential library management code in `Home.tsx` that was accidentally omitted during the display settings refactor.
+- **Fix**: **Dependency Isolation** — Broke a circular dependency between Settings and App modules by moving theme definitions to `lib/themes.ts`.
+
+## 1.1.5 – 2026-05-15
+
+- **Feature**: **Per-System Overrides** — Users can now set custom Aspect Ratios, Shaders, and Integer Scaling for each gaming system individually.
+- **Feature**: **Global Preferences** — Added global fallback settings for aspect ratio and shaders in Settings → Display.
+- **Feature**: **System Labels Toggle** — Added an option to hide console names on game cards across the entire UI for a cleaner look.
+- **Fix**: **Translation Sync** — Changing the language in Settings now immediately updates the UI without requiring a manual refresh.
+
 ## 1.1.4 – 2026-05-14
 
 - **Feature**: **Official System Logos** — Replaced hardware photos with official branding logos on all system tiles for much clearer navigation. Logos are automatically fetched and cached from Libretro assets.
