@@ -104,6 +104,7 @@ function HighlightCard({
   statLabel,
   icon,
   onOpen,
+  showSystem = true,
 }: {
   label: string;
   game: Game;
@@ -111,6 +112,7 @@ function HighlightCard({
   statLabel: string;
   icon: React.ReactNode;
   onOpen: (g: Game) => void;
+  showSystem?: boolean;
 }) {
   return (
     <button
@@ -136,9 +138,11 @@ function HighlightCard({
         <div className="font-medium text-sm text-foreground leading-tight line-clamp-1">
           {game.title}
         </div>
-        <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
-          {game.system.toUpperCase()}
-        </div>
+        {showSystem && (
+          <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
+            {game.system.toUpperCase()}
+          </div>
+        )}
       </div>
       <div className="mt-auto pt-1 border-t border-border flex items-baseline gap-1.5">
         <span className="font-display text-lg font-bold text-primary">{stat}</span>
@@ -315,6 +319,7 @@ function ActivityBar({
 
 // ─── main page ─────────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const { config } = useIntegration();
   const { data: roms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
   const { data: sessions = [] } = useQuery<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>>({
     queryKey: ["/api/sessions"],
@@ -491,294 +496,303 @@ export default function Dashboard() {
                     <Radio className="size-3" /> Live — Playing Now
                   </div>
                   <div className="font-display text-lg font-bold text-foreground leading-tight truncate">
-                    {nowPlaying.title}
+                  {nowPlaying.title}
                   </div>
-                  {nowPlaying.system && (
-                    <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
-                      {SYSTEMS.find((s) => s.id === nowPlaying.system)?.shortName ?? nowPlaying.system}
-                    </div>
+                  {nowPlaying.system && config.showSystemLabels && (
+                  <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">
+                  {SYSTEMS.find((s) => s.id === nowPlaying.system)?.shortName ?? nowPlaying.system}
+                  </div>
                   )}
-                </div>
-                {nowPlayingGame && (
+                  </div>
+                  {nowPlayingGame && (
                   <button
-                    type="button"
-                    onClick={() => openGame(nowPlayingGame)}
-                    className="shrink-0 font-mono text-[10px] uppercase tracking-wider border border-border bg-background/60 px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                  type="button"
+                  onClick={() => openGame(nowPlayingGame)}
+                  className="shrink-0 font-mono text-[10px] uppercase tracking-wider border border-border bg-background/60 px-3 py-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    Details
+                  Details
                   </button>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
+                  )}
+                  </div>
+                  </div>
+                  </section>
+                  )}
 
-        {/* ── Continue Playing hero ── */}
-        {continueGame && (
-          <section className="px-5 sm:px-8 pt-6">
-            <div
-              className="relative rounded-xl overflow-hidden border border-card-border min-h-[180px]"
-              data-testid="hero-continue"
-            >
-              <div
-                className="absolute inset-0"
-                style={{
+                  {/* ── Continue Playing hero ── */}
+                  {continueGame && (
+                  <section className="px-5 sm:px-8 pt-6">
+                  <div
+                  className="relative rounded-xl overflow-hidden border border-card-border min-h-[180px]"
+                  data-testid="hero-continue"
+                  >
+                  <div
+                  className="absolute inset-0"
+                  style={{
                   background: `linear-gradient(120deg, hsl(${continueGame.art[0]}) 0%, hsl(${continueGame.art[1]}) 60%, hsl(${continueGame.art[2]}) 100%)`,
-                }}
-              />
-              {continueGame.artUrl && (
-                <img
+                  }}
+                  />
+                  {continueGame.artUrl && (
+                  <img
                   src={continueGame.artUrl}
                   alt=""
                   className="absolute right-0 top-0 h-full w-auto object-cover opacity-30 pointer-events-none"
-                />
-              )}
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.75)_0%,rgba(0,0,0,0.4)_55%,rgba(0,0,0,0.1)_100%)]" />
-              <div className="relative p-6 sm:p-8 flex flex-col gap-2.5 max-w-xl">
-                <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/70">
+                  />
+                  )}
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.75)_0%,rgba(0,0,0,0.4)_55%,rgba(0,0,0,0.1)_100%)]" />
+                  <div className="relative p-6 sm:p-8 flex flex-col gap-2.5 max-w-xl">
+                  <div className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/70">
                   Continue Playing
-                </div>
-                <h2 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">
-                  {continueGame.title}
-                </h2>
-                <div className="font-mono text-[11px] text-white/60 uppercase tracking-wider">
-                  {SYSTEMS.find((s) => s.id === continueGame.system)?.shortName}
-                  {continueGame.lastPlayed
-                    ? ` · Last played ${formatRelative(continueGame.lastPlayed)}`
-                    : ""}
-                  {(continueGame.minutesPlayed ?? 0) > 0
-                    ? ` · ${fmtHours(continueGame.minutesPlayed ?? 0)} played`
-                    : ""}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <Button
-                    size="lg"
-                    onClick={() => launchGame(continueGame)}
-                    className="font-mono uppercase tracking-wider ring-neon"
-                    data-testid="button-hero-launch"
-                  >
-                    <Play className="size-4 fill-current" />
-                    Play
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => openGame(continueGame)}
-                    className="bg-black/70 border-white/35 text-white hover:bg-black/85"
-                  >
-                    Details
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <div className="px-5 sm:px-8 py-6 space-y-8">
-          {/* ── Stats row ── */}
-          <section>
-            <SectionHeader title="Overview" />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard
-                icon={<Clock className="size-3" />}
-                label="Hours played"
-                value={fmtHoursShort(totalMinutes)}
-                sub={`${games.length} game${games.length !== 1 ? "s" : ""} in library`}
-                accent="text-primary"
-              />
-              <StatCard
-                icon={<Trophy className="size-3" />}
-                label="Completed"
-                value={String(completed)}
-                sub={`${completionRate}% completion rate`}
-                accent="text-status-online"
-              />
-              <StatCard
-                icon={<ListTodo className="size-3" />}
-                label="Backlog"
-                value={String(backlog)}
-                sub={backlog > 0 ? "games waiting to play" : "backlog is clear!"}
-                accent="text-chart-3"
-              />
-              <StatCard
-                icon={<TrendingUp className="size-3" />}
-                label="This week"
-                value={String(thisWeek)}
-                sub={
-                  thisWeek !== lastWeekCount
-                    ? `${thisWeek > lastWeekCount ? "+" : ""}${thisWeek - lastWeekCount} vs last week`
-                    : "same as last week"
-                }
-                accent="text-accent"
-              />
-            </div>
-          </section>
-
-          {/* ── Charts: system breakdown + status donut ── */}
-          {(showSystemChart || games.length > 0) && (
-            <section>
-              <SectionHeader title="Library breakdown" />
-              <div className="grid sm:grid-cols-2 gap-4">
-                {showSystemChart && (
-                  <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
-                      Play time by system
-                    </div>
-                    {systemBreakdown.map(({ system, minutes }) => (
-                      <SystemBar
-                        key={system.id}
-                        system={system}
-                        minutes={minutes}
-                        maxMinutes={maxSystemMinutes}
-                      />
-                    ))}
-                    {systemBreakdown.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        Play some games to see your breakdown.
-                      </p>
-                    )}
                   </div>
-                )}
-                <div className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="font-display text-2xl sm:text-3xl font-bold text-white leading-tight">
+                  {continueGame.title}
+                  </h2>
+                  <div className="font-mono text-[11px] text-white/60 uppercase tracking-wider">
+                  {config.showSystemLabels && (
+                  <>
+                  {SYSTEMS.find((s) => s.id === continueGame.system)?.shortName}
+                  {" · "}
+                  </>
+                  )}
+                  {continueGame.lastPlayed
+                  ? `Last played ${formatRelative(continueGame.lastPlayed)}`
+                  : ""}
+                  {(continueGame.minutesPlayed ?? 0) > 0
+                  ? ` · ${fmtHours(continueGame.minutesPlayed ?? 0)} played`
+                  : ""}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <Button
+                  size="lg"
+                  onClick={() => launchGame(continueGame)}
+                  className="font-mono uppercase tracking-wider ring-neon"
+                  data-testid="button-hero-launch"
+                  >
+                  <Play className="size-4 fill-current" />
+                  Play
+                  </Button>
+                  <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => openGame(continueGame)}
+                  className="bg-black/70 border-white/35 text-white hover:bg-black/85"
+                  >
+                  Details
+                  </Button>
+                  </div>
+                  </div>
+                  </div>
+                  </section>
+                  )}
+
+                  <div className="px-5 sm:px-8 py-6 space-y-8">
+                  {/* ── Stats row ── */}
+                  <section>
+                  <SectionHeader title="Overview" />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <StatCard
+                  icon={<Clock className="size-3" />}
+                  label="Hours played"
+                  value={fmtHoursShort(totalMinutes)}
+                  sub={`${games.length} game${games.length !== 1 ? "s" : ""} in library`}
+                  accent="text-primary"
+                  />
+                  <StatCard
+                  icon={<Trophy className="size-3" />}
+                  label="Completed"
+                  value={String(completed)}
+                  sub={`${completionRate}% completion rate`}
+                  accent="text-status-online"
+                  />
+                  <StatCard
+                  icon={<ListTodo className="size-3" />}
+                  label="Backlog"
+                  value={String(backlog)}
+                  sub={backlog > 0 ? "games waiting to play" : "backlog is clear!"}
+                  accent="text-chart-3"
+                  />
+                  <StatCard
+                  icon={<TrendingUp className="size-3" />}
+                  label="This week"
+                  value={String(thisWeek)}
+                  sub={
+                  thisWeek !== lastWeekCount
+                  ? `${thisWeek > lastWeekCount ? "+" : ""}${thisWeek - lastWeekCount} vs last week`
+                  : "same as last week"
+                  }
+                  accent="text-accent"
+                  />
+                  </div>
+                  </section>
+
+                  {/* ── Charts: system breakdown + status donut ── */}
+                  {(showSystemChart || games.length > 0) && (
+                  <section>
+                  <SectionHeader title="Library breakdown" />
+                  <div className="grid sm:grid-cols-2 gap-4">
+                  {showSystemChart && (
+                  <div className="rounded-xl border border-border bg-card p-5 space-y-3">
                   <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
-                    Status breakdown
+                  Play time by system
+                  </div>
+                  {systemBreakdown.map(({ system, minutes }) => (
+                  <SystemBar
+                    key={system.id}
+                    system={system}
+                    minutes={minutes}
+                    maxMinutes={maxSystemMinutes}
+                  />
+                  ))}
+                  {systemBreakdown.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Play some games to see your breakdown.
+                  </p>
+                  )}
+                  </div>
+                  )}
+                  <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
+                  Status breakdown
                   </div>
                   <StatusDonut counts={statusCounts} total={games.length} />
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* ── Activity ── */}
-          <section>
-            <SectionHeader title="Activity" />
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
-                Games played — this week vs last
-              </div>
-              <ActivityBar thisWeek={thisWeek} lastWeek={lastWeekCount} />
-            </div>
-          </section>
-
-          {/* ── Game highlights ── */}
-          {showHighlights && (
-            <section>
-              <SectionHeader title="Highlights" />
-              <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-                {mostPlayed && (
-                  <HighlightCard
-                    label="Most played"
-                    game={mostPlayed}
-                    stat={fmtHoursShort(mostPlayed.minutesPlayed ?? 0)}
-                    statLabel="played"
-                    icon={<Clock className="size-3" />}
-                    onOpen={openGame}
-                  />
-                )}
-                {highestRated && (
-                  <HighlightCard
-                    label="Highest rated"
-                    game={highestRated}
-                    stat={`${highestRated.rating}/5`}
-                    statLabel="your rating"
-                    icon={<Star className="size-3" />}
-                    onOpen={openGame}
-                  />
-                )}
-                {bestCommunity && (
-                  <HighlightCard
-                    label="Community favourite"
-                    game={bestCommunity}
-                    stat={`${((bestCommunity.communityScore ?? 0) / 2).toFixed(1)}`}
-                    statLabel="/ 10 score"
-                    icon={<Zap className="size-3" />}
-                    onOpen={openGame}
-                  />
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* ── In Progress ── */}
-          {inProgress.length > 0 && (
-            <section>
-              <SectionHeader title="In Progress" count={inProgress.length} />
-              <HorizontalShelf>
-                {inProgress.map((g) => (
-                  <div key={g.id} className="w-44 shrink-0">
-                    <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
                   </div>
-                ))}
-              </HorizontalShelf>
-            </section>
-          )}
-
-          {/* ── Recently Played ── */}
-          {recentlyPlayed.length > 0 && (
-            <section>
-              <SectionHeader
-                title="Recently Played"
-                href="/library/recent"
-                count={recentlyPlayed.length}
-              />
-              <HorizontalShelf>
-                {recentlyPlayed.map((g) => (
-                  <div key={g.id} className="w-44 shrink-0">
-                    <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
                   </div>
-                ))}
-              </HorizontalShelf>
-            </section>
-          )}
+                  </section>
+                  )}
 
-          {/* ── New Additions ── */}
-          {newAdditions.length > 0 && (
-            <section>
-              <SectionHeader title="New This Week" count={newAdditions.length} />
-              <HorizontalShelf>
-                {newAdditions.map((g) => (
-                  <div key={g.id} className="w-44 shrink-0">
-                    <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
+                  {/* ── Activity ── */}
+                  <section>
+                  <SectionHeader title="Activity" />
+                  <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-4">
+                  Games played — this week vs last
                   </div>
-                ))}
-              </HorizontalShelf>
-            </section>
-          )}
+                  <ActivityBar thisWeek={thisWeek} lastWeek={lastWeekCount} />
+                  </div>
+                  </section>
 
-          {/* ── Recent Activity ── */}
-          {sessions.length > 0 && (
-            <section>
-              <SectionHeader title="Recent activity" />
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                {sessions.slice(0, 12).map((s, i) => {
+                  {/* ── Game highlights ── */}
+                  {showHighlights && (
+                  <section>
+                  <SectionHeader title="Highlights" />
+                  <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                  {mostPlayed && (
+                  <HighlightCard
+                  label="Most played"
+                  game={mostPlayed}
+                  stat={fmtHoursShort(mostPlayed.minutesPlayed ?? 0)}
+                  statLabel="played"
+                  icon={<Clock className="size-3" />}
+                  onOpen={openGame}
+                  showSystem={config.showSystemLabels}
+                  />
+                  )}
+                  {highestRated && (
+                  <HighlightCard
+                  label="Highest rated"
+                  game={highestRated}
+                  stat={`${highestRated.rating}/5`}
+                  statLabel="your rating"
+                  icon={<Star className="size-3" />}
+                  onOpen={openGame}
+                  showSystem={config.showSystemLabels}
+                  />
+                  )}
+                  {bestCommunity && (
+                  <HighlightCard
+                  label="Community favourite"
+                  game={bestCommunity}
+                  stat={`${((bestCommunity.communityScore ?? 0) / 2).toFixed(1)}`}
+                  statLabel="/ 10 score"
+                  icon={<Zap className="size-3" />}
+                  onOpen={openGame}
+                  showSystem={config.showSystemLabels}
+                  />
+                  )}
+                  </div>
+                  </section>
+                  )}
+
+                  {/* ── In Progress ── */}
+                  {inProgress.length > 0 && (
+                  <section>
+                  <SectionHeader title="In Progress" count={inProgress.length} />
+                  <HorizontalShelf>
+                  {inProgress.map((g) => (
+                  <div key={g.id} className="w-44 shrink-0">
+                  <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
+                  </div>
+                  ))}
+                  </HorizontalShelf>
+                  </section>
+                  )}
+
+                  {/* ── Recently Played ── */}
+                  {recentlyPlayed.length > 0 && (
+                  <section>
+                  <SectionHeader
+                  title="Recently Played"
+                  href="/library/recent"
+                  count={recentlyPlayed.length}
+                  />
+                  <HorizontalShelf>
+                  {recentlyPlayed.map((g) => (
+                  <div key={g.id} className="w-44 shrink-0">
+                  <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
+                  </div>
+                  ))}
+                  </HorizontalShelf>
+                  </section>
+                  )}
+
+                  {/* ── New Additions ── */}
+                  {newAdditions.length > 0 && (
+                  <section>
+                  <SectionHeader title="New This Week" count={newAdditions.length} />
+                  <HorizontalShelf>
+                  {newAdditions.map((g) => (
+                  <div key={g.id} className="w-44 shrink-0">
+                  <GameCard game={g} onOpen={openGame} onToggleFav={handleToggleFav} />
+                  </div>
+                  ))}
+                  </HorizontalShelf>
+                  </section>
+                  )}
+
+                  {/* ── Recent Activity ── */}
+                  {sessions.length > 0 && (
+                  <section>
+                  <SectionHeader title="Recent activity" />
+                  <div className="rounded-xl border border-border bg-card overflow-hidden">
+                  {sessions.slice(0, 12).map((s, i) => {
                   const system = SYSTEMS.find((sys) => sys.id === s.romSystem);
                   const dur = s.durationSeconds
-                    ? s.durationSeconds < 60
-                      ? `${s.durationSeconds}s`
-                      : `${Math.round(s.durationSeconds / 60)}m`
-                    : null;
+                  ? s.durationSeconds < 60
+                  ? `${s.durationSeconds}s`
+                  : `${Math.round(s.durationSeconds / 60)}m`
+                  : null;
                   const when = formatRelative(s.startedAt);
                   return (
-                    <div
-                      key={s.id}
-                      className={`flex items-center gap-3 px-4 py-2.5 ${i < sessions.slice(0, 12).length - 1 ? "border-b border-border" : ""}`}
-                    >
-                      <History className="size-3.5 text-muted-foreground shrink-0" />
-                      <span className="flex-1 min-w-0 font-medium text-sm truncate">{s.romTitle}</span>
-                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                        {system?.shortName ?? s.romSystem}
-                      </span>
-                      {dur && (
-                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{dur}</span>
-                      )}
-                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground/60">{when}</span>
-                    </div>
+                  <div
+                  key={s.id}
+                  className={`flex items-center gap-3 px-4 py-2.5 ${i < sessions.slice(0, 12).length - 1 ? "border-b border-border" : ""}`}
+                  >
+                  <History className="size-3.5 text-muted-foreground shrink-0" />
+                  <span className="flex-1 min-w-0 font-medium text-sm truncate">{s.romTitle}</span>
+                  {config.showSystemLabels && (
+                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                      {system?.shortName ?? s.romSystem}
+                    </span>
+                  )}
+                  {dur && (
+                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{dur}</span>
+                  )}
+                  <span className="shrink-0 font-mono text-[10px] text-muted-foreground/60">{when}</span>
+                  </div>
                   );
-                })}
-              </div>
-            </section>
-          )}
-
+                  })}
+                  </div>
+                  </section>
+                  )}
           {/* ── Browse Systems ── */}
           <section>
             <SectionHeader title="Browse Systems" href="/library/all" />

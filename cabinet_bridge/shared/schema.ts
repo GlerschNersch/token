@@ -143,6 +143,11 @@ export const integrationSettingsSchema = z.object({
   pcAppEntityId: z.string().max(256).default(""),
   controlDefaults: z.record(z.string(), z.record(z.coerce.number(), z.string().max(64))).default({}),
   gamepadRumble: z.boolean().default(true),
+  language: z.string().max(10).default("en"),
+  theme: z.string().max(32).default("default"),
+  globalAspectRatio: z.string().max(16).default("auto"),
+  globalShader: z.string().max(64).default("none"),
+  showSystemLabels: z.boolean().default(true),
   systemDisplay: z.record(z.string(), z.object({
     aspectRatio: z.string().max(16).optional(),
     integerScale: z.boolean().optional(),
@@ -154,8 +159,6 @@ export const integrationSettingsSchema = z.object({
     favorite: 3, // Y
     menu: 9,     // Start
   }),
-  adaptiveBackground: z.boolean().default(true),
-  crtIntensity: z.number().int().min(0).max(100).default(30),
 });
 
 export type IntegrationSettings = z.infer<typeof integrationSettingsSchema>;
@@ -180,6 +183,11 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
   pcAppEntityId: "",
   controlDefaults: {},
   gamepadRumble: true,
+  language: "en",
+  theme: "default",
+  globalAspectRatio: "auto",
+  globalShader: "none",
+  showSystemLabels: true,
   systemDisplay: {},
   uiGamepadMapping: {
     select: 0,   // A
@@ -187,8 +195,6 @@ export const DEFAULT_INTEGRATION_SETTINGS: IntegrationSettings = {
     favorite: 3, // Y
     menu: 9,     // Start
   },
-  adaptiveBackground: true,
-  crtIntensity: 30,
 };
 
 export const userProfiles = sqliteTable("user_profiles", {

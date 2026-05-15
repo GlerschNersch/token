@@ -45,6 +45,7 @@ import type { SmartFilterRules, GameCollectionWithItems } from "@shared/schema";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { THEMES } from "@/App";
 
 export default function Settings() {
   const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
@@ -487,109 +488,199 @@ function DisplaySettings() {
   const { config, setConfig } = useIntegration();
   const { t } = useTranslation();
 
-  const presets = [
-    { label: "Off", value: 0 },
-    { label: "Soft (PVM)", value: 20 },
-    { label: "Arcade", value: 45 },
-    { label: "Vintage", value: 80 },
-  ];
-
   return (
     <div className="space-y-10">
       <Section
-        title={t("settings.language")}
-        description="Choose your preferred display language."
+        title="Global Preferences"
+        description="Default settings that apply to all games unless overridden."
       >
-        <div className="flex items-center gap-4">
-          <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Select
-            value={config.language ?? "en"}
-            onValueChange={(val) => setConfig({ language: val })}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">{t("languages.en")}</SelectItem>
-              <SelectItem value="es">{t("languages.es")}</SelectItem>
-              <SelectItem value="fr">{t("languages.fr")}</SelectItem>
-              <SelectItem value="de">{t("languages.de")}</SelectItem>
-              <SelectItem value="pt">{t("languages.pt")}</SelectItem>
-              <SelectItem value="ja">{t("languages.ja")}</SelectItem>
-              <SelectItem value="zh">{t("languages.zh")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </Section>
-
-      <Section
-        title="Visual Effects"
-        description="Personalize the arcade aesthetic and immersion."
-      >
-        <div className="grid gap-6">
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
-            <div className="space-y-0.5">
-              <div className="font-display font-semibold text-sm">Adaptive Backgrounds</div>
-              <div className="text-xs text-muted-foreground">Morph global gradients to match focused game artwork colors.</div>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <Field label={t("settings.language")} hint="Choose your preferred display language.">
+            <div className="flex items-center gap-4">
+              <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select
+                value={config.language ?? "en"}
+                onValueChange={(val) => setConfig({ language: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">{t("languages.en")}</SelectItem>
+                  <SelectItem value="es">{t("languages.es")}</SelectItem>
+                  <SelectItem value="fr">{t("languages.fr")}</SelectItem>
+                  <SelectItem value="de">{t("languages.de")}</SelectItem>
+                  <SelectItem value="pt">{t("languages.pt")}</SelectItem>
+                  <SelectItem value="ja">{t("languages.ja")}</SelectItem>
+                  <SelectItem value="zh">{t("languages.zh")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Switch
-              checked={config.adaptiveBackground}
-              onCheckedChange={(v) => setConfig({ adaptiveBackground: v })}
-            />
-          </div>
+          </Field>
 
-          <div className="space-y-4 p-4 rounded-lg border border-border bg-sidebar/40">
-            <div className="space-y-0.5">
-              <div className="font-display font-semibold text-sm">CRT Scanline Intensity</div>
-              <div className="text-xs text-muted-foreground">Adjust the strength of the retro CRT tube overlay.</div>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 pt-2">
-              {presets.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setConfig({ crtIntensity: p.value })}
-                  className={`px-4 py-2 rounded-md font-mono text-[10px] uppercase tracking-wider border transition-all ${
-                    config.crtIntensity === p.value
-                      ? "bg-primary border-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-                      : "bg-background/40 border-border text-muted-foreground hover:border-primary/50"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-4 mt-2">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={config.crtIntensity}
-                onChange={(e) => setConfig({ crtIntensity: parseInt(e.target.value, 10) })}
-                className="flex-1 h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
+          <Field label="System Labels" hint="Show or hide console names on game cards.">
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-sidebar/40 h-10 mt-1">
+              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Show Labels</span>
+              <Switch
+                checked={config.showSystemLabels}
+                onCheckedChange={(v) => setConfig({ showSystemLabels: v })}
               />
-              <span className="font-mono text-xs w-8 text-right">{config.crtIntensity}%</span>
             </div>
-          </div>
+          </Field>
+
+          <Field label="UI Theme" hint="Choose a visual style for the interface.">
+            <div className="flex items-center gap-4">
+              <Palette className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select
+                value={config.theme || "default"}
+                onValueChange={(val) => setConfig({ theme: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {THEMES.map((theme) => (
+                    <SelectItem key={theme} value={theme}>
+                      {theme.charAt(0).toUpperCase() + theme.slice(1).replace("-", " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </Field>
+
+          <div />
+
+          <Field label="Default Aspect Ratio" hint="Used if no system-specific override is set.">
+            <Select
+              value={config.globalAspectRatio || "auto"}
+              onValueChange={(v) => setConfig({ globalAspectRatio: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Auto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto (Default)</SelectItem>
+                <SelectItem value="4/3">4:3 (Standard)</SelectItem>
+                <SelectItem value="16/9">16:9 (Widescreen)</SelectItem>
+                <SelectItem value="3/2">3:2 (GBA)</SelectItem>
+                <SelectItem value="8/7">8:7 (SNES Pixel)</SelectItem>
+                <SelectItem value="1/1">1:1 (Square)</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field label="Default Shader" hint="Global visual filter for the emulator.">
+            <Select
+              value={config.globalShader || "none"}
+              onValueChange={(v) => setConfig({ globalShader: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="None" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="crt">CRT</SelectItem>
+                <SelectItem value="smooth">Smooth (Linear)</SelectItem>
+                <SelectItem value="scanlines">Scanlines</SelectItem>
+                <SelectItem value="lcd">LCD</SelectItem>
+                <SelectItem value="phosphor">Phosphor</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
         </div>
       </Section>
 
       <Section
-        title="Dynamic Theming"
-        description="Adaptive background colors are sampled directly from the game's procedural or uploaded art."
+        title="Per-System Overrides"
+        description="Customize display settings for specific consoles. These apply when launching a game."
       >
-        <div className="grid grid-cols-3 gap-3">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="aspect-video rounded-lg border border-border animate-pulse"
-              style={{
-                background: `linear-gradient(135deg, var(--adaptive-1), var(--adaptive-2))`,
-                opacity: 0.4 + (i * 0.2)
-              }}
-            />
-          ))}
+        <div className="space-y-3">
+          {ALL_SYSTEMS.map((system) => {
+            const display = config.systemDisplay?.[system.id] || {};
+            const update = (patch: Partial<NonNullable<typeof config.systemDisplay>[string]>) => {
+              const next = { ...config.systemDisplay };
+              next[system.id] = { ...display, ...patch };
+              setConfig({ systemDisplay: next });
+            };
+
+            return (
+              <div key={system.id} className="p-4 rounded-lg border border-border bg-sidebar/20 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="font-display font-bold uppercase tracking-wider text-sm flex items-center gap-2">
+                    <Monitor className="size-3.5 text-primary" />
+                    {system.label}
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2 text-[10px] uppercase font-mono text-muted-foreground hover:text-destructive"
+                    onClick={() => {
+                      const next = { ...config.systemDisplay };
+                      delete next[system.id];
+                      setConfig({ systemDisplay: next });
+                    }}
+                    disabled={!config.systemDisplay?.[system.id]}
+                  >
+                    Reset
+                  </Button>
+                </div>
+
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-mono text-muted-foreground">Aspect Ratio</Label>
+                    <Select
+                      value={display.aspectRatio || "auto"}
+                      onValueChange={(v) => update({ aspectRatio: v === "auto" ? undefined : v })}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background/40">
+                        <SelectValue placeholder="Auto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (Default)</SelectItem>
+                        <SelectItem value="4/3">4:3 (Standard)</SelectItem>
+                        <SelectItem value="16/9">16:9 (Widescreen)</SelectItem>
+                        <SelectItem value="3/2">3:2 (GBA)</SelectItem>
+                        <SelectItem value="8/7">8:7 (SNES Pixel)</SelectItem>
+                        <SelectItem value="1/1">1:1 (Square)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] uppercase font-mono text-muted-foreground">Shader</Label>
+                    <Select
+                      value={display.shader || "none"}
+                      onValueChange={(v) => update({ shader: v === "none" ? undefined : v })}
+                    >
+                      <SelectTrigger className="h-8 text-xs bg-background/40">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="crt">CRT</SelectItem>
+                        <SelectItem value="smooth">Smooth (Linear)</SelectItem>
+                        <SelectItem value="scanlines">Scanlines</SelectItem>
+                        <SelectItem value="lcd">LCD</SelectItem>
+                        <SelectItem value="phosphor">Phosphor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col justify-end pb-1">
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <Label className="text-[10px] uppercase font-mono text-muted-foreground">Integer Scale</Label>
+                      <Switch
+                        className="scale-75 origin-right"
+                        checked={!!display.integerScale}
+                        onCheckedChange={(v) => update({ integerScale: v })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Section>
     </div>

@@ -4,6 +4,7 @@ import { SYSTEMS, type Game } from "@/data/library";
 import { formatRelative } from "@/lib/integration";
 import { Heart, Info, Star, Clock } from "lucide-react";
 import { queryClient, apiUrl } from "@/lib/queryClient";
+import { useIntegration } from "@/lib/integration";
 
 // ── Play-status badge ─────────────────────────────────────────────────────────
 const STATUS_META: Record<string, { label: string; color: string }> = {
@@ -40,6 +41,7 @@ export const GameCard = memo(function GameCard({
   focused?: boolean;
   showSaveThumb?: boolean;
 }) {
+  const { config } = useIntegration();
   const system = SYSTEMS.find((s) => s.id === game.system);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
@@ -209,12 +211,14 @@ export const GameCard = memo(function GameCard({
           {/* System name + play-status dot */}
           <span className="flex items-center gap-1.5 min-w-0 truncate">
             <PlayStatusDot status={game.playStatus} />
-            <span
-              className="md-label-small text-muted-foreground uppercase tracking-[0.08em] truncate"
-              data-testid={`text-system-${game.id}`}
-            >
-              {system?.shortName ?? game.system}
-            </span>
+            {config.showSystemLabels && (
+              <span
+                className="md-label-small text-muted-foreground uppercase tracking-[0.08em] truncate"
+                data-testid={`text-system-${game.id}`}
+              >
+                {system?.shortName ?? game.system}
+              </span>
+            )}
           </span>
           <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
             {game.minutesPlayed && game.minutesPlayed > 0 ? (

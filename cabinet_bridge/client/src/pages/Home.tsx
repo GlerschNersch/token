@@ -19,6 +19,7 @@ import {
   Shuffle,
   X,
   Check,
+  Play,
 } from "lucide-react";
 import { useProfile } from "@/lib/useProfile";
 import { useIntegration } from "@/lib/integration";
@@ -28,6 +29,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { GameCollectionWithItems, UploadedRom, ProfileGameState } from "@shared/schema";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { useGridNav } from "@/lib/useGridNav";
+import { formatRelative } from "@/lib/integration";
 
 type Sort = "title" | "year" | "recent" | "rating" | "plays";
 
@@ -422,25 +424,8 @@ export default function Home({ filter }: { filter: Filter }) {
     return SYSTEMS.some((s) => s.id === filter) ? (filter as SystemId) : undefined;
   }, [filter]);
 
-  // ── Adaptive Background Logic ──────────────────────────────────────────────
-  const handleFocusChange = useCallback((idx: number) => {
-    if (!config.adaptiveBackground) return;
-    const game = filtered[idx];
-    if (game && game.art) {
-      document.documentElement.style.setProperty("--adaptive-1", `hsl(${game.art[0]})`);
-      document.documentElement.style.setProperty("--adaptive-2", `hsl(${game.art[1]})`);
-    } else {
-      // Default colors (miami-vice-ish)
-      document.documentElement.style.setProperty("--adaptive-1", "hsl(322 92% 30%)");
-      document.documentElement.style.setProperty("--adaptive-2", "hsl(188 90% 30%)");
-    }
-  }, [filtered, config.adaptiveBackground]);
-
   return (
     <div className="flex h-full">
-      {/* Dynamic Adaptive Background Layer */}
-      {config.adaptiveBackground && <div className="adaptive-bg" />}
-      
       <WelcomeDialog hasRoms={uploadedRoms.length > 0} />
       <Sidebar active={filter} />
 
@@ -784,14 +769,12 @@ export default function Home({ filter }: { filter: Filter }) {
               onToggleFav={toggleFav}
               disabled={openGame !== null}
               mapping={config.uiGamepadMapping}
-              onFocusChange={handleFocusChange}
             />
           ) : (
             <ListView
               games={filtered}
               onOpen={setOpenGame}
               onToggleFav={toggleFav}
-              onFocusChange={handleFocusChange}
             />
           )}
           </section>
@@ -833,14 +816,12 @@ const Grid = memo(function Grid({
   games,
   onOpen,
   onToggleFav,
-  onFocusChange,
   disabled,
   mapping,
 }: {
   games: Game[];
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
-  onFocusChange?: (index: number) => void;
   disabled?: boolean;
   mapping?: { select?: number; favorite?: number };
 }) {
@@ -851,7 +832,6 @@ const Grid = memo(function Grid({
     disabled,
     onActivate: (i) => { if (games[i]) onOpen(games[i]); },
     onFav: (i) => { if (games[i]) onToggleFav(games[i]); },
-    onFocusChange,
     mapping,
   });
 
@@ -873,12 +853,10 @@ const ListView = memo(function ListView({
   games,
   onOpen,
   onToggleFav,
-  onFocusChange,
 }: {
   games: Game[];
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
-  onFocusChange?: (index: number) => void;
 }) {
   const STATUS_LABELS: Record<string, string> = {
     unset: "",
@@ -1117,6 +1095,7 @@ function ContinueHero({ game, onOpen, profileId = 1 }: { game: Game; onOpen: (g:
               className="font-mono uppercase tracking-wider ring-neon"
               data-testid="button-hero-launch"
             >
+              <Play className="size-4 fill-current" />
               Play
             </Button>
             <Button

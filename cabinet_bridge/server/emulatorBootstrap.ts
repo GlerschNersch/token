@@ -1973,20 +1973,28 @@ ${cheats.length > 0 ? `window.EJS_cheats = ${JSON.stringify(cheats.map(c => [c.d
 window.EJS_defaultControls = ${JSON.stringify(buildEjsControls(core, controlDefaults, gamepadBindings, controlDefaultsP2, gamepadBindingsP2))};
 // ── Display options (per-system) ────────────────────────────────────────────
 window.CABINET_RUMBLE = ${JSON.stringify(gamepadRumble)};
-(function () {
-  var sysId = ${JSON.stringify(core)};
-  var opts = ${JSON.stringify(systemDisplay)};
-  var sysOpts = opts[sysId] || {};
-  if (sysOpts.shader) {
-    window.EJS_defaultOptions = window.EJS_defaultOptions || {};
-    window.EJS_defaultOptions["shader"] = sysOpts.shader;
-  }
-  window.CABINET_DISPLAY_OPTS = sysOpts;
-})();
 window.EJS_defaultOptions = {
   "save-state-location": "browser",
   "save-state-slot": 1
 };
+(function () {
+  var sysId = ${JSON.stringify(core)};
+  var opts = ${JSON.stringify(systemDisplay)};
+  var sysOpts = opts[sysId] || {};
+  
+  // Use per-system shader or fallback to global shader
+  var shader = sysOpts.shader || ${JSON.stringify(bootstrapSettings.globalShader || "none")};
+  if (shader && shader !== "none") {
+    window.EJS_defaultOptions["shader"] = shader;
+  }
+  
+  // Ensure aspect ratio fallbacks to global
+  if (!sysOpts.aspectRatio && ${JSON.stringify(bootstrapSettings.globalAspectRatio)} !== "auto") {
+    sysOpts.aspectRatio = ${JSON.stringify(bootstrapSettings.globalAspectRatio)};
+  }
+  
+  window.CABINET_DISPLAY_OPTS = sysOpts;
+})();
 window.EJS_Buttons = {
   playPause: true,
   restart: true,

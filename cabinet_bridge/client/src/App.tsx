@@ -9,6 +9,7 @@ import { IntegrationProvider, useIntegration } from "@/lib/integration";
 import { parseFilter, parseCollectionFilter, DEFAULT_FILTER } from "@/lib/filter";
 import { MobileBottomNav } from "@/components/MobileNav";
 import i18n from "./lib/i18n";
+import { useTranslation } from "react-i18next";
 import Home from "@/pages/Home";
 import { ProfileProvider } from "@/lib/useProfile";
 import Dashboard from "@/pages/Dashboard";
@@ -20,32 +21,20 @@ const Achievements = lazy(() => import("@/pages/Achievements"));
 const History = lazy(() => import("@/pages/History"));
 
 /**
- * Manages global visual effects driven by Integration settings.
+ * Manages global visual effects and themes driven by Integration settings.
  */
 function VisualEffectManager() {
   const { config } = useIntegration();
 
   useEffect(() => {
-    // 1. CRT Effect
-    const intensity = config.crtIntensity ?? 0;
-    if (intensity > 0) {
-      document.body.classList.add("crt");
-      document.documentElement.style.setProperty("--crt-opacity", (intensity / 100).toFixed(2));
+    // Apply theme
+    const theme = config.theme || "default";
+    if (theme === "default") {
+      document.documentElement.removeAttribute("data-theme");
     } else {
-      document.body.classList.remove("crt");
+      document.documentElement.setAttribute("data-theme", theme);
     }
-
-    // 2. Adaptive Background Base (if not on Home page or no focus)
-    if (config.adaptiveBackground) {
-      document.documentElement.style.setProperty("--adaptive-opacity", "0.18");
-      if (!document.documentElement.style.getPropertyValue("--adaptive-1")) {
-        document.documentElement.style.setProperty("--adaptive-1", "hsl(322 92% 30%)");
-        document.documentElement.style.setProperty("--adaptive-2", "hsl(188 90% 30%)");
-      }
-    } else {
-      document.documentElement.style.setProperty("--adaptive-opacity", "0");
-    }
-  }, [config.crtIntensity, config.adaptiveBackground]);
+  }, [config.theme]);
 
   return null;
 }
@@ -55,12 +44,15 @@ function VisualEffectManager() {
  */
 function LanguageManager() {
   const { config } = useIntegration();
+  const { i18n } = useTranslation();
+
   useEffect(() => {
     const lang = config.language ?? "en";
     if (i18n.language !== lang) {
-      i18n.changeLanguage(lang);
+      void i18n.changeLanguage(lang);
     }
-  }, [config.language]);
+  }, [config.language, i18n]);
+
   return null;
 }
 
