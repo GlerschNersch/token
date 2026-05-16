@@ -144,9 +144,6 @@ export default function Settings() {
               <TabsTrigger value="display" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Palette className="size-4" /> {t("settings.tabs.display")}
               </TabsTrigger>
-              <TabsTrigger value="automation" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Zap className="size-4" /> {t("settings.tabs.automation")}
-              </TabsTrigger>
               <TabsTrigger value="controls" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Gamepad2 className="size-4" /> {t("settings.tabs.controls")}
               </TabsTrigger>
@@ -244,134 +241,6 @@ export default function Settings() {
 
             <TabsContent value="display" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <DisplaySettings />
-            </TabsContent>
-
-            <TabsContent value="automation" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Section
-                title={t("settings.sections.automation.title")}
-                description={t("settings.sections.automation.description")}
-              >
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <Field label={t("settings.fields.pcHostname.label")} hint={t("settings.fields.pcHostname.hint")}>
-                    <Input
-                      value={config.pcHostname}
-                      onChange={(e) => setConfig({ pcHostname: e.target.value })}
-                      placeholder="GAMING-PC"
-                      className="font-mono text-sm"
-                    />
-                  </Field>
-                  <Field label={t("settings.fields.pcOnline.label")} hint={t("settings.fields.pcOnline.hint")}>
-                    <Input
-                      value={config.pcOnlineEntityId}
-                      onChange={(e) => setConfig({ pcOnlineEntityId: e.target.value })}
-                      placeholder="binary_sensor.gaming_pc_status"
-                      className="font-mono text-sm"
-                    />
-                  </Field>
-                  <Field label={t("settings.fields.pcCpu.label")} hint={t("settings.fields.pcCpu.hint")}>
-                    <Input
-                      value={config.pcCpuEntityId}
-                      onChange={(e) => setConfig({ pcCpuEntityId: e.target.value })}
-                      placeholder="sensor.gaming_pc_cpu_usage"
-                      className="font-mono text-sm"
-                    />
-                  </Field>
-                  <Field label={t("settings.fields.pcRam.label")} hint={t("settings.fields.pcRam.hint")}>
-                    <Input
-                      value={config.pcRamEntityId}
-                      onChange={(e) => setConfig({ pcRamEntityId: e.target.value })}
-                      placeholder="sensor.gaming_pc_ram_usage"
-                      className="font-mono text-sm"
-                    />
-                  </Field>
-                  <Field label={t("settings.fields.pcApp.label")} hint={t("settings.fields.pcApp.hint")}>
-                    <Input
-                      value={config.pcAppEntityId}
-                      onChange={(e) => setConfig({ pcAppEntityId: e.target.value })}
-                      placeholder="sensor.gaming_pc_current_app"
-                      className="font-mono text-sm"
-                    />
-                  </Field>
-                </div>
-              </Section>
-
-              <Separator className="bg-border/60" />
-
-              <Section
-                title={t("settings.sections.endpoints.title")}
-                description={t("settings.sections.endpoints.description")}
-              >
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg border border-border bg-sidebar/20">
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-neon-cyan">
-                      <Wifi className="size-4 text-accent" />
-                      System Actions
-                    </h3>
-                    <div className="grid gap-3">
-                      {[
-                        { id: "wake_pc", label: "Wake PC", default: "/api/webhook/cabinet_wake_pc" },
-                        { id: "sleep_pc", label: "Sleep PC", default: "/api/webhook/cabinet_sleep_pc" },
-                        { id: "restart_pc", label: "Restart PC", default: "/api/webhook/cabinet_restart_pc" },
-                        { id: "shutdown_pc", label: "Shutdown PC", default: "/api/webhook/cabinet_shutdown_pc" },
-                      ].map((a) => (
-                        <div key={a.id} className="space-y-1.5">
-                          <Label className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                            {a.label}
-                          </Label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={config.endpoints[a.id] || a.default}
-                              onChange={(e) => setEndpoint(a.id, e.target.value)}
-                              className="font-mono text-[12px] bg-background/40"
-                            />
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              onClick={() => copy(config.endpoints[a.id] || a.default, a.id)}
-                            >
-                              {copied === a.id ? (
-                                <Check className="size-3.5 text-accent" />
-                              ) : (
-                                <Copy className="size-3.5" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-lg border border-border bg-sidebar/20">
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Terminal className="size-4 text-primary" />
-                      Sample Game Launch
-                    </h3>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Each game has a unique webhook. Example for a specific title:
-                    </p>
-                    <div className="flex gap-2">
-                      <Input
-                        readOnly
-                        value="/api/webhook/cabinet_launch_super-mario-world"
-                        className="font-mono text-[12px] bg-background/40 opacity-70"
-                      />
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        onClick={() =>
-                          copy("/api/webhook/cabinet_launch_super-mario-world", "sample-game")
-                        }
-                      >
-                        {copied === "sample-game" ? (
-                          <Check className="size-3.5 text-accent" />
-                        ) : (
-                          <Copy className="size-3.5" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Section>
             </TabsContent>
 
             <TabsContent value="controls" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1009,7 +878,7 @@ function ControlsSettings() {
 
     window.addEventListener("gamepadconnected", update);
     window.addEventListener("gamepaddisconnected", update);
-    const timer = setInterval(update, 100); // Faster poll for the tester
+    const timer = setInterval(update, 100);
     return () => {
       window.removeEventListener("gamepadconnected", update);
       window.removeEventListener("gamepaddisconnected", update);
