@@ -19,6 +19,17 @@ import { insertUploadedRomSchema } from "@shared/schema";
 import { extractFirstRomFromZip, titleFromFileName, slugify } from "./utils";
 import { fetchTheGamesDBMeta, fetchScreenScraperMeta, findLibretroBoxArt } from "./scrape";
 
+// ── EmulatorJS asset disk cache ─────────────────────────────────────────────
+// Caches CDN assets on disk so repeated visits (or different users launching
+// the same core) don't re-fetch the same WASM / JS from the internet.
+const EJS_CACHE_DIR = dataPath("ejs_cache");
+let ejsCacheDirReady = false;
+async function ensureEjsCacheDir() {
+  if (ejsCacheDirReady) return;
+  await fs.mkdir(EJS_CACHE_DIR, { recursive: true });
+  ejsCacheDirReady = true;
+}
+
 export function registerRomRoutes(app: Express) {
   const BIOS_ROOT = dataPath("bios");
 
@@ -170,30 +181,116 @@ export function registerRomRoutes(app: Express) {
     }
   });
 
+  // ── EmulatorJS CDN proxy with disk cache ──────────────────────────────────
+  // Assets are immutable once fetched (WASM, JS cores, etc.).
+  // We cache them on disk so subsequent requests are served locally at LAN
+  // speed (~100-1000×) instead of round-tripping to the CDN every time.
   app.get("/api/emulatorjs/*path", async (req, res) => {
-    const filePath = Array.isArray(req.params.path) ? (req.params.path as string[]).join("/") : ((req.params as any).path ?? "");
+    const filePath = Array.isArray(req.params.path)
+      ? (req.params.path as string[]).join("/")
+      : ((req.params as any).path ?? "");
     if (!filePath || filePath.includes("..")) {
       return res.status(400).send("Invalid path");
     }
+
+    await ensureEjsCacheDir();
+
+    // Determine content-type from extension
+    const ext = path.extname(filePath).toLowerCase();
+    const MIME: Record<string, string> = {
+      ".js": "application/javascript",
+      ".wasm": "application/wasm",
+      ".data": "application/octet-stream",
+      ".mem": "application/octet-stream",
+      ".json": "application/json",
+      ".css": "text/css",
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".svg": "image/svg+xml",
+    };
+    const contentType = MIME[ext] ?? "application/octet-stream";
+
+    // Sanitize the CDN path to a safe cache key (replace slashes with __ to keep flat)
+    const cacheKey = filePath.replace(/[\/\\]/g, "__");
+    const cachePath = path.join(EJS_CACHE_DIR, cacheKey);
+
+    // Serve from disk cache if available
+    try {
+      const stat = await fs.stat(cachePath);
+      if (stat.isFile() && stat.size > 0) {
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Content-Length", String(stat.size));
+        res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+        res.setHeader("X-Cache", "HIT");
+        // Support Range requests so browsers can stream large WASM files
+        const rangeHeader = req.headers.range;
+        if (rangeHeader) {
+          const parts = rangeHeader.replace(/bytes=/, "").split("-");
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+          const chunkSize = end - start + 1;
+          res.setHeader("Accept-Ranges", "bytes");
+          res.setHeader("Content-Range", `bytes ${start}-${end}/${stat.size}`);
+          res.setHeader("Content-Length", String(chunkSize));
+          res.status(206);
+          fsSync.createReadStream(cachePath, { start, end }).pipe(res);
+        } else {
+          res.setHeader("Accept-Ranges", "bytes");
+          fsSync.createReadStream(cachePath).pipe(res);
+        }
+        return;
+      }
+    } catch {
+      // not cached yet — fall through to CDN fetch
+    }
+
+    // Fetch from CDN and simultaneously write to disk cache + stream to client
     const cdnUrl = `https://cdn.emulatorjs.org/stable/data/${filePath}`;
     try {
       const upstream = await fetch(cdnUrl, {
         headers: { "User-Agent": "CabinetBridge/0.1" },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(30000),
       });
       if (!upstream.ok || !upstream.body) {
         return res.status(upstream.status).send("CDN error");
       }
-      const ct = upstream.headers.get("Content-Type") ?? "application/octet-stream";
-      res.setHeader("Content-Type", ct);
-      res.setHeader("Cache-Control", "public, max-age=604800");
-      const { Readable } = await import("stream");
-      Readable.fromWeb(upstream.body as any).pipe(res);
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("X-Cache", "MISS");
+      const cl = upstream.headers.get("Content-Length");
+      if (cl) res.setHeader("Content-Length", cl);
+
+      const { Readable, PassThrough } = await import("stream");
+      const readable = Readable.fromWeb(upstream.body as any);
+      const passToClient = new PassThrough();
+      const passToCache = new PassThrough();
+
+      readable.pipe(passToClient);
+      readable.pipe(passToCache);
+
+      passToClient.pipe(res);
+
+      // Write cache file in background; don't block or fail the response
+      const tmpPath = `${cachePath}.tmp`;
+      const writeStream = fsSync.createWriteStream(tmpPath);
+      passToCache.pipe(writeStream);
+      writeStream.on("finish", () => {
+        fsSync.rename(tmpPath, cachePath, () => {});
+      });
+      writeStream.on("error", () => {
+        fsSync.unlink(tmpPath, () => {});
+      });
     } catch {
       res.status(502).send("EmulatorJS CDN unreachable");
     }
   });
 
+  // ── ROM file download — Range-aware so browsers can stream large ROMs ─────
+  // Without Accept-Ranges the browser must fully buffer the ROM before
+  // EmulatorJS can start the core.  With Range support it can begin booting
+  // as soon as the first chunk arrives.
   app.get("/api/roms/:id/file", async (req, res) => {
     const id = Number(req.params.id);
     const rom = await storage.getUploadedRom(id);
@@ -205,9 +302,39 @@ export function registerRomRoutes(app: Express) {
     if (!resolved.startsWith(safeRoot)) {
       return res.status(403).json({ message: "ROM path is outside the storage directory." });
     }
-    res.setHeader("Content-Type", rom.mimeType || "application/octet-stream");
+
+    let stat: fsSync.Stats;
+    try {
+      stat = fsSync.statSync(resolved);
+    } catch {
+      return res.status(404).json({ message: "ROM file not found on disk." });
+    }
+
+    const mimeType = rom.mimeType || "application/octet-stream";
+    res.setHeader("Content-Type", mimeType);
     res.setHeader("Content-Disposition", `inline; filename="${rom.originalName.replace(/"/g, "")}"`);
-    res.sendFile(resolved);
+    res.setHeader("Accept-Ranges", "bytes");
+    // 1-hour browser cache for ROMs (immutable content, large files)
+    res.setHeader("Cache-Control", "private, max-age=3600");
+
+    const rangeHeader = req.headers.range;
+    if (rangeHeader) {
+      const parts = rangeHeader.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+      if (start >= stat.size || end >= stat.size || start > end) {
+        res.setHeader("Content-Range", `bytes */${stat.size}`);
+        return res.status(416).end();
+      }
+      const chunkSize = end - start + 1;
+      res.setHeader("Content-Range", `bytes ${start}-${end}/${stat.size}`);
+      res.setHeader("Content-Length", String(chunkSize));
+      res.status(206);
+      fsSync.createReadStream(resolved, { start, end }).pipe(res);
+    } else {
+      res.setHeader("Content-Length", String(stat.size));
+      fsSync.createReadStream(resolved).pipe(res);
+    }
   });
 
   app.get("/api/roms/:id/discs", async (req, res) => {
@@ -227,6 +354,8 @@ export function registerRomRoutes(app: Express) {
     if (!core) return res.status(400).send(renderPlayerError(`${rom.system.toUpperCase()} is not configured for browser play yet.`));
     await storage.markUploadedRomPlayed(id);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
+    // Short cache: the HTML shell rarely changes but we don't want stale BIOS errors
+    res.setHeader("Cache-Control", "private, max-age=60");
     const returnTo = typeof req.query.return === "string" ? req.query.return : "";
     res.send(renderEmulatorPage({ title: rom.title, returnTo, romHash: rom.romHash ?? null }));
   });
@@ -255,6 +384,9 @@ export function registerRomRoutes(app: Express) {
     const profileParam = req.query.profile ? String(req.query.profile) : null;
     const userId = profileParam ? `profile_${profileParam}` : haUserId;
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+    // Bootstrap content is stable for a given ROM+profile combination;
+    // a short cache avoids regenerating it on every page reload.
+    res.setHeader("Cache-Control", "private, max-age=300");
 
     const coreBios = REQUIRED_BIOS[core] || [];
     let biosUrl: string | null = null;
