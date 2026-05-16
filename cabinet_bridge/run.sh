@@ -1,32 +1,33 @@
 #!/usr/bin/with-contenv bashio
-# NOTE: Do NOT use 'set -e' here.
-# bashio helpers return non-zero on missing/unset config keys which would
-# kill the script before Node ever starts.
-
-cd /app
 
 export NODE_ENV=production
 export PORT=5000
 export CABINET_DATA_DIR="${CABINET_DATA_DIR:-/data}"
+export CABINET_MAX_UPLOAD_MB=8192
 
-# Read the upload limit from add-on options with a safe fallback.
-CABINET_MAX_UPLOAD_MB="$(bashio::config 'max_upload_mb' 8192 2>/dev/null || echo 8192)"
-if [ -z "$CABINET_MAX_UPLOAD_MB" ] || [ "$CABINET_MAX_UPLOAD_MB" = "null" ]; then
-  CABINET_MAX_UPLOAD_MB=8192
+# Safely read config - bashio::config exits non-zero if key missing, so capture carefully
+if bashio::config.exists 'max_upload_mb' 2>/dev/null; then
+  _val="$(bashio::config 'max_upload_mb' 2>/dev/null)"
+  if [ -n "$_val" ] && [ "$_val" != "null" ] && [ "$_val" != "false" ]; then
+    CABINET_MAX_UPLOAD_MB="$_val"
+  fi
 fi
 export CABINET_MAX_UPLOAD_MB
 
 mkdir -p "$CABINET_DATA_DIR"
+cd /app
 
-bashio::log.info "Starting HomeArcade v$(bashio::addon.version) on port $PORT"
-bashio::log.info "Data dir: $CABINET_DATA_DIR | Max upload: ${CABINET_MAX_UPLOAD_MB}mb"
+bashio::log.info "HomeArcade starting on port $PORT"
+bashio::log.info "Data: $CABINET_DATA_DIR | Max upload: ${CABINET_MAX_UPLOAD_MB}MB"
 
-# Quick sanity-check: verify the native SQLite module loaded correctly.
-# If this fails, the error prints to the HA add-on log before we exit.
-if ! node -e "require('better-sqlite3'); process.exit(0);" 2>&1; then
-  bashio::log.error "FATAL: better-sqlite3 failed to load. The native module may not be built for this Node version."
+# Verify better-sqlite3 loads before starting the full app
+if ! node -e "require('better-sqlite3'); console.log('sqlite3 ok');" 2>&1; then
+  bashio::log.error "FATAL: better-sqlite3 native module failed to load"
   exit 1
 fi
 
-# Start the app. stderr is merged into stdout so all output appears in the HA log.
-exec node dist/index.cjs 2>&1
+bashio::log.info "Launching Node..."
+exec node \
+  --unhandled-rejections=throw \
+  --enable-source-maps \
+  dist/index.cjs 2>&1
