@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
+import React, { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import Fuse from "fuse.js";
 import { type Filter } from "@/components/Sidebar";

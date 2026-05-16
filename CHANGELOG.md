@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.3.8] — 2026-05-15
+
+### Fix: Ingress Navigation & Routing
+
+- **Catch-all Routing Fix** — Corrected the server-side static file server to use a standard Express wildcard (`*`). This ensures the app correctly handles deep links and manual refreshes when running behind Home Assistant Ingress, resolving "Cannot GET" errors and potential white screens.
+- **Production React Scope** — Added explicit `import React` to all core components to prevent ReferenceErrors in production builds.
+
+---
+
 ## [1.3.7] — 2026-05-15
 
 ### Fix: Repository Heartbeat

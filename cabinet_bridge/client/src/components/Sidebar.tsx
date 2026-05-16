@@ -1,3 +1,4 @@
+import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { SYSTEMS, type SystemId, GAMES } from "@/data/library";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
@@ -20,7 +21,6 @@ import {
   Radio,
   PanelLeft,
 } from "lucide-react";
-import { useState, useMemo } from "react";
 import { useProfile } from "@/lib/useProfile";
 import type { UserProfile } from "@shared/schema";
 import { useTranslation } from "react-i18next";
