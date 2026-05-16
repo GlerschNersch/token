@@ -17,7 +17,7 @@ Source and full documentation: <https://github.com/GlerschNersch/token>
 2. Find **Cabinet Bridge** in the store and click **Install** (the first build
    may take several minutes).
 3. Click **Start**. The add-on listens on port 5000 internally and is exposed
-   via Home Assistant Ingress (sidebar entry: **Cabinet**, or use **Open Web
+   via Home Assistant Ingress (sidebar entry: **HomeArcade**, or use **Open Web
    UI** from the add-on page).
 
 Connection settings (HA base URL, long-lived token, endpoint overrides, Live
@@ -28,7 +28,7 @@ add-on's SQLite database.
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `max_upload_mb` | `2048` | Per-file ROM upload ceiling. Raise for very large PS2 disc images, lower to fence off the add-on from oversized uploads. |
+| `max_upload_mb` | `8192` | Per-file ROM upload ceiling. Raise for very large PS2 disc images, lower to fence off the add-on from oversized uploads. |
 
 The add-on also enables `ingress_stream: true` so Home Assistant streams large
 upload bodies through the Supervisor proxy instead of capping them at the
@@ -93,7 +93,7 @@ formats include `.zip` and `.7z`; PS1 also accepts `.cue`/`.bin`/`.iso`/`.chd`/
 multi-disc archives upload as a batch.
 
 Per-file uploads are capped at the value of the `max_upload_mb` add-on option
-(default 2048 MB / 2 GB). The dropzone shows the active limit and refuses
+(default 8192 MB / 8 GB). The dropzone shows the active limit and refuses
 oversize files before sending them.
 
 ## Local development (without Home Assistant)
