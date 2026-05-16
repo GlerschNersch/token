@@ -109,12 +109,12 @@ function ConsoleCarousel({
   onSelect: (s: System) => void;
 }) {
   const [index, setIndex] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
 
   const handleNext = () => setIndex((i) => (i + 1) % systems.length);
   const handlePrev = () => setIndex((i) => (i - 1 + systems.length) % systems.length);
 
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") handleNext();
@@ -129,7 +129,7 @@ function ConsoleCarousel({
   const activeCount = roms.filter(r => r.system === activeSystem.id).length;
 
   return (
-    <div className="relative w-full py-12 flex flex-col items-center gap-8 overflow-hidden min-h-[500px]">
+    <div className="relative w-full py-8 sm:py-12 flex flex-col items-center gap-6 sm:gap-8 overflow-hidden min-h-[450px] sm:min-h-[500px] touch-none">
       {/* Background Glow */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -145,24 +145,32 @@ function ConsoleCarousel({
         />
       </AnimatePresence>
 
-      <div className="flex items-center gap-4 sm:gap-12 relative z-10 w-full justify-center px-8">
+      <div className="flex items-center gap-4 sm:gap-12 relative z-10 w-full justify-center px-4 sm:px-8">
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={handlePrev}
-          className="size-12 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/20 transition-all shrink-0 hidden sm:flex"
+          className="size-12 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/20 transition-all shrink-0 hidden md:flex"
         >
           <ChevronLeft className="size-6" />
         </Button>
 
-        <div className="flex items-center justify-center gap-6 sm:gap-10 perspective-[1000px]">
-          {/* We show 3 consoles: Prev, Current, Next */}
+        {/* Swipeable Container */}
+        <motion.div 
+          className="flex items-center justify-center gap-4 sm:gap-10 perspective-[1000px] cursor-grab active:cursor-grabbing"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(_, info) => {
+            if (info.offset.x < -50) handleNext();
+            else if (info.offset.x > 50) handlePrev();
+          }}
+        >
+          {/* We show 3 consoles on desktop, 1 centered on mobile */}
           {[-1, 0, 1].map((offset) => {
             const idx = (index + offset + systems.length) % systems.length;
             const system = systems[idx];
             const isActive = offset === 0;
-            const isPrev = offset === -1;
-            const isNext = offset === 1;
 
             return (
               <motion.div
@@ -172,11 +180,13 @@ function ConsoleCarousel({
                   opacity: isActive ? 1 : 0.4,
                   rotateY: isActive ? 0 : offset * 25,
                   x: isActive ? 0 : offset * 40,
-                  z: isActive ? 50 : 0
+                  z: isActive ? 50 : 0,
+                  // Hide side items on small mobile screens to prevent overlap/clutter
+                  display: !isActive && window.innerWidth < 640 ? "none" : "block"
                 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={`relative w-[240px] sm:w-[320px] aspect-[4/3] rounded-3xl overflow-hidden cursor-pointer shadow-2xl ${
-                  isActive ? "ring-4 ring-primary shadow-primary/20" : ""
+                className={`relative w-[280px] sm:w-[320px] aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl transition-shadow ${
+                  isActive ? "ring-4 ring-primary shadow-primary/30" : "hidden sm:block"
                 }`}
                 onClick={() => isActive ? onSelect(system) : setIndex(idx)}
               >
@@ -193,13 +203,13 @@ function ConsoleCarousel({
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={handleNext}
-          className="size-12 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/20 transition-all shrink-0 hidden sm:flex"
+          className="size-12 rounded-full border border-white/10 bg-white/5 backdrop-blur hover:bg-white/20 transition-all shrink-0 hidden md:flex"
         >
           <ChevronRight className="size-6" />
         </Button>
@@ -210,21 +220,21 @@ function ConsoleCarousel({
         key={activeSystem.id + "-info"}
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="text-center space-y-2 z-10"
+        className="text-center space-y-2 z-10 px-6"
       >
-        <h1 className="font-display text-3xl font-black uppercase tracking-tight text-neon">
+        <h1 className="font-display text-2xl sm:text-3xl font-black uppercase tracking-tight text-neon leading-tight">
           {activeSystem.name}
         </h1>
-        <div className="flex items-center justify-center gap-4 text-muted-foreground font-mono text-xs uppercase tracking-widest">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-muted-foreground font-mono text-[10px] sm:text-xs uppercase tracking-widest">
           <span>{activeSystem.era} Era</span>
-          <span className="w-1 h-1 rounded-full bg-border" />
+          <span className="hidden sm:block w-1 h-1 rounded-full bg-border" />
           <span className="text-primary font-bold">{activeCount} Games Loaded</span>
         </div>
         <div className="pt-4">
           <Button 
             size="lg" 
             onClick={() => onSelect(activeSystem)}
-            className="rounded-full px-8 gap-2 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest shadow-lg shadow-primary/20"
+            className="rounded-full px-8 h-12 sm:h-14 gap-2 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-transform active:scale-95"
           >
             Explore Library <ChevronRight className="size-4" />
           </Button>
@@ -232,11 +242,11 @@ function ConsoleCarousel({
       </motion.div>
 
       {/* Breadcrumb Indicator */}
-      <div className="flex gap-1.5 z-10 pt-4">
+      <div className="flex gap-1.5 z-10 pt-4 overflow-x-auto max-w-[80%] scrollbar-none px-4">
         {systems.map((_, i) => (
           <div 
             key={i} 
-            className={`h-1 rounded-full transition-all duration-300 ${
+            className={`h-1 rounded-full transition-all duration-300 shrink-0 ${
               i === index ? "w-8 bg-primary" : "w-2 bg-border/40"
             }`}
           />
