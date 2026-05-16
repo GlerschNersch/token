@@ -4,7 +4,7 @@ import { SYSTEMS, type SystemId, GAMES } from "@/data/library";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
 import { useQuery } from "@tanstack/react-query";
-import { filterToPath } from "@/lib/filter";
+import { filterToPath, filterKey, type Filter } from "@/lib/filter";
 import {
   LayoutDashboard,
   Heart,
@@ -42,28 +42,37 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export type Filter = SystemId | `collection:${number}` | "all" | "favorites" | "recent" | "backlog" | "completed";
+// Re-export Filter type for consumers that used to import it from here
+export type { Filter } from "@/lib/filter";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { t } = useTranslation();
-  
-  // Derive active filter from location
-  const active = useMemo(() => {
+
+  // Derive active filter key from location for isActive comparisons
+  const activeKey = useMemo((): string | null => {
     if (location === "/") return "dashboard";
     if (location.startsWith("/settings")) return "settings";
     if (location.startsWith("/history")) return "history";
     if (location.startsWith("/achievements")) return "achievements";
-    
+
     if (location.startsWith("/library/collection/")) {
       const id = location.split("/").pop();
       return `collection:${id}`;
     }
+    if (location.startsWith("/library/status/")) {
+      const status = location.split("/").pop();
+      return `status:${status}`;
+    }
     if (location.startsWith("/library/")) {
-      return location.split("/").pop() as Filter;
+      const segment = location.slice("/library/".length);
+      // Could be a bare system id or a simple type
+      return segment;
     }
     return null;
   }, [location]);
+
+  const isActive = (filter: Filter): boolean => filterKey(filter) === activeKey;
 
   const { data: kiosk } = useQuery<{ enabled: boolean }>({ queryKey: ["/api/kiosk"] });
   const kioskMode = !!kiosk?.enabled;
@@ -71,14 +80,14 @@ export function Sidebar() {
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
   const { state, isMobile } = useSidebar();
 
-  const favCount      = GAMES.filter((g) => g.favorite).length + uploadedRoms.filter((r) => r.favorite).length;
-  const recentCount   = GAMES.filter((g) => g.lastPlayed && g.lastPlayed > 0).length + uploadedRoms.filter((r) => r.lastPlayed && r.lastPlayed > 0).length;
-  const allCount      = GAMES.length + uploadedRoms.length;
-  const backlogCount  = uploadedRoms.filter((r) => r.playStatus === "backlog").length;
-  const playingCount  = uploadedRoms.filter((r) => r.playStatus === "playing").length;
-  const completedCount= uploadedRoms.filter((r) => r.playStatus === "completed").length;
-  
-  const systemCounts  = Object.fromEntries(
+  const favCount       = GAMES.filter((g) => g.favorite).length + uploadedRoms.filter((r) => r.favorite).length;
+  const recentCount    = GAMES.filter((g) => g.lastPlayed && g.lastPlayed > 0).length + uploadedRoms.filter((r) => r.lastPlayed && r.lastPlayed > 0).length;
+  const allCount       = GAMES.length + uploadedRoms.length;
+  const backlogCount   = uploadedRoms.filter((r) => r.playStatus === "backlog").length;
+  const playingCount   = uploadedRoms.filter((r) => r.playStatus === "playing").length;
+  const completedCount = uploadedRoms.filter((r) => r.playStatus === "completed").length;
+
+  const systemCounts = Object.fromEntries(
     SYSTEMS.map((system) => [
       system.id,
       GAMES.filter((g) => g.system === system.id).length + uploadedRoms.filter((r) => r.system === system.id).length,
@@ -133,7 +142,7 @@ export function Sidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={active === "dashboard"}
+                isActive={activeKey === "dashboard"}
                 tooltip={t("nav.dashboard")}
               >
                 <Link href="/">
@@ -150,8 +159,8 @@ export function Sidebar() {
           <SidebarGroupLabel>{t("home.sections.library")}</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={active === "favorites"} tooltip={t("home.sections.favorites")}>
-                <Link href={filterToPath("favorites")}>
+              <SidebarMenuButton asChild isActive={isActive({ type: "favorites" })} tooltip={t("home.sections.favorites")}>
+                <Link href={filterToPath({ type: "favorites" })}>
                   <Heart className="size-4" />
                   <span>{t("home.sections.favorites")}</span>
                 </Link>
@@ -160,8 +169,8 @@ export function Sidebar() {
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={active === "recent"} tooltip={t("home.sections.recentlyPlayed")}>
-                <Link href={filterToPath("recent")}>
+              <SidebarMenuButton asChild isActive={isActive({ type: "recent" })} tooltip={t("home.sections.recentlyPlayed")}>
+                <Link href={filterToPath({ type: "recent" })}>
                   <Clock className="size-4" />
                   <span>{t("home.sections.recentlyPlayed")}</span>
                 </Link>
@@ -170,8 +179,8 @@ export function Sidebar() {
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={active === "all"} tooltip={t("home.sections.allGames")}>
-                <Link href={filterToPath("all")}>
+              <SidebarMenuButton asChild isActive={isActive({ type: "all" })} tooltip={t("home.sections.allGames")}>
+                <Link href={filterToPath({ type: "all" })}>
                   <LayoutGrid className="size-4" />
                   <span>{t("home.sections.allGames")}</span>
                 </Link>
@@ -181,8 +190,8 @@ export function Sidebar() {
 
             {backlogCount > 0 && (
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={active === "backlog"} tooltip={t("dashboard.status.backlog")}>
-                  <Link href={filterToPath("backlog" as any)}>
+                <SidebarMenuButton asChild isActive={isActive({ type: "backlog" })} tooltip={t("dashboard.status.backlog")}>
+                  <Link href={filterToPath({ type: "backlog" })}>
                     <BookMarked className="size-4" />
                     <span>{t("dashboard.status.backlog")}</span>
                   </Link>
@@ -193,8 +202,8 @@ export function Sidebar() {
 
             {completedCount > 0 && (
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={active === "completed"} tooltip={t("dashboard.status.completed")}>
-                  <Link href={filterToPath("completed" as any)}>
+                <SidebarMenuButton asChild isActive={isActive({ type: "completed" })} tooltip={t("dashboard.status.completed")}>
+                  <Link href={filterToPath({ type: "completed" })}>
                     <CheckCircle2 className="size-4" />
                     <span>{t("dashboard.status.completed")}</span>
                   </Link>
@@ -214,10 +223,10 @@ export function Sidebar() {
                 <SidebarMenuItem key={s.id}>
                   <SidebarMenuButton
                     asChild
-                    isActive={active === s.id}
+                    isActive={isActive({ type: "system", value: s.id })}
                     tooltip={s.shortName}
                   >
-                    <Link href={filterToPath(s.id)}>
+                    <Link href={filterToPath({ type: "system", value: s.id })}>
                       <span
                         className="inline-block size-3 rounded-sm shrink-0"
                         style={{ background: `linear-gradient(135deg, hsl(${s.art[0]}), hsl(${s.art[1]}))` }}
@@ -241,10 +250,10 @@ export function Sidebar() {
                 <SidebarMenuItem key={collection.id}>
                   <SidebarMenuButton
                     asChild
-                    isActive={active === `collection:${collection.id}`}
+                    isActive={isActive({ type: "collection", value: String(collection.id) })}
                     tooltip={collection.name}
                   >
-                    <Link href={filterToPath(`collection:${collection.id}` as any)}>
+                    <Link href={filterToPath({ type: "collection", value: String(collection.id) })}>
                       <Folder className="size-4" />
                       <span>{collection.name}</span>
                     </Link>
@@ -261,7 +270,7 @@ export function Sidebar() {
         {!kioskMode && (
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={active === "history"} tooltip={t("history.title")}>
+              <SidebarMenuButton asChild isActive={activeKey === "history"} tooltip={t("history.title")}>
                 <Link href="/history">
                   <History className="size-4" />
                   <span>{t("history.title")}</span>
@@ -269,7 +278,7 @@ export function Sidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={active === "achievements"} tooltip={t("achievements.title")}>
+              <SidebarMenuButton asChild isActive={activeKey === "achievements"} tooltip={t("achievements.title")}>
                 <Link href="/achievements">
                   <Trophy className="size-4" />
                   <span>{t("achievements.title")}</span>
@@ -277,7 +286,7 @@ export function Sidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={active === "settings"} tooltip={t("settings.title")}>
+              <SidebarMenuButton asChild isActive={activeKey === "settings"} tooltip={t("settings.title")}>
                 <Link href="/settings">
                   <SettingsIcon className="size-4" />
                   <span>{t("settings.title")}</span>
