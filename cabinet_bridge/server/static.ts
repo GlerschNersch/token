@@ -1,25 +1,39 @@
-import express from 'express';
-import type { Express } from 'express';
+import express from "express";
+import type { Express } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import { log } from "./index";
+
+function staticLog(message: string) {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [static] ${message}`);
+}
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(process.cwd(), "dist", "public");
 
-  log(`Checking static assets at: ${distPath}`, "static");
-
   if (!fs.existsSync(distPath)) {
-    // Log the error but do NOT throw — throwing kills the process before
-    // the HTTP server can respond to HA's ingress health checks.
-    log(`ERROR: Build directory not found at ${distPath}`, "static");
+    // Do NOT throw here - that would kill the process before HA ingress
+    // can connect. Log the error and return gracefully instead.
+    staticLog(`ERROR: Build output not found at ${distPath}`);
     return;
   }
 
-  log(`Serving static files from ${distPath}`, "static");
+  staticLog(`Serving from ${distPath}`);
   app.use(express.static(distPath));
 
-  app.get("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // SPA fallback - serve index.html for all non-API routes
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    const indexPath = path.resolve(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
   });
 }
