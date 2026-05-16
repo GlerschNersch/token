@@ -13,7 +13,9 @@ import { registerImportRoutes } from "./import";
 import { registerScrapeRoutes } from "./scrape";
 import { registerRetroAchievementsRoutes } from "./retroachievements";
 import { registerKioskRoutes } from "./kiosk";
-import { registerBiosRoutes } from "./bios";
+
+// BIOS and complex routes temporarily disabled for safety rollback
+// import { registerBiosRoutes } from "./bios";
 
 export { registerUploadRoute };
 
@@ -31,5 +33,7 @@ export async function registerRoutes(_httpServer: Server, app: Express) {
   registerScrapeRoutes(app);
   registerRetroAchievementsRoutes(app);
   registerKioskRoutes(app);
-  registerBiosRoutes(app);
+  
+  // BIOS routes are non-essential for boot and may cause issues if pathing fails
+  // registerBiosRoutes(app);
 }

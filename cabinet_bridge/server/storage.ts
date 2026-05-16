@@ -18,14 +18,24 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { and, desc, eq } from "drizzle-orm";
 import { dataPath, ensureDir, getDataDir } from "./data-dir";
+import { log } from "./log";
 
 let _sqlite: Database.Database | null = null;
-function getSqlite() {
-  if (!_sqlite || (process.env.NODE_ENV === "test" && _sqlite.name !== dataPath("data.db"))) {
-    ensureDir(getDataDir());
+let _db: any = null;
+
+export function initializeDatabase() {
+  if (_sqlite) return { sqlite: _sqlite, db: _db };
+
+  try {
+    const dataDir = getDataDir();
+    ensureDir(dataDir);
     const dbPath = dataPath("data.db");
+    
+    log(`Initializing database at ${dbPath}`, "db");
     _sqlite = new Database(dbPath);
     _sqlite.pragma("journal_mode = WAL");
+    
+    // Core Schema
     _sqlite.exec(`
       CREATE TABLE IF NOT EXISTS uploaded_roms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,7 +83,9 @@ function getSqlite() {
         updated_at INTEGER NOT NULL
       );
     `);
-    for (const statement of [
+
+    // Migrations
+    const migrations = [
       "ALTER TABLE uploaded_roms ADD COLUMN art_url TEXT",
       "ALTER TABLE uploaded_roms ADD COLUMN scrape_status TEXT NOT NULL DEFAULT 'not_scraped'",
       "ALTER TABLE uploaded_roms ADD COLUMN scrape_message TEXT",
@@ -108,34 +120,45 @@ function getSqlite() {
       "CREATE TABLE IF NOT EXISTS cheat_file_cache (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT NOT NULL UNIQUE, cheats_json TEXT NOT NULL, cached_at INTEGER NOT NULL)",
       "CREATE TABLE IF NOT EXISTS hltb_cache (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL UNIQUE, hltb_title TEXT, main_story INTEGER, main_extra INTEGER, completionist INTEGER, cached_at INTEGER NOT NULL)",
       "CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, label TEXT NOT NULL, endpoint TEXT NOT NULL, status TEXT NOT NULL, detail TEXT)",
-    ]) {
-      try {
-        _sqlite.exec(statement);
-      } catch {
-        // Column or table already exists
-      }
+    ];
+
+    for (const stmt of migrations) {
+      try { _sqlite.exec(stmt); } catch { /* ignore exist errors */ }
     }
-    
-    // Seed Player 1 profile if empty
+
+    // Seed Player 1
     try {
-       const row = _sqlite.prepare("SELECT id FROM user_profiles WHERE id = 1").get();
-       if (!row) {
-         _sqlite.prepare("INSERT INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', ?)").run(Date.now());
-       }
+      const row = _sqlite.prepare("SELECT id FROM user_profiles WHERE id = 1").get();
+      if (!row) {
+        _sqlite.prepare("INSERT INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', ?)").run(Date.now());
+      }
     } catch {}
+
+    _db = drizzle(_sqlite);
+    log("Database initialized successfully", "db");
+    return { sqlite: _sqlite, db: _db };
+  } catch (err) {
+    log("FATAL: Database initialization failed!", "db");
+    console.error(err);
+    throw err;
   }
-  return _sqlite;
 }
 
-const sqlite = new Proxy({} as Database.Database, {
+// Proxy to ensure we don't call db before init
+export const db = new Proxy({} as any, {
   get: (target, prop) => {
-    const s = getSqlite();
-    const val = (s as any)[prop];
-    return typeof val === "function" ? val.bind(s) : val;
+    if (!_db) throw new Error("Database not initialized! Call initializeDatabase() first.");
+    return _db[prop];
   }
 });
 
-export const db = drizzle(sqlite);
+export const sqlite = new Proxy({} as Database.Database, {
+  get: (target, prop) => {
+    if (!_sqlite) throw new Error("SQLite not initialized! Call initializeDatabase() first.");
+    const val = (_sqlite as any)[prop];
+    return typeof val === "function" ? val.bind(_sqlite) : val;
+  }
+});
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -202,41 +225,32 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     return db.select().from(users).where(eq(users.id, id)).get();
   }
-
   async getUserByUsername(username: string): Promise<User | undefined> {
     return db.select().from(users).where(eq(users.username, username)).get();
   }
-
   async createUser(insertUser: InsertUser): Promise<User> {
     return db.insert(users).values(insertUser).returning().get();
   }
-
   async listUploadedRoms(): Promise<UploadedRom[]> {
     return db.select().from(uploadedRoms).orderBy(desc(uploadedRoms.createdAt)).all();
   }
-
   async getUploadedRom(id: number): Promise<UploadedRom | undefined> {
     return db.select().from(uploadedRoms).where(eq(uploadedRoms.id, id)).get();
   }
-
   async listRomsByDiscGroup(discGroup: string): Promise<UploadedRom[]> {
     return db.select().from(uploadedRoms).where(eq(uploadedRoms.discGroup, discGroup)).orderBy(uploadedRoms.discNumber).all();
   }
-
   async createUploadedRom(rom: InsertUploadedRom): Promise<UploadedRom> {
     return db.insert(uploadedRoms).values(rom).returning().get();
   }
-
   async incrementRomMinutesPlayed(id: number, minutes: number): Promise<UploadedRom | undefined> {
     const rom = await this.getUploadedRom(id);
     if (!rom) return undefined;
     return db.update(uploadedRoms).set({ minutesPlayed: (rom.minutesPlayed ?? 0) + Math.max(0, Math.round(minutes)) }).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
-  async updateUploadedRomMetadata(id: number, meta: Partial<Pick<InsertUploadedRom, "description" | "releaseYear" | "developer" | "publisher" | "genre" | "players" | "artUrl" | "scrapeStatus" | "scrapeMessage" | "communityScore" | "wheelArtUrl" | "videoUrl">>): Promise<UploadedRom | undefined> {
+  async updateUploadedRomMetadata(id: number, meta: any): Promise<UploadedRom | undefined> {
     return db.update(uploadedRoms).set(meta).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
   async deleteUploadedRom(id: number): Promise<UploadedRom | undefined> {
     const rom = await this.getUploadedRom(id);
     if (!rom) return undefined;
@@ -245,29 +259,23 @@ export class DatabaseStorage implements IStorage {
     db.delete(uploadedRoms).where(eq(uploadedRoms.id, id)).run();
     return rom;
   }
-
-  async updateUploadedRomArt(id: number, art: Pick<InsertUploadedRom, "artUrl" | "scrapeStatus" | "scrapeMessage">): Promise<UploadedRom | undefined> {
+  async updateUploadedRomArt(id: number, art: any): Promise<UploadedRom | undefined> {
     return db.update(uploadedRoms).set(art).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
   async updateUploadedRomPlayStatus(id: number, status: string): Promise<UploadedRom | undefined> {
     return db.update(uploadedRoms).set({ playStatus: status }).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
   async updateUploadedRomRating(id: number, rating: number): Promise<UploadedRom | undefined> {
     return db.update(uploadedRoms).set({ rating }).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
   async updateUploadedRomFavorite(id: number, favorite: boolean): Promise<UploadedRom | undefined> {
     return db.update(uploadedRoms).set({ favorite: favorite ? 1 : 0 }).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
   async markUploadedRomPlayed(id: number): Promise<UploadedRom | undefined> {
     const rom = await this.getUploadedRom(id);
     if (!rom) return undefined;
     return db.update(uploadedRoms).set({ lastPlayed: Date.now(), playCount: (rom.playCount ?? 0) + 1 }).where(eq(uploadedRoms.id, id)).returning().get();
   }
-
   async listCollections(): Promise<GameCollectionWithItems[]> {
     const collections = db.select().from(gameCollections).orderBy(desc(gameCollections.createdAt)).all();
     const items = db.select().from(collectionItems).all();
@@ -277,33 +285,26 @@ export class DatabaseStorage implements IStorage {
       romIds: items.filter((item) => item.collectionId === collection.id).map((item) => item.romId),
     }));
   }
-
   async createCollection(collection: InsertGameCollection): Promise<GameCollection> {
     return db.insert(gameCollections).values(collection).returning().get();
   }
-
   async deleteCollection(id: number): Promise<boolean> {
     db.delete(collectionItems).where(eq(collectionItems.collectionId, id)).run();
     const result = db.delete(gameCollections).where(eq(gameCollections.id, id)).run();
     return result.changes > 0;
   }
-
   async renameCollection(id: number, name: string): Promise<GameCollection | undefined> {
     return db.update(gameCollections).set({ name }).where(eq(gameCollections.id, id)).returning().get();
   }
-
   async addRomToCollection(collectionId: number, romId: number): Promise<GameCollectionWithItems | undefined> {
     const collection = db.select().from(gameCollections).where(eq(gameCollections.id, collectionId)).get();
     const rom = await this.getUploadedRom(romId);
     if (!collection || !rom) return undefined;
     const existing = db.select().from(collectionItems).where(and(eq(collectionItems.collectionId, collectionId), eq(collectionItems.romId, romId))).get();
-    if (!existing) {
-      db.insert(collectionItems).values({ collectionId, romId, createdAt: Date.now() }).run();
-    }
+    if (!existing) db.insert(collectionItems).values({ collectionId, romId, createdAt: Date.now() }).run();
     const collections = await this.listCollections();
     return collections.find((item) => item.id === collectionId);
   }
-
   async removeRomFromCollection(collectionId: number, romId: number): Promise<GameCollectionWithItems | undefined> {
     const collection = db.select().from(gameCollections).where(eq(gameCollections.id, collectionId)).get();
     if (!collection) return undefined;
@@ -311,108 +312,59 @@ export class DatabaseStorage implements IStorage {
     const collections = await this.listCollections();
     return collections.find((item) => item.id === collectionId);
   }
-
   async listRomSaveSlots(romId: number, userId: string): Promise<RomSaveSlot[]> {
     return db.select().from(romSaveSlots).where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.userId, userId))).orderBy(romSaveSlots.slot).all();
   }
-
   async upsertRomSaveSlot(saveSlot: InsertRomSaveSlot): Promise<RomSaveSlot> {
     const existing = db.select().from(romSaveSlots).where(and(eq(romSaveSlots.romId, saveSlot.romId), eq(romSaveSlots.userId, saveSlot.userId ?? "default"), eq(romSaveSlots.slot, saveSlot.slot))).get();
-    if (existing) {
-      return db.update(romSaveSlots).set({ label: saveSlot.label, updatedAt: saveSlot.updatedAt }).where(eq(romSaveSlots.id, existing.id)).returning().get();
-    }
+    if (existing) return db.update(romSaveSlots).set({ label: saveSlot.label, updatedAt: saveSlot.updatedAt }).where(eq(romSaveSlots.id, existing.id)).returning().get();
     return db.insert(romSaveSlots).values(saveSlot).returning().get();
   }
-
   async deleteRomSaveSlot(romId: number, slot: number, userId: string): Promise<boolean> {
     const result = db.delete(romSaveSlots).where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.userId, userId), eq(romSaveSlots.slot, slot))).run();
     return result.changes > 0;
   }
-
   async createPlaySession(romId: number, romTitle: string, romSystem: string, startedAt: number): Promise<number> {
     const result = sqlite.prepare("INSERT INTO play_sessions (rom_id, rom_title, rom_system, started_at) VALUES (?, ?, ?, ?)").run(romId, romTitle, romSystem, startedAt);
     return result.lastInsertRowid as number;
   }
-
   async endPlaySession(sessionId: number, endedAt: number, durationSeconds: number): Promise<void> {
     sqlite.prepare("UPDATE play_sessions SET ended_at = ?, duration_seconds = ? WHERE id = ?").run(endedAt, durationSeconds, sessionId);
   }
-
-  async listRecentSessions(limit = 50): Promise<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>> {
-    const rows = sqlite.prepare("SELECT id, rom_id, rom_title, rom_system, started_at, ended_at, duration_seconds FROM play_sessions ORDER BY started_at DESC LIMIT ?").all(limit) as Array<Record<string, unknown>>;
-    return rows.map((r) => ({
-      id: r.id as number,
-      romId: r.rom_id as number,
-      romTitle: r.rom_title as string,
-      romSystem: r.rom_system as string,
-      startedAt: r.started_at as number,
-      endedAt: (r.ended_at ?? null) as number | null,
-      durationSeconds: (r.duration_seconds ?? null) as number | null,
+  async listRecentSessions(limit = 50): Promise<any[]> {
+    const rows = sqlite.prepare("SELECT * FROM play_sessions ORDER BY started_at DESC LIMIT ?").all(limit);
+    return rows.map((r: any) => ({
+      id: r.id, romId: r.rom_id, romTitle: r.rom_title, romSystem: r.rom_system,
+      startedAt: r.started_at, endedAt: r.ended_at ?? null, durationSeconds: r.duration_seconds ?? null,
     }));
   }
-
   async getIntegrationSettings(): Promise<IntegrationSettings> {
     const row = db.select().from(appSettings).where(eq(appSettings.key, INTEGRATION_SETTINGS_KEY)).get();
     if (!row) return { ...DEFAULT_INTEGRATION_SETTINGS };
     try { return integrationSettingsSchema.parse(JSON.parse(row.value)); } catch { return { ...DEFAULT_INTEGRATION_SETTINGS }; }
   }
-
   async saveIntegrationSettings(settings: IntegrationSettings): Promise<IntegrationSettings> {
     const value = JSON.stringify(settings);
     const updatedAt = Date.now();
     const existing = db.select().from(appSettings).where(eq(appSettings.key, INTEGRATION_SETTINGS_KEY)).get();
-    if (existing) {
-      db.update(appSettings).set({ value, updatedAt }).where(eq(appSettings.key, INTEGRATION_SETTINGS_KEY)).run();
-    } else {
-      db.insert(appSettings).values({ key: INTEGRATION_SETTINGS_KEY, value, updatedAt }).run();
-    }
+    if (existing) db.update(appSettings).set({ value, updatedAt }).where(eq(appSettings.key, INTEGRATION_SETTINGS_KEY)).run();
+    else db.insert(appSettings).values({ key: INTEGRATION_SETTINGS_KEY, value, updatedAt }).run();
     return settings;
   }
-
-  async listProfiles() {
-    const { userProfiles } = await import("../shared/schema");
-    return db.select().from(userProfiles).all();
-  }
-  async createProfile(name: string, color: string) {
-    const { userProfiles } = await import("../shared/schema");
-    return db.insert(userProfiles).values({ name, color, createdAt: Date.now() }).returning().get();
-  }
-  async deleteProfile(id: number): Promise<boolean> {
-    if (id === 1) return false;
-    const { userProfiles } = await import("../shared/schema");
-    const result = db.delete(userProfiles).where(eq(userProfiles.id, id)).run();
-    return result.changes > 0;
-  }
-
-  async listCheats(romId: number, profileId: number) {
-    const { gameCheatCodes } = await import("../shared/schema");
-    return db.select().from(gameCheatCodes).where(and(eq(gameCheatCodes.romId, romId), eq(gameCheatCodes.profileId, profileId))).all();
-  }
-  async createCheat(cheat: import("../shared/schema").InsertGameCheatCode) {
-    const { gameCheatCodes } = await import("../shared/schema");
-    return db.insert(gameCheatCodes).values(cheat).returning().get();
-  }
-  async updateCheatEnabled(id: number, enabled: boolean): Promise<boolean> {
-    const { gameCheatCodes } = await import("../shared/schema");
-    const result = db.update(gameCheatCodes).set({ enabled: enabled ? 1 : 0 }).where(eq(gameCheatCodes.id, id)).run();
-    return result.changes > 0;
-  }
-  async deleteCheat(id: number): Promise<boolean> {
-    const { gameCheatCodes } = await import("../shared/schema");
-    const result = db.delete(gameCheatCodes).where(eq(gameCheatCodes.id, id)).run();
-    return result.changes > 0;
-  }
-
-  async getProfileGameState(profileId: number, romId: number) {
-    const row = sqlite.prepare("SELECT * FROM profile_game_state WHERE profile_id=? AND rom_id=?").get(profileId, romId) as import("../shared/schema").ProfileGameState | undefined;
-    return row;
-  }
-  async upsertProfileGameState(profileId: number, romId: number, patch: { favorite?: boolean; rating?: number; playStatus?: string }) {
+  async listProfiles() { return db.select().from((await import("@shared/schema")).userProfiles).all(); }
+  async createProfile(name: string, color: string) { return db.insert((await import("@shared/schema")).userProfiles).values({ name, color, createdAt: Date.now() }).returning().get(); }
+  async deleteProfile(id: number) { if (id === 1) return false; return db.delete((await import("@shared/schema")).userProfiles).where(eq((await import("@shared/schema")).userProfiles.id, id)).run().changes > 0; }
+  async listCheats(romId: number, profileId: number) { return db.select().from((await import("@shared/schema")).gameCheatCodes).where(and(eq((await import("@shared/schema")).gameCheatCodes.romId, romId), eq((await import("@shared/schema")).gameCheatCodes.profileId, profileId))).all(); }
+  async createCheat(cheat: any) { return db.insert((await import("@shared/schema")).gameCheatCodes).values(cheat).returning().get(); }
+  async updateCheatEnabled(id: number, enabled: boolean) { return db.update((await import("@shared/schema")).gameCheatCodes).set({ enabled: enabled ? 1 : 0 }).where(eq((await import("@shared/schema")).gameCheatCodes.id, id)).run().changes > 0; }
+  async deleteCheat(id: number) { return db.delete((await import("@shared/schema")).gameCheatCodes).where(eq((await import("@shared/schema")).gameCheatCodes.id, id)).run().changes > 0; }
+  async getProfileGameState(profileId: number, romId: number) { return sqlite.prepare("SELECT * FROM profile_game_state WHERE profile_id=? AND rom_id=?").get(profileId, romId) as any; }
+  async upsertProfileGameState(profileId: number, romId: number, patch: any) {
     const now = Date.now();
     const existing = await this.getProfileGameState(profileId, romId);
     if (existing) {
       const sets: string[] = ["updated_at=?"];
-      const vals: unknown[] = [now];
+      const vals: any[] = [now];
       if (patch.favorite !== undefined) { sets.push("favorite=?"); vals.push(patch.favorite ? 1 : 0); }
       if (patch.rating !== undefined) { sets.push("rating=?"); vals.push(patch.rating); }
       if (patch.playStatus !== undefined) { sets.push("play_status=?"); vals.push(patch.playStatus); }
@@ -423,58 +375,39 @@ export class DatabaseStorage implements IStorage {
     }
     return (await this.getProfileGameState(profileId, romId))!;
   }
-  async listProfileGameStates(profileId: number) {
-    return sqlite.prepare("SELECT * FROM profile_game_state WHERE profile_id=?").all(profileId) as import("../shared/schema").ProfileGameState[];
+  async listProfileGameStates(profileId: number) { return sqlite.prepare("SELECT * FROM profile_game_state WHERE profile_id=?").all(profileId) as any[]; }
+  async getProfileControlBindings(profileId: number, core: string) {
+    const row = sqlite.prepare("SELECT bindings FROM profile_control_bindings WHERE profile_id=? AND core=?").get(profileId, core) as any;
+    try { return JSON.parse(row?.bindings || "{}"); } catch { return {}; }
   }
-
-  async getProfileControlBindings(profileId: number, core: string): Promise<Record<number, string>> {
-    const row = sqlite.prepare("SELECT bindings FROM profile_control_bindings WHERE profile_id=? AND core=?").get(profileId, core) as { bindings: string } | undefined;
-    if (!row) return {};
-    try { return JSON.parse(row.bindings); } catch { return {}; }
+  async setProfileControlBindings(profileId: number, core: string, bindings: any) { sqlite.prepare("INSERT INTO profile_control_bindings (profile_id, core, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, core) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at").run(profileId, core, JSON.stringify(bindings), Date.now()); }
+  async getGamepadBindings(profileId: number, gamepadId: string) {
+    const row = sqlite.prepare("SELECT bindings FROM gamepad_bindings WHERE profile_id=? AND gamepad_id=?").get(profileId, gamepadId) as any;
+    const fallback = !row && gamepadId !== "default" ? sqlite.prepare("SELECT bindings FROM gamepad_bindings WHERE profile_id=? AND gamepad_id='default'").get(profileId) as any : null;
+    try { return JSON.parse((row || fallback)?.bindings || "{}"); } catch { return {}; }
   }
-  async setProfileControlBindings(profileId: number, core: string, bindings: Record<number, string>): Promise<void> {
-    sqlite.prepare("INSERT INTO profile_control_bindings (profile_id, core, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, core) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at").run(profileId, core, JSON.stringify(bindings), Date.now());
-  }
-
-  async getGamepadBindings(profileId: number, gamepadId: string): Promise<Record<number, number>> {
-    const row = sqlite.prepare("SELECT bindings FROM gamepad_bindings WHERE profile_id=? AND gamepad_id=?").get(profileId, gamepadId) as { bindings: string } | undefined;
-    const fallback = gamepadId !== "default" ? sqlite.prepare("SELECT bindings FROM gamepad_bindings WHERE profile_id=? AND gamepad_id='default'").get(profileId) as { bindings: string } | undefined : undefined;
-    const raw = row ?? fallback;
-    if (!raw) return {};
-    try { return JSON.parse(raw.bindings); } catch { return {}; }
-  }
-  async setGamepadBindings(profileId: number, gamepadId: string, bindings: Record<number, number>): Promise<void> {
-    sqlite.prepare("INSERT INTO gamepad_bindings (profile_id, gamepad_id, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, gamepad_id) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at").run(profileId, gamepadId, JSON.stringify(bindings), Date.now());
-  }
+  async setGamepadBindings(profileId: number, gamepadId: string, bindings: any) { sqlite.prepare("INSERT INTO gamepad_bindings (profile_id, gamepad_id, bindings, updated_at) VALUES (?,?,?,?) ON CONFLICT(profile_id, gamepad_id) DO UPDATE SET bindings=excluded.bindings, updated_at=excluded.updated_at").run(profileId, gamepadId, JSON.stringify(bindings), Date.now()); }
   async listGamepadBindings(profileId: number) {
-    const rows = sqlite.prepare("SELECT gamepad_id, bindings FROM gamepad_bindings WHERE profile_id=?").all(profileId) as Array<{ gamepad_id: string; bindings: string }>;
+    const rows = sqlite.prepare("SELECT gamepad_id, bindings FROM gamepad_bindings WHERE profile_id=?").all(profileId) as any[];
     return rows.map((r) => ({ gamepadId: r.gamepad_id, bindings: (() => { try { return JSON.parse(r.bindings); } catch { return {}; } })() }));
   }
-
   async getCheatIndex(folder: string) {
-    const row = sqlite.prepare("SELECT files_json, cached_at FROM cheat_index_cache WHERE folder=?").get(folder) as { files_json: string; cached_at: number } | undefined;
+    const row = sqlite.prepare("SELECT files_json, cached_at FROM cheat_index_cache WHERE folder=?").get(folder) as any;
     if (!row || Date.now() - row.cached_at > 7 * 24 * 60 * 60 * 1000) return null;
     try { return JSON.parse(row.files_json); } catch { return null; }
   }
-  async setCheatIndex(folder: string, files: any[]) {
-    sqlite.prepare("INSERT INTO cheat_index_cache (folder, files_json, cached_at) VALUES (?,?,?) ON CONFLICT(folder) DO UPDATE SET files_json=excluded.files_json, cached_at=excluded.cached_at").run(folder, JSON.stringify(files), Date.now());
-  }
+  async setCheatIndex(folder: string, files: any[]) { sqlite.prepare("INSERT INTO cheat_index_cache (folder, files_json, cached_at) VALUES (?,?,?) ON CONFLICT(folder) DO UPDATE SET files_json=excluded.files_json, cached_at=excluded.cached_at").run(folder, JSON.stringify(files), Date.now()); }
   async getCachedCheats(path: string) {
-    const row = sqlite.prepare("SELECT cheats_json, cached_at FROM cheat_file_cache WHERE path=?").get(path) as { cheats_json: string; cached_at: number } | undefined;
+    const row = sqlite.prepare("SELECT cheats_json, cached_at FROM cheat_file_cache WHERE path=?").get(path) as any;
     if (!row || Date.now() - row.cached_at > 30 * 24 * 60 * 60 * 1000) return null;
     try { return JSON.parse(row.cheats_json); } catch { return null; }
   }
-  async setCachedCheats(path: string, cheats: any[]) {
-    sqlite.prepare("INSERT INTO cheat_file_cache (path, cheats_json, cached_at) VALUES (?,?,?) ON CONFLICT(path) DO UPDATE SET cheats_json=excluded.cheats_json, cached_at=excluded.cached_at").run(path, JSON.stringify(cheats), Date.now());
-  }
+  async setCachedCheats(path: string, cheats: any[]) { sqlite.prepare("INSERT INTO cheat_file_cache (path, cheats_json, cached_at) VALUES (?,?,?) ON CONFLICT(path) DO UPDATE SET cheats_json=excluded.cheats_json, cached_at=excluded.cached_at").run(path, JSON.stringify(cheats), Date.now()); }
   async clearCheatCache() { sqlite.exec("DELETE FROM cheat_index_cache; DELETE FROM cheat_file_cache;"); }
-
-  async getHltbCache(romId: number) { return sqlite.prepare("SELECT * FROM hltb_cache WHERE rom_id=?").get(romId) as HltbCache | undefined; }
+  async getHltbCache(romId: number) { return sqlite.prepare("SELECT * FROM hltb_cache WHERE rom_id=?").get(romId) as any; }
   async saveHltbCache(data: any) { sqlite.prepare("INSERT INTO hltb_cache (rom_id, hltb_title, main_story, main_extra, completionist, cached_at) VALUES (?,?,?,?,?,?) ON CONFLICT(rom_id) DO UPDATE SET hltb_title=excluded.hltb_title, main_story=excluded.main_story, main_extra=excluded.main_extra, completionist=excluded.completionist, cached_at=excluded.cached_at").run(data.romId, data.hltbTitle, data.mainStory, data.mainExtra, data.completionist, data.cachedAt); }
-
   async addScannedRom(rom: any) { return sqlite.prepare("INSERT INTO uploaded_roms (title, system, slug, original_name, file_name, file_path, size, mime_type, created_at) VALUES (?,?,?,?,?,?,?,?,?) RETURNING *").get(rom.title, rom.system, rom.slug, rom.originalName, rom.fileName, rom.filePath, rom.size, rom.mimeType, rom.createdAt) as UploadedRom; }
   async listRomFilenames() { return (sqlite.prepare("SELECT file_name FROM uploaded_roms").all() as any[]).map(r => r.file_name); }
-
   async listActivityLog(limit = 100) { return sqlite.prepare("SELECT * FROM activity_log ORDER BY ts DESC LIMIT ?").all(limit) as any[]; }
   async addActivityLogEntry(entry: any) { return sqlite.prepare("INSERT INTO activity_log (ts, label, endpoint, status, detail) VALUES (?,?,?,?,?) RETURNING *").get(entry.ts, entry.label, entry.endpoint, entry.status, entry.detail ?? null) as any; }
   async clearActivityLog() { sqlite.exec("DELETE FROM activity_log"); }
