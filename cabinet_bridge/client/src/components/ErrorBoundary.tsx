@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="size-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto ring-8 ring-destructive/5">
               <AlertCircle className="size-10 text-destructive" />
             </div>
-            
+
             <div className="space-y-2">
               <h1 className="text-2xl font-display font-bold tracking-tight text-white">Something went wrong</h1>
               <p className="text-sm text-slate-400 leading-relaxed">
@@ -50,18 +50,18 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
 
             <div className="flex flex-col gap-3 pt-4">
-              <Button 
-                onClick={() => window.location.reload()} 
+              <Button
+                onClick={() => window.location.reload()}
                 className="w-full gap-2 h-12 font-mono uppercase tracking-wider"
               >
                 <RefreshCw className="size-4" />
                 Reload Application
               </Button>
-              <Button 
+              <Button
                 variant="ghost"
                 onClick={() => {
-                   window.location.hash = "#/";
-                   window.location.reload();
+                  window.location.hash = "#/";
+                  window.location.reload();
                 }}
                 className="w-full gap-2 h-12 text-slate-400 hover:text-white"
               >
@@ -71,13 +71,13 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="pt-8 text-[10px] font-mono uppercase tracking-[0.2em] text-slate-600">
-              Cabinet Bridge v1.4.1 · Error Boundary Active
+              HomeArcade v2.0.3 · Error Boundary Active
             </div>
           </div>
         </div>
       );
     }
 
-    return this.children;
+    return this.props.children;
   }
 }
