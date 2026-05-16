@@ -44,16 +44,20 @@ export function registerBiosRoutes(app: Express) {
     "/api/bios/upload",
     express.raw({ type: "*/*", limit: "50mb" }),
     async (req, res) => {
-      const filename = decodeURIComponent(String(req.header("x-bios-filename") ?? ""));
+      const rawFilename = decodeURIComponent(String(req.header("x-bios-filename") ?? ""));
       
-      if (!filename) {
+      if (!rawFilename) {
         return res.status(400).json({ message: "No filename provided." });
       }
 
-      // Security check: only allow known BIOS filenames
+      // Case-insensitive match — find the canonical filename from our allowed list
       const allAllowedFiles = Object.values(REQUIRED_BIOS).flat();
-      if (!allAllowedFiles.includes(filename)) {
-        return res.status(400).json({ message: `Filename '${filename}' is not a recognized BIOS file.` });
+      const canonicalFilename = allAllowedFiles.find(
+        (f) => f.toLowerCase() === rawFilename.toLowerCase()
+      );
+
+      if (!canonicalFilename) {
+        return res.status(400).json({ message: `Filename '${rawFilename}' is not a recognized BIOS file.` });
       }
 
       const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
@@ -61,10 +65,11 @@ export function registerBiosRoutes(app: Express) {
         return res.status(400).json({ message: "Empty file body." });
       }
 
-      const filePath = path.join(BIOS_ROOT, filename);
+      // Always write using the canonical (lowercase) filename
+      const filePath = path.join(BIOS_ROOT, canonicalFilename);
       await fs.writeFile(filePath, body);
 
-      res.status(201).json({ success: true, filename });
+      res.status(201).json({ success: true, filename: canonicalFilename });
     }
   );
 
