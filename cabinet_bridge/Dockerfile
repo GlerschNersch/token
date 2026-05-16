@@ -17,7 +17,7 @@ COPY package.json package-lock.json ./
 RUN NODE_ENV=development npm install --no-audit --no-fund --ignore-scripts
 RUN npm rebuild better-sqlite3
 
-ARG CACHE_BUST=74
+ARG CACHE_BUST=75
 RUN echo "cache-bust=$CACHE_BUST"
 
 COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts ./
