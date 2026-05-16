@@ -12,6 +12,19 @@ export default defineConfig({
   },
   root: path.resolve(import.meta.dirname, "client"),
   base: "./",
+  optimizeDeps: {
+    include: [
+      "framer-motion",
+      "react",
+      "react-dom",
+      "@tanstack/react-query",
+      "wouter",
+      "lucide-react",
+      "clsx",
+      "tailwind-merge",
+      "class-variance-authority",
+    ],
+  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
@@ -19,6 +32,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom"],
+          "vendor-motion": ["framer-motion"],
           "vendor-query": ["@tanstack/react-query", "wouter"],
           "vendor-radix": [
             "@radix-ui/react-accordion",
