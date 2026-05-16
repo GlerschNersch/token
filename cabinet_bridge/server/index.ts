@@ -6,6 +6,7 @@ import { registerRoutes } from "./routes/index";
 import { attachNetplayServer } from "./netplay";
 import { serveStatic } from "./static";
 import { createServer } from "node:http";
+import { initializeDatabase } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -89,6 +90,10 @@ app.use((req, res, next) => {
 (async () => {
   try {
     log("Initializing server sequence...", "boot");
+
+    // Initialize the SQLite database before any route handler can use it.
+    initializeDatabase();
+    log("Database initialized", "boot");
     
     await registerRoutes(httpServer, app);
     log("Routes registered successfully", "boot");
