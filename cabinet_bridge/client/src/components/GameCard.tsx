@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState, useEffect } from "react";
+import React, { memo, useCallback, useRef, useState, useEffect } from "react";
 import { GameArt } from "@/components/GameArt";
 import { SYSTEMS, type Game } from "@/data/library";
 import { formatRelative } from "@/lib/integration";

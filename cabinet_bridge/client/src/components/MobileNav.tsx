@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useLocation } from "wouter";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Wordmark } from "@/components/Logo";

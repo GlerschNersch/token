@@ -4,6 +4,17 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.4.0] — 2026-05-15
+
+### Major: The Definitive Stability Release
+
+- **Super-Logging Diagnostic** — Added comprehensive logging to the entire server boot sequence. If the app fails to start, the Home Assistant logs will now show exactly which step (routes, database, or static server) is causing the issue.
+- **Absolute Pathing** — Switched all static file serving to use absolute path resolution. This ensures the app can find its HTML and JS files regardless of the container's working directory.
+- **Fail-safe Client** — Injected `import React` into every single UI component to prevent ReferenceErrors that were causing white screens in production environments.
+- **Ingress Prefix Robustness** — Refined the URL stripping logic to better handle trailing slashes and nested paths behind the Home Assistant proxy.
+
+---
+
 ## [1.3.9] — 2026-05-15
 
 ### Fix: Critical Server Boot
