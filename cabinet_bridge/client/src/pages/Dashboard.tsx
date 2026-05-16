@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { uploadedRomToGame, SYSTEMS, type Game } from "@/data/library";
@@ -12,7 +12,19 @@ import { apiUrl } from "@/lib/queryClient";
 import { formatRelative, useIntegration } from "@/lib/integration";
 import { useGameDialogState } from "@/lib/useGameDialogState";
 import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
-import { Play, Clock, Trophy, ListTodo, TrendingUp, Star, Zap, History, Radio, Gamepad2, AlertCircle } from "lucide-react";
+import { 
+  Play, 
+  Clock, 
+  Trophy, 
+  ListTodo, 
+  TrendingUp, 
+  Star, 
+  Zap, 
+  History, 
+  Radio, 
+  Gamepad2, 
+  AlertCircle 
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 
@@ -500,7 +512,6 @@ export default function Dashboard() {
     return [...sessions].sort((a, b) => (b.durationSeconds ?? 0) - (a.durationSeconds ?? 0))[0];
   }, [sessions]);
 
-  const showHighlights = mostPlayed || highestRated || bestCommunity;
   const showSystemChart = systemBreakdown.length > 0;
 
   const launchGame = (game: Game) => {
@@ -522,7 +533,7 @@ export default function Dashboard() {
         animate="visible"
         className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 p-5 sm:p-8"
       >
-        {/* ... Now Playing ... */}
+        {/* Now Playing live banner */}
         {nowPlaying?.playing && nowPlaying.title && (
           <motion.div variants={itemVariants} className="md:col-span-12">
             <div className="relative rounded-xl overflow-hidden border border-primary/40 bg-primary/5">
@@ -565,7 +576,7 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* ── Continue Playing hero ── */}
+        {/* Continue Playing hero */}
         {continueGame && (
           <motion.div variants={itemVariants} className="md:col-span-12">
             <div
@@ -628,7 +639,7 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* ── Stats row ── */}
+        {/* Stats row */}
         <motion.div variants={itemVariants} className="md:col-span-3 sm:col-span-6">
           <StatCard
             icon={<Clock className="size-3.5" />}
@@ -670,7 +681,7 @@ export default function Dashboard() {
           />
         </motion.div>
 
-        {/* ── Library Breakdown ── */}
+        {/* Library Breakdown */}
         <motion.div variants={itemVariants} className="md:col-span-4 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             {t("dashboard.charts.playTimeBySystem")}
@@ -693,7 +704,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* ── Status Breakdown ── */}
+        {/* Status Breakdown */}
         <motion.div variants={itemVariants} className="md:col-span-4 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             {t("dashboard.sections.statusBreakdown")}
@@ -703,7 +714,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* ── Activity Trend ── */}
+        {/* Activity Trend */}
         <motion.div variants={itemVariants} className="md:col-span-4 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             {t("dashboard.activity.trend")}
@@ -713,7 +724,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* ── Recent Activity ── */}
+        {/* Recent Activity */}
         <motion.div variants={itemVariants} className="md:col-span-8 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -724,7 +735,7 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="divide-y divide-border/40">
-            {sessions.slice(0, 7).map((s, i) => {
+            {sessions.slice(0, 7).map((s) => {
               const system = SYSTEMS.find((sys) => sys.id === s.romSystem);
               const dur = s.durationSeconds
                 ? s.durationSeconds < 60
@@ -765,96 +776,85 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-          {/* ── Highlights ── */}
-          <motion.div variants={itemVariants} className="md:col-span-4 flex flex-col gap-4">
-            {mostPlayed && (
-              <HighlightCard
-                label={t("dashboard.highlights.mostPlayed")}
-                game={mostPlayed}
-                stat={fmtHoursShort(mostPlayed.minutesPlayed ?? 0)}
-                statLabel={t("common.played")}
-                icon={<Clock className="size-3" />}
-                onOpen={openGame}
-                showSystem={config.showSystemLabels}
-              />
-            )}
-            {highestRated && (
-              <HighlightCard
-                label={t("dashboard.highlights.highestRated")}
-                game={highestRated}
-                stat={`${highestRated.rating}/5`}
-                statLabel={t("dashboard.highlights.yourRating")}
-                icon={<Star className="size-3" />}
-                onOpen={openGame}
-                showSystem={config.showSystemLabels}
-              />
-            )}
-            {bestCommunity && (
-              <HighlightCard
-                label={t("dashboard.highlights.communityFav")}
-                game={bestCommunity}
-                stat={`${((bestCommunity.communityScore ?? 0) / 2).toFixed(1)}`}
-                statLabel="/ 10"
-                icon={<Zap className="size-3" />}
-                onOpen={openGame}
-                showSystem={config.showSystemLabels}
-              />
-            )}
-          </motion.div>
+        {/* Highlights Stack */}
+        <motion.div variants={itemVariants} className="md:col-span-4 flex flex-col gap-4">
+          {mostPlayed && (
+            <HighlightCard
+              label={t("dashboard.highlights.mostPlayed")}
+              game={mostPlayed}
+              stat={fmtHoursShort(mostPlayed.minutesPlayed ?? 0)}
+              statLabel={t("common.played")}
+              icon={<Clock className="size-3" />}
+              onOpen={openGame}
+              showSystem={config.showSystemLabels}
+            />
+          )}
+          {highestRated && (
+            <HighlightCard
+              label={t("dashboard.highlights.highestRated")}
+              game={highestRated}
+              stat={`${highestRated.rating}/5`}
+              statLabel={t("dashboard.highlights.yourRating")}
+              icon={<Star className="size-3" />}
+              onOpen={openGame}
+              showSystem={config.showSystemLabels}
+            />
+          )}
+        </motion.div>
 
-          {/* ── Wall of Shame (New) ── */}
-          <motion.div variants={itemVariants} className="md:col-span-6 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-destructive flex items-center gap-1.5">
-                <AlertCircle className="size-3" /> The Wall of Shame
-              </div>
-              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">Unplayed 30+ days</span>
+        {/* Wall of Shame */}
+        <motion.div variants={itemVariants} className="md:col-span-6 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-destructive flex items-center gap-1.5">
+              <AlertCircle className="size-3" /> The Wall of Shame
             </div>
-            <div className="space-y-4 flex-1">
-               {wallOfShame.map((g) => (
-                 <div key={g.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => openGame(g)}>
-                    <div className="size-12 rounded-lg overflow-hidden border border-border/50 shrink-0">
-                      {g.artUrl ? <img src={g.artUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-muted" />}
+            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">Unplayed 30+ days</span>
+          </div>
+          <div className="space-y-4 flex-1">
+             {wallOfShame.map((g) => (
+               <div key={g.id} className="flex items-center gap-4 group cursor-pointer" onClick={() => openGame(g)}>
+                  <div className="size-12 rounded-lg overflow-hidden border border-border/50 shrink-0">
+                    {g.artUrl ? <img src={g.artUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-muted" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate group-hover:text-primary transition-colors">{g.title}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                      {fmtHoursShort(g.minutesPlayed ?? 0)} played · {formatRelative(g.lastPlayed)}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate group-hover:text-primary transition-colors">{g.title}</div>
-                      <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
-                        {fmtHoursShort(g.minutesPlayed ?? 0)} played · {formatRelative(g.lastPlayed)}
-                      </div>
-                    </div>
-                 </div>
-               ))}
-               {wallOfShame.length === 0 && (
-                 <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
-                    Your backlog is fresh!
-                 </div>
-               )}
-            </div>
-          </motion.div>
+                  </div>
+               </div>
+             ))}
+             {wallOfShame.length === 0 && (
+               <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+                  Your backlog is fresh!
+               </div>
+             )}
+          </div>
+        </motion.div>
 
-          {/* ── Longest Session (New) ── */}
-          <motion.div variants={itemVariants} className="md:col-span-6 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent flex items-center gap-1.5">
-              <Trophy className="size-3" /> Legend Status
+        {/* Legend Status */}
+        <motion.div variants={itemVariants} className="md:col-span-6 bg-card/30 backdrop-blur-md border border-border rounded-2xl p-6 flex flex-col gap-4">
+          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-accent flex items-center gap-1.5">
+            <Trophy className="size-3" /> Legend Status
+          </div>
+          {longestSession ? (
+            <div className="flex-1 flex flex-col justify-center gap-2">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Longest Session Record</div>
+              <div className="text-2xl font-display font-bold text-foreground truncate">{longestSession.romTitle}</div>
+              <div className="flex items-baseline gap-2">
+                 <span className="text-4xl font-display font-black text-accent">{Math.round((longestSession.durationSeconds ?? 0) / 60)}m</span>
+                 <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">consecutive play</span>
+              </div>
+              <div className="text-[10px] font-mono text-muted-foreground/60 uppercase mt-1">Set on {new Date(longestSession.startedAt).toLocaleDateString()}</div>
             </div>
-            {longestSession ? (
-              <div className="flex-1 flex flex-col justify-center gap-2">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Longest Session Record</div>
-                <div className="text-2xl font-display font-bold text-foreground truncate">{longestSession.romTitle}</div>
-                <div className="flex items-baseline gap-2">
-                   <span className="text-4xl font-display font-black text-accent">{Math.round((longestSession.durationSeconds ?? 0) / 60)}m</span>
-                   <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">consecutive play</span>
-                </div>
-                <div className="text-[10px] font-mono text-muted-foreground/60 uppercase mt-1">Set on {new Date(longestSession.startedAt).toLocaleDateString()}</div>
-              </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
-                 No session data yet.
-              </div>
-            )}
-          </motion.div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+               No session data yet.
+            </div>
+          )}
+        </motion.div>
 
-        {/* ── Shelves ── */}
+        {/* Shelves */}
         {inProgress.length > 0 && (
           <motion.div variants={itemVariants} className="md:col-span-12 space-y-4">
             <SectionHeader title={t("dashboard.sections.inProgress")} count={inProgress.length} />
@@ -898,7 +898,7 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* ── Browse Systems ── */}
+        {/* Browse Systems */}
         <motion.div variants={itemVariants} className="md:col-span-12 space-y-6 pt-4">
           <SectionHeader title={t("dashboard.sections.browseSystems")} href="/library/all" />
           <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4">

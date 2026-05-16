@@ -4,6 +4,16 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.3.3] — 2026-05-15
+
+### Fix: Critical Runtime Stability
+
+- **Nesting & Component Fixes** — Performed a full surgical cleanup of the Dashboard component to ensure correct JSX nesting and layout grid column spans (maximum 12).
+- **Metadata Fixes** — Corrected configuration schema formatting for better Home Assistant compatibility.
+- **Icon Integrity** — Verified and fixed all icon imports and usage across the new Bento widgets and Surprise Wheel.
+
+---
+
 ## [1.3.2] — 2026-05-15
 
 ### Fix: Runtime Stability
