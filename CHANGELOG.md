@@ -4,6 +4,14 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.2.5] — 2026-05-15
+
+### Fix: Persistent 8GB Limit
+
+- **Config Restoration** — Fixed a bug where the 8GB upload limit would fall back to 2GB in certain environments. The system now correctly respects the 8192 MB ceiling for large PlayStation 2 ISOs across all configurations.
+
+---
+
 ## [1.2.4] — 2026-05-15
 
 ### Feature: Large ROM Support & UI Fixes

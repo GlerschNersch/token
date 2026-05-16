@@ -15,7 +15,7 @@ if command -v bashio >/dev/null 2>&1; then
     CABINET_MAX_UPLOAD_MB="$(bashio::config 'max_upload_mb')"
   fi
 fi
-export CABINET_MAX_UPLOAD_MB="${CABINET_MAX_UPLOAD_MB:-2048}"
+export CABINET_MAX_UPLOAD_MB="${CABINET_MAX_UPLOAD_MB:-8192}"
 
 mkdir -p "$CABINET_DATA_DIR"
 
