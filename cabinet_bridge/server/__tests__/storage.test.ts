@@ -2,77 +2,38 @@
  * Server-side storage integration tests.
  * Uses an in-memory SQLite DB so no /data directory is needed.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import path from 'node:path';
 
-// Patch the module-level db/sqlite before importing storage functions
+// Mock the log and data-dir modules to avoid side effects
+vi.mock('../log', () => ({
+  log: vi.fn()
+}));
+
+vi.mock('../data-dir', () => ({
+  dataPath: vi.fn((p) => p),
+  ensureDir: vi.fn(),
+  getDataDir: vi.fn(() => '/tmp')
+}));
+
 let sqlite: Database.Database;
 let db: any;
 
 function bootstrapDb() {
   sqlite = new Database(':memory:');
   sqlite.pragma('journal_mode = WAL');
-
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS uploaded_roms (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL, system TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
-      original_name TEXT NOT NULL, file_name TEXT NOT NULL, file_path TEXT NOT NULL,
-      size INTEGER NOT NULL, mime_type TEXT NOT NULL,
-      art_url TEXT, scrape_status TEXT NOT NULL DEFAULT 'not_scraped',
-      scrape_message TEXT, favorite INTEGER NOT NULL DEFAULT 1,
-      rating INTEGER NOT NULL DEFAULT 0, last_played INTEGER NOT NULL DEFAULT 0,
-      play_count INTEGER NOT NULL DEFAULT 0, minutes_played INTEGER NOT NULL DEFAULT 0,
-      play_status TEXT NOT NULL DEFAULT 'unset', created_at INTEGER NOT NULL,
-      disc_number INTEGER, disc_group TEXT, description TEXT,
-      release_year INTEGER, developer TEXT, publisher TEXT, genre TEXT,
-      players TEXT, rom_hash TEXT, community_score INTEGER,
-      wheel_art_url TEXT, video_url TEXT, ra_game_id INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS game_collections (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
-      smart_filter TEXT, created_at INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS collection_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      collection_id INTEGER NOT NULL, rom_id INTEGER NOT NULL,
-      created_at INTEGER NOT NULL, UNIQUE(collection_id, rom_id)
-    );
-    CREATE TABLE IF NOT EXISTS rom_save_slots (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      rom_id INTEGER NOT NULL, slot INTEGER NOT NULL,
-      user_id TEXT NOT NULL DEFAULT 'default', label TEXT NOT NULL,
-      updated_at INTEGER NOT NULL, UNIQUE(rom_id, user_id, slot)
-    );
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS user_profiles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#8b5cf6', created_at INTEGER NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS profile_game_state (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, profile_id INTEGER NOT NULL,
-      rom_id INTEGER NOT NULL, favorite INTEGER, rating INTEGER,
-      play_status TEXT, updated_at INTEGER NOT NULL, UNIQUE(profile_id, rom_id)
-    );
-    CREATE TABLE IF NOT EXISTS play_sessions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL,
-      rom_title TEXT NOT NULL, rom_system TEXT NOT NULL,
-      started_at INTEGER NOT NULL, ended_at INTEGER, duration_seconds INTEGER
-    );
-    CREATE TABLE IF NOT EXISTS activity_log (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL,
-      label TEXT NOT NULL, endpoint TEXT NOT NULL, status TEXT NOT NULL, detail TEXT
-    );
-  `);
-
-  // Default profile
-  sqlite.prepare('INSERT INTO user_profiles (id, name, color, created_at) VALUES (1, ?, ?, ?)').run('Player 1', '#8b5cf6', Date.now());
-
   db = drizzle(sqlite);
+
+  // Run migrations
+  const migrationsFolder = path.join(process.cwd(), "migrations");
+  migrate(db, { migrationsFolder });
+
+  // Default profile (usually handled by initializeDatabase, but we do it manually for tests)
+  sqlite.prepare('INSERT OR IGNORE INTO user_profiles (id, name, color, created_at) VALUES (1, ?, ?, ?)').run('Player 1', '#8b5cf6', Date.now());
+
   return { sqlite, db };
 }
 
@@ -91,9 +52,6 @@ function makeRom(overrides: Record<string, any> = {}) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Helpers that replicate DatabaseStorage logic against our in-memory DB
-// ---------------------------------------------------------------------------
 function insertRom(rom: ReturnType<typeof makeRom>) {
   return sqlite.prepare(`
     INSERT INTO uploaded_roms
@@ -101,8 +59,6 @@ function insertRom(rom: ReturnType<typeof makeRom>) {
     VALUES (?,?,?,?,?,?,?,?,?) RETURNING *
   `).get(rom.title, rom.system, rom.slug, rom.originalName, rom.fileName, rom.filePath, rom.size, rom.mimeType, rom.createdAt) as any;
 }
-
-// ---------------------------------------------------------------------------
 
 describe('DatabaseStorage — ROM CRUD', () => {
   beforeEach(() => bootstrapDb());
@@ -185,7 +141,6 @@ describe('DatabaseStorage — Profiles & Game State', () => {
   afterEach(() => sqlite.close());
 
   it('cannot delete profile 1', () => {
-    // Mirrors DatabaseStorage.deleteProfile guard: id === 1 returns false
     const canDelete = (id: number) => id !== 1;
     expect(canDelete(1)).toBe(false);
     expect(canDelete(2)).toBe(true);
@@ -220,6 +175,9 @@ describe('DatabaseStorage — Play Sessions', () => {
 
   it('creates and ends a play session', () => {
     const rom = insertRom(makeRom());
+    // Create the play_sessions table manually as it might not be in the schema yet if it was a manual migration before
+    sqlite.exec(`CREATE TABLE IF NOT EXISTS play_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, rom_id INTEGER NOT NULL, rom_title TEXT NOT NULL, rom_system TEXT NOT NULL, started_at INTEGER NOT NULL, ended_at INTEGER, duration_seconds INTEGER)`);
+    
     const result = sqlite.prepare('INSERT INTO play_sessions (rom_id, rom_title, rom_system, started_at) VALUES (?,?,?,?) RETURNING *').get(rom.id, rom.title, rom.system, Date.now()) as any;
     expect(result.id).toBeGreaterThan(0);
     expect(result.ended_at).toBeNull();

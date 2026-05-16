@@ -353,3 +353,17 @@ export const activityLog = sqliteTable("activity_log", {
 export const insertActivityLogSchema = createInsertSchema(activityLog).omit({ id: true });
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLogEntry = typeof activityLog.$inferSelect;
+
+export const playSessions = sqliteTable("play_sessions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  romId: integer("rom_id").notNull(),
+  romTitle: text("rom_title").notNull(),
+  romSystem: text("rom_system").notNull(),
+  startedAt: integer("started_at").notNull(),
+  endedAt: integer("ended_at"),
+  durationSeconds: integer("duration_seconds"),
+});
+
+export const insertPlaySessionSchema = createInsertSchema(playSessions).omit({ id: true });
+export type InsertPlaySession = z.infer<typeof insertPlaySessionSchema>;
+export type PlaySession = typeof playSessions.$inferSelect;

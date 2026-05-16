@@ -1,48 +1,108 @@
-
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
-import { registerRoutes } from "../routes";
+import path from "node:path";
+import fs from "node:fs";
+import http from "node:http";
 
-process.env.CABINET_DATA_DIR = "/tmp/cabinet-test-cheats-" + Date.now();
+// ── Setup Test Environment ───────────────────────────────────────────────────
+
+const TEST_DATA_DIR = "/tmp/cabinet-test-cheats-" + Date.now();
+if (!fs.existsSync(TEST_DATA_DIR)) {
+  fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
+}
+
+process.env.CABINET_DATA_DIR = TEST_DATA_DIR;
 process.env.NODE_ENV = "test";
 
+// Mock netplay
+vi.mock('../netplay', () => ({
+  attachNetplayServer: vi.fn(),
+  registerNetplayRoutes: vi.fn()
+}));
+
+import { registerRoutes } from "../routes";
+import { initializeDatabase } from "../storage";
+
 let server: Server;
-let baseUrl: string;
+let port: number;
 
 beforeAll(async () => {
+  initializeDatabase();
   const app = express();
   app.use(express.json());
+  
   const httpServer = createServer(app);
   await registerRoutes(httpServer, app);
+
+  // Global error handler for tests
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    console.error(`APP_ERROR: ${status} - ${message}`, err);
+    if (!res.headersSent) res.status(status).json({ message, stack: err.stack });
+  });
+
   await new Promise<void>((resolve) => {
     httpServer.listen(0, "127.0.0.1", () => resolve());
   });
   server = httpServer;
   const addr = httpServer.address() as { port: number };
-  baseUrl = `http://127.0.0.1:${addr.port}`;
-}, 15_000);
+  port = addr.port;
+}, 20_000);
 
-afterAll(() => {
-  server?.close();
+afterAll(async () => {
+  if (server) {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+  if (fs.existsSync(TEST_DATA_DIR)) {
+    fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  }
 });
 
+// ── Helper ────────────────────────────────────────────────────────────────────
 async function api(method: string, path: string, body?: unknown) {
-  const res = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : {},
-    body: body ? JSON.stringify(body) : undefined,
+  return new Promise<{ status: number; body: any }>((resolve) => {
+    const options = {
+      hostname: '127.0.0.1',
+      port: port,
+      path: path,
+      method: method,
+      headers: body ? { 
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(JSON.stringify(body))
+      } : {},
+    };
+
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        let json = null;
+        try { json = JSON.parse(data); } catch {}
+        resolve({ status: res.statusCode || 500, body: json });
+      });
+    });
+
+    req.on('error', (err) => {
+      console.error(`HTTP_REQ_ERROR: ${err.message}`);
+      resolve({ status: 500, body: null });
+    });
+
+    if (body) {
+      req.write(JSON.stringify(body));
+    }
+    req.end();
   });
-  const json = await res.json().catch(() => null);
-  return { status: res.status, body: json };
 }
 
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
 describe("Cheat Routes", () => {
-  it("GET /api/roms/:id/cheats returns 404 for non-existent ROM", async () => {
+  it("GET /api/roms/:id/cheats returns 200 (empty array) for non-existent ROM", async () => {
     const { status } = await api("GET", "/api/roms/99999/cheats");
-    // Actually listCheats doesn't return 404 if ROM not found, it just returns empty array usually
-    // Let's check cheats.ts implementation
     expect(status).toBe(200);
   });
 
