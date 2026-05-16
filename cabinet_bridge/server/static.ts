@@ -17,8 +17,6 @@ export function serveStatic(app: Express) {
   const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
-    // Do NOT throw here - that would kill the process before HA ingress
-    // can connect. Log the error and return gracefully instead.
     staticLog(`ERROR: Build output not found at ${distPath}`);
     return;
   }
@@ -27,7 +25,8 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
 
   // SPA fallback - serve index.html for all non-API routes
-  app.get("*", (req, res, next) => {
+  // Express 5 requires named wildcard: /{*path} instead of bare *
+  app.get("/{*path}", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     const indexPath = path.resolve(distPath, "index.html");
     if (fs.existsSync(indexPath)) {
