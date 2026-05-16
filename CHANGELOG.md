@@ -4,6 +4,23 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.3.7] — 2026-05-15
+
+### Fix: Repository Heartbeat
+
+- **Strict Metadata Sync** — Simplified the add-on configuration to its most robust form to force Home Assistant to recognize the repository. Resolved potential YAML parsing conflicts that were preventing the add-on from appearing in the Store.
+
+---
+
+## [1.3.6] — 2026-05-15
+
+### Fix: Final Repository Sync & Metadata Refresh
+
+- **Store Refresh** — Applied strict YAML quoting and simplified metadata to ensure the add-on appears reliably in the Home Assistant Add-on Store.
+- **Cache Break** — Incremented version to force a deep re-scan of the repository configuration.
+
+---
+
 ## [1.3.5] — 2026-05-15
 
 ### Major: Professional Stability Overhaul
