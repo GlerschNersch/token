@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { useIntegration } from "@/lib/integration";
 import { useQuery } from "@tanstack/react-query";
@@ -70,7 +69,6 @@ export default function Achievements() {
 
   return (
     <div className="flex h-full">
-      <Sidebar active="favorites" />
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto" data-testid="page-achievements">
         <MobileTopBar active="favorites" />
 

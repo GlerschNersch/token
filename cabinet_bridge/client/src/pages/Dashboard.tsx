@@ -5,7 +5,6 @@ import { uploadedRomToGame, SYSTEMS, type Game } from "@/data/library";
 import { GameCard } from "@/components/GameCard";
 import { SystemTile } from "@/components/GameArt";
 import { GameDetailDialog } from "@/components/GameDetailDialog";
-import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
 import { Button } from "@/components/ui/button";
@@ -498,20 +497,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-dvh min-h-dvh overflow-hidden">
-      {/* Sidebar — desktop only */}
-      <Sidebar active="all" />
+    <div className="flex-1 overflow-y-auto pb-20 lg:pb-0 overscroll-y-contain">
+      {/* Mobile top bar */}
+      <MobileTopBar />
 
-      <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-        {/* Mobile top bar */}
-        <MobileTopBar />
-
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 p-5 sm:p-8"
-        >
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-[1600px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 p-5 sm:p-8"
+      >
           {/* ── Now Playing live banner ── */}
           {nowPlaying?.playing && nowPlaying.title && (
             <motion.div variants={itemVariants} className="md:col-span-12">

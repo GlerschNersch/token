@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -104,8 +103,6 @@ export default function Settings() {
 
   return (
     <div className="flex h-full">
-      <Sidebar active="settings" />
-
       <main className="flex-1 min-w-0 flex flex-col bg-background/30 overflow-y-auto overscroll-y-contain">
         <MobileTopBar active="settings" />
 

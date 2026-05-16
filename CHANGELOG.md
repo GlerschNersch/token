@@ -4,6 +4,18 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.2.0] — 2026-05-15
+
+### Major: Professional Shadcn Navigation
+
+- **Persistent Sidebar** — Migrated the custom navigation to the professional Shadcn UI Sidebar foundation. The sidebar is now a top-level component that stays consistent during page transitions.
+- **Collapsible Mode** — Added support for "Icon Mode" (collapsing the sidebar to icons only), providing significant extra screen space for game grids on desktop.
+- **Keyboard Shortcuts** — Integrated native keyboard support (Cmd+B / Ctrl+B) to toggle the sidebar instantly.
+- **Improved Hierarchy** — Refined the organization of systems, collections, and library filters for a cleaner, more intuitive browsing experience.
+- **Glassmorphic Refinement** — Maintained and polished the backdrop-blur effects across the new navigation primitives.
+
+---
+
 ## [1.1.19] — 2026-05-15
 
 ### Fix: Final Localization Cleanup

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sidebar } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { SYSTEMS, uploadedRomToGame } from "@/data/library";
 import type { UploadedRom } from "@shared/schema";
@@ -157,7 +156,6 @@ export default function History() {
 
   return (
     <div className="flex h-full overflow-hidden">
-      <Sidebar active={"all"} />
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <MobileTopBar />
         <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-24 lg:pb-8 space-y-8">

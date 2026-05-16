@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import Fuse from "fuse.js";
-import { Sidebar, type Filter } from "@/components/Sidebar";
+import { type Filter } from "@/components/Sidebar";
 import { MobileTopBar } from "@/components/MobileNav";
 import { GameCard, GameCardSkeleton } from "@/components/GameCard";
 import { GameDetailDialog } from "@/components/GameDetailDialog";
@@ -412,7 +412,6 @@ export default function Home({ filter }: { filter: Filter }) {
   return (
     <div className="flex h-full">
       <WelcomeDialog hasRoms={uploadedRoms.length > 0} />
-      <Sidebar active={filter} />
 
       <main className="flex-1 min-w-0 flex flex-col" data-testid="main-content">
         <MobileTopBar active={filter} />

@@ -3,7 +3,7 @@ import { SYSTEMS, type SystemId, GAMES } from "@/data/library";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
 import { useQuery } from "@tanstack/react-query";
-import { filterToPath } from "@/lib/filter";
+import { filterToPath, parseFilter, parseCollectionFilter } from "@/lib/filter";
 import {
   LayoutDashboard,
   Heart,
@@ -17,26 +17,54 @@ import {
   Folder,
   History,
   ChevronsUpDown,
+  Radio,
+  PanelLeft,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useProfile } from "@/lib/useProfile";
 import type { UserProfile } from "@shared/schema";
+import { useTranslation } from "react-i18next";
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
-export type Filter = SystemId | `collection:${number}` | "settings";
+export type Filter = SystemId | `collection:${number}` | "all" | "favorites" | "recent" | "backlog" | "completed";
 
-interface SidebarProps {
-  active: Filter;
-  alwaysVisible?: boolean;
-  onNavigate?: () => void;
-}
-
-export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarProps) {
+export function Sidebar() {
   const [location] = useLocation();
+  const { t } = useTranslation();
   const onSettingsRoute = location.startsWith("/settings");
+  
+  // Derive active filter from location
+  const active = useMemo(() => {
+    if (location === "/") return "dashboard";
+    if (location.startsWith("/library/collection/")) {
+      const id = location.split("/").pop();
+      return `collection:${id}`;
+    }
+    if (location.startsWith("/library/")) {
+      return location.split("/").pop() as Filter;
+    }
+    return null;
+  }, [location]);
+
   const { data: kiosk } = useQuery<{ enabled: boolean }>({ queryKey: ["/api/kiosk"] });
   const kioskMode = !!kiosk?.enabled;
   const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
+  const { state } = useSidebar();
 
   const favCount      = GAMES.filter((g) => g.favorite).length + uploadedRoms.filter((r) => r.favorite).length;
   const recentCount   = GAMES.filter((g) => g.lastPlayed && g.lastPlayed > 0).length + uploadedRoms.filter((r) => r.lastPlayed && r.lastPlayed > 0).length;
@@ -44,6 +72,7 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
   const backlogCount  = uploadedRoms.filter((r) => r.playStatus === "backlog").length;
   const playingCount  = uploadedRoms.filter((r) => r.playStatus === "playing").length;
   const completedCount= uploadedRoms.filter((r) => r.playStatus === "completed").length;
+  
   const systemCounts  = Object.fromEntries(
     SYSTEMS.map((system) => [
       system.id,
@@ -55,7 +84,6 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
     queryKey: ["/api/now-playing"],
     queryFn: async () => { const res = await fetch("/api/now-playing"); return res.json(); },
     refetchInterval: (query) => {
-      // Don't poll if the tab is hidden or if we already have data and it's not playing
       if (document.hidden) return false;
       return query.state.data?.playing ? 5000 : 15000;
     },
@@ -63,232 +91,217 @@ export function Sidebar({ active, alwaysVisible = false, onNavigate }: SidebarPr
   });
 
   return (
-    <aside
-      className={`${alwaysVisible ? "flex" : "hidden lg:flex"} flex-col w-full lg:w-64 shrink-0 border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md h-full`}
-      data-testid="nav-sidebar"
-    >
-      {/* ── Drawer header ── */}
-      <div className="px-5 py-5 border-b border-sidebar-border">
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          data-testid="link-home"
-        >
-          <Wordmark />
-        </Link>
-      </div>
+    <ShadcnSidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md">
+      <SidebarHeader className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+        {state === "expanded" && (
+          <Link href="/" className="flex-1 outline-none">
+            <Wordmark />
+          </Link>
+        )}
+        <SidebarMenuButton className="w-8 h-8 p-0 flex items-center justify-center ml-auto" tooltip="Toggle Sidebar">
+           <PanelLeft className="size-4" />
+        </SidebarMenuButton>
+      </SidebarHeader>
 
-      {/* ── Now Playing indicator ── */}
-      {nowPlaying?.playing && nowPlaying.title && (
-        <div className="mx-3 mt-3 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 flex items-center gap-2.5">
-          <span className="relative flex size-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
-            <span className="relative inline-flex size-2 rounded-full bg-primary" />
-          </span>
-          <div className="min-w-0">
-            <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-primary/70">Now Playing</div>
-            <div className="font-medium text-[11px] text-foreground truncate leading-tight">{nowPlaying.title}</div>
-          </div>
-        </div>
-      )}
+      <SidebarContent className="nav-scroll">
+        {/* Now Playing indicator */}
+        {nowPlaying?.playing && nowPlaying.title && (
+          <SidebarGroup>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip={`${t("dashboard.liveNow")}: ${nowPlaying.title}`}
+                className="bg-primary/10 text-primary border border-primary/20 rounded-xl mx-1"
+              >
+                <span className="relative flex size-2 shrink-0">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
+                  <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                </span>
+                <span className="truncate font-medium text-xs ml-1">{nowPlaying.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarGroup>
+        )}
 
-      {/* ── Navigation items ── */}
-      <nav className="flex-1 overflow-y-auto nav-scroll px-3 py-4 space-y-5">
         {/* Dashboard */}
-        <NavSection label="">
-          <NavItem
-            icon={<LayoutDashboard className="size-[18px]" />}
-            label="Dashboard"
-            href="/"
-            selected={location === "/" && !onSettingsRoute}
-            onNavigate={onNavigate}
-            testId="nav-dashboard"
-          />
-        </NavSection>
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={location === "/"}
+                tooltip={t("nav.dashboard")}
+              >
+                <Link href="/">
+                  <LayoutDashboard className="size-4" />
+                  <span>{t("nav.dashboard")}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
 
         {/* Library */}
-        <NavSection label="Library">
-          <NavItem icon={<Heart className="size-[18px]" />} label="Favorites" count={favCount}
-            href={filterToPath("favorites")} selected={!onSettingsRoute && active === "favorites"}
-            onNavigate={onNavigate} testId="nav-favorites" />
-          <NavItem icon={<Clock className="size-[18px]" />} label="Recently Played" count={recentCount}
-            href={filterToPath("recent")} selected={!onSettingsRoute && active === "recent"}
-            onNavigate={onNavigate} testId="nav-recent" />
-          <NavItem icon={<LayoutGrid className="size-[18px]" />} label="All Games" count={allCount}
-            href={filterToPath("all")} selected={!onSettingsRoute && active === "all"}
-            onNavigate={onNavigate} testId="nav-all" />
-          {(backlogCount > 0 || playingCount > 0 || completedCount > 0) && (
-            <>
-              <NavItem icon={<BookMarked className="size-[18px]" />} label="Backlog" count={backlogCount}
-                href={filterToPath("backlog" as any)} selected={!onSettingsRoute && (active as string) === "backlog"}
-                onNavigate={onNavigate} testId="nav-backlog" />
-              {playingCount > 0 && (
-                <NavItem icon={<Gamepad2 className="size-[18px]" />} label="Now Playing" count={playingCount}
-                  href={filterToPath("playing" as any)} selected={!onSettingsRoute && (active as string) === "playing"}
-                  onNavigate={onNavigate} testId="nav-playing" />
-              )}
-              {completedCount > 0 && (
-                <NavItem icon={<CheckCircle2 className="size-[18px]" />} label="Completed" count={completedCount}
-                  href={filterToPath("completed" as any)} selected={!onSettingsRoute && (active as string) === "completed"}
-                  onNavigate={onNavigate} testId="nav-completed" />
-              )}
-            </>
-          )}
-        </NavSection>
+        <SidebarGroup>
+          <SidebarGroupLabel>{t("home.sections.library")}</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={active === "favorites"} tooltip={t("home.sections.favorites")}>
+                <Link href={filterToPath("favorites")}>
+                  <Heart className="size-4" />
+                  <span>{t("home.sections.favorites")}</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuBadge>{favCount}</SidebarMenuBadge>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={active === "recent"} tooltip={t("home.sections.recentlyPlayed")}>
+                <Link href={filterToPath("recent")}>
+                  <Clock className="size-4" />
+                  <span>{t("home.sections.recentlyPlayed")}</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuBadge>{recentCount}</SidebarMenuBadge>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={active === "all"} tooltip={t("home.sections.allGames")}>
+                <Link href={filterToPath("all")}>
+                  <LayoutGrid className="size-4" />
+                  <span>{t("home.sections.allGames")}</span>
+                </Link>
+              </SidebarMenuButton>
+              <SidebarMenuBadge>{allCount}</SidebarMenuBadge>
+            </SidebarMenuItem>
+
+            {backlogCount > 0 && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={active === "backlog"} tooltip={t("dashboard.status.backlog")}>
+                  <Link href={filterToPath("backlog" as any)}>
+                    <BookMarked className="size-4" />
+                    <span>{t("dashboard.status.backlog")}</span>
+                  </Link>
+                </SidebarMenuButton>
+                <SidebarMenuBadge>{backlogCount}</SidebarMenuBadge>
+              </SidebarMenuItem>
+            )}
+
+            {completedCount > 0 && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={active === "completed"} tooltip={t("dashboard.status.completed")}>
+                  <Link href={filterToPath("completed" as any)}>
+                    <CheckCircle2 className="size-4" />
+                    <span>{t("dashboard.status.completed")}</span>
+                  </Link>
+                </SidebarMenuButton>
+                <SidebarMenuBadge>{completedCount}</SidebarMenuBadge>
+              </SidebarMenuItem>
+            )}
+          </SidebarMenu>
+        </SidebarGroup>
 
         {/* Systems */}
-        <NavSection label="Systems">
-          {SYSTEMS.map((s) => (
-            <NavItem
-              key={s.id}
-              icon={
-                <span
-                  className="inline-block size-3.5 rounded-sm shrink-0"
-                  style={{ background: `linear-gradient(135deg, hsl(${s.art[0]}), hsl(${s.art[1]}))` }}
-                />
-              }
-              label={s.shortName}
-              count={systemCounts[s.id] ?? 0}
-              href={filterToPath(s.id)}
-              selected={!onSettingsRoute && active === s.id}
-              onNavigate={onNavigate}
-              testId={`nav-system-${s.id}`}
-            />
-          ))}
-        </NavSection>
+        {!kioskMode && (
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("dashboard.sections.browseSystems")}</SidebarGroupLabel>
+            <SidebarMenu>
+              {SYSTEMS.map((s) => (
+                <SidebarMenuItem key={s.id}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active === s.id}
+                    tooltip={s.shortName}
+                  >
+                    <Link href={filterToPath(s.id)}>
+                      <span
+                        className="inline-block size-3 rounded-sm shrink-0"
+                        style={{ background: `linear-gradient(135deg, hsl(${s.art[0]}), hsl(${s.art[1]}))` }}
+                      />
+                      <span>{s.shortName}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge>{systemCounts[s.id] ?? 0}</SidebarMenuBadge>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
 
         {/* Collections */}
         {collections.length > 0 && (
-          <NavSection label="Collections">
-            {collections.map((collection) => (
-              <NavItem
-                key={collection.id}
-                icon={<Folder className="size-[18px]" />}
-                label={collection.name}
-                count={collection.romIds.length}
-                href={filterToPath(`collection:${collection.id}` as Filter)}
-                selected={!onSettingsRoute && active === `collection:${collection.id}`}
-                onNavigate={onNavigate}
-                testId={`nav-collection-${collection.id}`}
-              />
-            ))}
-          </NavSection>
+          <SidebarGroup>
+            <SidebarGroupLabel>{t("nav.collections") || "Collections"}</SidebarGroupLabel>
+            <SidebarMenu>
+              {collections.map((collection) => (
+                <SidebarMenuItem key={collection.id}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active === `collection:${collection.id}`}
+                    tooltip={collection.name}
+                  >
+                    <Link href={filterToPath(`collection:${collection.id}` as any)}>
+                      <Folder className="size-4" />
+                      <span>{collection.name}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge>{collection.romIds.length}</SidebarMenuBadge>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
         )}
-      </nav>
+      </SidebarContent>
 
-      {/* ── Drawer footer ── */}
-      <div className={`px-3 pb-4 border-t border-sidebar-border pt-3 space-y-0.5 ${kioskMode ? "hidden" : ""}`}>
-        <NavItem
-          icon={<History className="size-[18px]" />}
-          label="History"
-          href="/history"
-          selected={location.startsWith("/history")}
-          onNavigate={onNavigate}
-          testId="link-history"
-        />
-        <NavItem
-          icon={<Trophy className="size-[18px]" />}
-          label="Achievements"
-          href="/achievements"
-          selected={location.startsWith("/achievements")}
-          onNavigate={onNavigate}
-          testId="link-achievements"
-        />
-        <NavItem
-          icon={<SettingsIcon className="size-[18px]" />}
-          label="Settings"
-          href="/settings"
-          selected={onSettingsRoute}
-          onNavigate={onNavigate}
-          testId="link-settings"
-        />
-        <SidebarProfile onNavigate={onNavigate} />
-      </div>
-    </aside>
+      <SidebarFooter className="border-t border-sidebar-border bg-sidebar/40 p-2">
+        {!kioskMode && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.startsWith("/history")} tooltip={t("history.title")}>
+                <Link href="/history">
+                  <History className="size-4" />
+                  <span>{t("history.title")}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location.startsWith("/achievements")} tooltip={t("achievements.title")}>
+                <Link href="/achievements">
+                  <Trophy className="size-4" />
+                  <span>{t("achievements.title")}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={onSettingsRoute} tooltip={t("settings.title")}>
+                <Link href="/settings">
+                  <SettingsIcon className="size-4" />
+                  <span>{t("settings.title")}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
+        <SidebarProfile />
+      </SidebarFooter>
+      <SidebarRail />
+    </ShadcnSidebar>
   );
 }
 
-/* ── MD3 Navigation Section (group label) ── */
-function NavSection({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      {label && (
-        <p className="px-4 mb-1 md-label-small text-muted-foreground/70 uppercase tracking-[0.1em]">
-          {label}
-        </p>
-      )}
-      <div className="space-y-0.5">{children}</div>
-    </div>
-  );
-}
-
-/* ── MD3 Navigation Drawer Item ──
-   Active state: indicator pill (primary-container bg, on-primary-container text, icon tinted primary)
-   Inactive state: transparent bg, muted foreground, md3-state layer on hover/press
-*/
-function NavItem({
-  icon,
-  label,
-  count,
-  href,
-  selected,
-  onNavigate,
-  testId,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  count?: number;
-  href: string;
-  selected: boolean;
-  onNavigate?: () => void;
-  testId: string;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      data-testid={testId}
-      data-state={selected ? "active" : "inactive"}
-      className={[
-        /* MD3 nav-item base */
-        "w-full flex items-center gap-3 px-4 h-[3.5rem] rounded-2xl",
-        "md-label-large transition-colors duration-150",
-        "md3-state",
-        selected
-          ? /* active — indicator filled */
-            "bg-primary-container text-[hsl(var(--on-primary-container))] md3-state-primary"
-          : /* inactive — transparent, state layer on hover */
-            "text-sidebar-foreground/80 hover:bg-white/[0.05] md3-state-on-surface",
-      ].join(" ")}
-    >
-      {/* Icon — tinted primary when active */}
-      <span className={`shrink-0 ${selected ? "text-primary" : "text-sidebar-foreground/60"}`}>
-        {icon}
-      </span>
-      <span className="truncate flex-1 text-left">{label}</span>
-      {count !== undefined && (
-        <span className="font-mono text-[11px] text-muted-foreground/60 tabular-nums shrink-0">
-          {count.toLocaleString()}
-        </span>
-      )}
-    </Link>
-  );
-}
-
-/* ── Profile Switcher (sidebar footer) ── */
-function SidebarProfile({ onNavigate }: { onNavigate?: () => void }) {
+/* ── Profile Switcher ── */
+function SidebarProfile() {
   const { currentProfileId, setCurrentProfileId } = useProfile();
   const [open, setOpen] = useState(false);
   const { data: profiles = [] } = useQuery<UserProfile[]>({ queryKey: ["/api/profiles"] });
   const active = profiles.find((p) => p.id === currentProfileId);
+  const { state } = useSidebar();
 
   if (!active || profiles.length <= 1) return null;
 
   return (
     <div className="relative mt-1">
-      {open && (
-        <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-2xl border border-sidebar-border bg-sidebar shadow-2xl py-1 z-50 overflow-hidden">
+      {open && state === "expanded" && (
+        <div className="absolute bottom-full left-0 right-0 mb-1.5 rounded-xl border border-sidebar-border bg-sidebar shadow-2xl py-1 z-50 overflow-hidden">
           {profiles.map((p) => (
             <button
               key={p.id}
@@ -296,34 +309,29 @@ function SidebarProfile({ onNavigate }: { onNavigate?: () => void }) {
               onClick={() => {
                 setCurrentProfileId(p.id);
                 setOpen(false);
-                onNavigate?.();
               }}
               className={[
-                "w-full flex items-center gap-3 px-4 h-[3.25rem] text-left transition-colors",
+                "w-full flex items-center gap-3 px-3 h-10 text-left transition-colors text-xs",
                 p.id === currentProfileId
                   ? "bg-primary-container/60 text-foreground"
                   : "text-sidebar-foreground/70 hover:bg-white/[0.05]",
               ].join(" ")}
             >
-              <span className="size-2.5 rounded-full shrink-0" style={{ background: p.color }} />
-              <span className="flex-1 truncate font-medium text-sm">{p.name}</span>
-              {p.id === currentProfileId && (
-                <span className="text-primary text-[11px] font-mono uppercase tracking-wider">active</span>
-              )}
+              <span className="size-2 rounded-full shrink-0" style={{ background: p.color }} />
+              <span className="flex-1 truncate font-medium">{p.name}</span>
             </button>
           ))}
         </div>
       )}
-      <button
-        type="button"
+      <SidebarMenuButton
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 px-4 h-[3.5rem] rounded-2xl text-sidebar-foreground/80 hover:bg-white/[0.05] transition-colors"
-        data-testid="nav-profile-switcher"
+        tooltip={active.name}
+        className="h-10"
       >
         <span className="size-2.5 rounded-full shrink-0" style={{ background: active.color }} />
-        <span className="flex-1 truncate text-left font-medium text-sm">{active.name}</span>
-        <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground/50" />
-      </button>
+        <span className="flex-1 truncate text-left font-medium text-xs">{active.name}</span>
+        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground/50" />
+      </SidebarMenuButton>
     </div>
   );
 }

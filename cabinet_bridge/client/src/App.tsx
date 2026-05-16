@@ -15,6 +15,8 @@ import { ProfileProvider } from "@/lib/useProfile";
 import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/not-found";
 import { THEMES, AppTheme } from "./lib/themes";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { Sidebar } from "@/components/Sidebar";
 
 /**
  * Ensures scroll position is reset or restored correctly on navigation.
@@ -163,21 +165,20 @@ function App() {
       <LanguageManager />
       <ScrollRestoration />
         <TooltipProvider>
-          <Toaster />
-          <Router hook={useHashLocation}>
-            {/*
-             * Root container — fills the viewport.
-             * MobileBottomNav is fixed-position so it doesn't affect layout,
-             * but pages must add pb-20 lg:pb-0 to their scroll containers
-             * so content isn't hidden behind it.
-             */}
-            <div className="h-dvh min-h-dvh flex flex-col">
-              <PageTransition>
-                <AppRouter />
-              </PageTransition>
-              <MobileBottomNav />
-            </div>
-          </Router>
+          <SidebarProvider>
+            <Toaster />
+            <Router hook={useHashLocation}>
+              <div className="h-dvh min-h-dvh flex w-full overflow-hidden">
+                <Sidebar />
+                <SidebarInset className="flex flex-col min-h-0 overflow-hidden">
+                  <PageTransition>
+                    <AppRouter />
+                  </PageTransition>
+                  <MobileBottomNav />
+                </SidebarInset>
+              </div>
+            </Router>
+          </SidebarProvider>
         </TooltipProvider>
       </IntegrationProvider>
       </ProfileProvider>
