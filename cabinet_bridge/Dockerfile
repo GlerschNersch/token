@@ -14,8 +14,6 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Install dependencies
-# Use npm install (not ci) - bufferutil is an optional native dep whose
-# resolved version can differ across platforms, causing npm ci to fail.
 COPY package.json package-lock.json ./
 RUN NODE_ENV=development npm install --no-audit --no-fund --ignore-scripts
 RUN npm rebuild better-sqlite3
@@ -43,4 +41,4 @@ RUN chmod a+x \
       /etc/s6-overlay/s6-rc.d/homearcade/finish
 
 EXPOSE 5000
-CMD ["/init"]
+ENTRYPOINT ["/init"]
