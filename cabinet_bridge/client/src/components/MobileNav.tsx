@@ -1,16 +1,10 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Sidebar, type Filter } from "@/components/Sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Wordmark } from "@/components/Logo";
-import { Menu, LayoutDashboard, Gamepad2, Trophy, Settings, History } from "lucide-react";
+import { LayoutDashboard, Gamepad2, Trophy, Settings, History } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-interface Props {
-  active?: Filter;
-}
-
-export function MobileTopBar({ active }: Props) {
-  const [open, setOpen] = useState(false);
+export function MobileTopBar() {
   const [location] = useLocation();
   const onSettingsRoute = location.startsWith("/settings");
 
@@ -19,25 +13,7 @@ export function MobileTopBar({ active }: Props) {
       className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-border bg-sidebar/80 backdrop-blur-md sticky top-0 z-30"
       data-testid="bar-mobile-top"
     >
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger asChild>
-          {/* MD3 Icon Button */}
-          <button
-            type="button"
-            className="size-10 rounded-full flex items-center justify-center text-foreground/80 md3-state md3-state-on-surface hover:bg-white/[0.08] transition-colors"
-            data-testid="button-open-nav"
-            aria-label="Open navigation"
-          >
-            <Menu className="size-5" />
-          </button>
-        </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-72 bg-sidebar text-sidebar-foreground border-sidebar-border">
-          <SheetTitle className="sr-only">HomeArcade navigation</SheetTitle>
-          <div className="h-full flex">
-            <Sidebar active={active ?? "all"} alwaysVisible onNavigate={() => setOpen(false)} />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SidebarTrigger className="size-10 rounded-full" />
 
       <Link href="/" className="flex items-center" data-testid="link-home-mobile">
         <Wordmark />
@@ -61,14 +37,6 @@ export function MobileTopBar({ active }: Props) {
   );
 }
 
-function SidebarMobileWrapper({ active, onNavigate }: { active: Filter; onNavigate: () => void }) {
-  return (
-    <div className="flex flex-col w-full h-full">
-      <Sidebar active={active} alwaysVisible onNavigate={onNavigate} />
-    </div>
-  );
-}
-
 /**
  * MD3 Navigation Bar — fixed bottom tab bar.
  * Active tab: pill-shaped indicator under icon, primary color icon+label.
@@ -77,13 +45,14 @@ function SidebarMobileWrapper({ active, onNavigate }: { active: Filter; onNaviga
  */
 export function MobileBottomNav() {
   const [location] = useLocation();
+  const { t } = useTranslation();
 
   const tabs = [
-    { href: "/",            icon: LayoutDashboard, label: "Home"     },
-    { href: "/library",     icon: Gamepad2,        label: "Library"  },
-    { href: "/history",     icon: History,         label: "History"  },
-    { href: "/achievements",icon: Trophy,          label: "Awards"   },
-    { href: "/settings",    icon: Settings,        label: "Settings" },
+    { href: "/",            icon: LayoutDashboard, label: t("nav.home") || "Home"     },
+    { href: "/library",     icon: Gamepad2,        label: t("nav.library") || "Library"  },
+    { href: "/history",     icon: History,         label: t("nav.history") || "History"  },
+    { href: "/achievements",icon: Trophy,          label: t("nav.achievements") || "Awards"   },
+    { href: "/settings",    icon: Settings,        label: t("nav.settings") || "Settings" },
   ] as const;
 
   return (

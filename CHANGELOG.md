@@ -4,6 +4,17 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.2.2] — 2026-05-15
+
+### Polish: Sidebar Configuration
+
+- **Native Trigger** — Replaced the custom toggle button with the official Shadcn `SidebarTrigger`, ensuring the collapsible state is handled correctly by the framework.
+- **Mobile Integration** — Refactored the Mobile Top Bar to trigger the Sidebar drawer natively, providing a consistent experience across desktop and mobile.
+- **Visual Spacing** — Added `SidebarSeparator` and refined the header/footer alignment for a cleaner, more professional look.
+- **Active State Fixes** — Improved the URL-based active link detection to correctly highlight History and Achievements sections.
+
+---
+
 ## [1.2.1] — 2026-05-15
 
 ### Fix: Build Stability

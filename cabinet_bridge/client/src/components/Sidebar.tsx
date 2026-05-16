@@ -3,7 +3,7 @@ import { SYSTEMS, type SystemId, GAMES } from "@/data/library";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
 import { useQuery } from "@tanstack/react-query";
-import { filterToPath, parseFilter, parseCollectionFilter } from "@/lib/filter";
+import { filterToPath } from "@/lib/filter";
 import {
   LayoutDashboard,
   Heart,
@@ -37,6 +37,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -45,11 +47,14 @@ export type Filter = SystemId | `collection:${number}` | "all" | "favorites" | "
 export function Sidebar() {
   const [location] = useLocation();
   const { t } = useTranslation();
-  const onSettingsRoute = location.startsWith("/settings");
   
   // Derive active filter from location
   const active = useMemo(() => {
     if (location === "/") return "dashboard";
+    if (location.startsWith("/settings")) return "settings";
+    if (location.startsWith("/history")) return "history";
+    if (location.startsWith("/achievements")) return "achievements";
+    
     if (location.startsWith("/library/collection/")) {
       const id = location.split("/").pop();
       return `collection:${id}`;
@@ -64,7 +69,7 @@ export function Sidebar() {
   const kioskMode = !!kiosk?.enabled;
   const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
 
   const favCount      = GAMES.filter((g) => g.favorite).length + uploadedRoms.filter((r) => r.favorite).length;
   const recentCount   = GAMES.filter((g) => g.lastPlayed && g.lastPlayed > 0).length + uploadedRoms.filter((r) => r.lastPlayed && r.lastPlayed > 0).length;
@@ -92,16 +97,16 @@ export function Sidebar() {
 
   return (
     <ShadcnSidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md">
-      <SidebarHeader className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border">
+      <SidebarHeader className="h-16 flex items-center justify-between px-4">
         {state === "expanded" && (
           <Link href="/" className="flex-1 outline-none">
             <Wordmark />
           </Link>
         )}
-        <SidebarMenuButton className="w-8 h-8 p-0 flex items-center justify-center ml-auto" tooltip="Toggle Sidebar">
-           <PanelLeft className="size-4" />
-        </SidebarMenuButton>
+        <SidebarTrigger className={state === "collapsed" ? "mx-auto" : "ml-auto"} />
       </SidebarHeader>
+
+      <SidebarSeparator />
 
       <SidebarContent className="nav-scroll">
         {/* Now Playing indicator */}
@@ -110,13 +115,13 @@ export function Sidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip={`${t("dashboard.liveNow")}: ${nowPlaying.title}`}
-                className="bg-primary/10 text-primary border border-primary/20 rounded-xl mx-1"
+                className="bg-primary/10 text-primary border border-primary/20 rounded-xl mx-1 h-10"
               >
                 <span className="relative flex size-2 shrink-0">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
                   <span className="relative inline-flex size-2 rounded-full bg-primary" />
                 </span>
-                <span className="truncate font-medium text-xs ml-1">{nowPlaying.title}</span>
+                {state === "expanded" && <span className="truncate font-medium text-xs ml-2">{nowPlaying.title}</span>}
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarGroup>
@@ -128,7 +133,7 @@ export function Sidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={location === "/"}
+                isActive={active === "dashboard"}
                 tooltip={t("nav.dashboard")}
               >
                 <Link href="/">
@@ -256,7 +261,7 @@ export function Sidebar() {
         {!kioskMode && (
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={location.startsWith("/history")} tooltip={t("history.title")}>
+              <SidebarMenuButton asChild isActive={active === "history"} tooltip={t("history.title")}>
                 <Link href="/history">
                   <History className="size-4" />
                   <span>{t("history.title")}</span>
@@ -264,7 +269,7 @@ export function Sidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={location.startsWith("/achievements")} tooltip={t("achievements.title")}>
+              <SidebarMenuButton asChild isActive={active === "achievements"} tooltip={t("achievements.title")}>
                 <Link href="/achievements">
                   <Trophy className="size-4" />
                   <span>{t("achievements.title")}</span>
@@ -272,7 +277,7 @@ export function Sidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={onSettingsRoute} tooltip={t("settings.title")}>
+              <SidebarMenuButton asChild isActive={active === "settings"} tooltip={t("settings.title")}>
                 <Link href="/settings">
                   <SettingsIcon className="size-4" />
                   <span>{t("settings.title")}</span>
