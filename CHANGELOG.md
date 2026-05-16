@@ -4,7 +4,18 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
-## [1.5.0] — 2026-05-15
+## [1.5.2] — 2026-05-15
+
+### Major: Deep Infrastructure Hardening (AMD64 Stability)
+
+- **Boot Cycle Fix** — Resolved a circular dependency in the server boot sequence and fixed a locale-related error in the logging system that could prevent the application from starting in Alpine-based containers.
+- **Robust Shell Lifecycle** — Rewrote `run.sh` from scratch to be significantly more resilient. Added architecture and environment diagnostics to the startup logs.
+- **Cache Purge** — Forced a fresh build of all binary dependencies (`better-sqlite3`, etc.) to ensure absolute compatibility with the AMD64 architecture.
+- **Relative API Hardening** — Updated the Dashboard and Sidebar to use strict relative API paths, ensuring full functionality behind the Home Assistant Ingress proxy.
+
+---
+
+## [1.5.1] — 2026-05-15
 
 ### Major: Stable Hybrid Release (Rollback & Hardening)
 
