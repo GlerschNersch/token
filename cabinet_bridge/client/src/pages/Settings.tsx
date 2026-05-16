@@ -46,6 +46,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { THEMES } from "@/lib/themes";
 import { BiosManager } from "@/components/BiosManager";
+import { RomUpload } from "@/components/RomUpload";
 
 export default function Settings() {
   const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
@@ -379,6 +380,8 @@ export default function Settings() {
 
             <TabsContent value="library" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <ScannerStatusSection />
+              <Separator className="bg-border/60" />
+              <ManualUploadSection />
               <Separator className="bg-border/60" />
               <SmartFilterCollectionCreator />
             </TabsContent>
@@ -919,6 +922,20 @@ function ScannerStatusSection() {
           {scanning ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5" />}
           {t("settings.buttons.scanNow")}
         </Button>
+      </div>
+    </Section>
+  );
+}
+
+function ManualUploadSection() {
+  const { t } = useTranslation();
+  return (
+    <Section
+      title={t("settings.sections.manualUpload.title")}
+      description={t("settings.sections.manualUpload.description")}
+    >
+      <div className="p-4 rounded-xl border border-border bg-sidebar/20">
+        <RomUpload system={undefined} variant="inline" />
       </div>
     </Section>
   );

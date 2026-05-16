@@ -90,6 +90,7 @@
     "actions": {
       "surprise": "Surprise me — pick a random game",
       "newCollection": "+ New collection",
+      "upload": "Upload ROMs",
       "save": "Save",
       "cancel": "Cancel"
     },

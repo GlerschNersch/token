@@ -9,7 +9,7 @@ export CABINET_MAX_UPLOAD_MB="${CABINET_MAX_UPLOAD_MB:-8192}"
 mkdir -p "$CABINET_DATA_DIR"
 cd /app
 
-echo "[boot] HomeArcade 1.9.1 starting on port $PORT"
+echo "[boot] HomeArcade 2.0.6 starting on port $PORT"
 echo "[boot] Data: $CABINET_DATA_DIR | Max upload: ${CABINET_MAX_UPLOAD_MB}MB"
 
 exec node dist/index.cjs

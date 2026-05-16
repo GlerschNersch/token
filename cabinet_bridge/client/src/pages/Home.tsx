@@ -20,6 +20,7 @@ import {
   X,
   Check,
   Play,
+  Upload,
 } from "lucide-react";
 import { useProfile } from "@/lib/useProfile";
 import { useIntegration } from "@/lib/integration";
@@ -45,6 +46,7 @@ export default function Home({ filter }: { filter: Filter }) {
   const [genreFilter, setGenreFilter] = useState<string>(() => localStorage.getItem("ha-genre") ?? "");
   const [openGame, setOpenGame] = useState<Game | null>(null);
   const [showSurpriseWheel, setShowSurpriseWheel] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
   const [favOverrides, setFavOverrides] = useState<Record<string, boolean>>({});
   const [ratingOverrides, setRatingOverrides] = useState<Record<string, number>>({});
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
@@ -472,6 +474,20 @@ export default function Home({ filter }: { filter: Filter }) {
             </div>
 
             <SortMenu sort={sort} setSort={persistSort} />
+
+            {!kioskMode && (
+              <button
+                type="button"
+                onClick={() => setShowUpload(!showUpload)}
+                title={t("home.actions.upload")}
+                className={`size-9 flex items-center justify-center rounded-md border border-border bg-background/40 hover:text-foreground hover-elevate transition-all ${
+                  showUpload ? "text-primary border-primary/50 bg-primary/5" : "text-muted-foreground"
+                }`}
+                data-testid="button-toggle-upload"
+              >
+                <Upload className="size-4" />
+              </button>
+            )}
 
             <button
               type="button"
