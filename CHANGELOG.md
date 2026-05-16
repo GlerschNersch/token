@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.3.9] — 2026-05-15
+
+### Fix: Critical Server Boot
+
+- **ESM Compatibility** — Fixed a critical server crash where the app was attempting to use `__dirname` in an ES module environment. Replaced with `process.cwd()` to ensure static assets load correctly.
+- **Ingress Stream Restore** — Restored `ingress_stream: true` in the configuration to allow for large ROM uploads through the Home Assistant proxy.
+
+---
+
 ## [1.3.8] — 2026-05-15
 
 ### Fix: Ingress Navigation & Routing
