@@ -3,9 +3,7 @@ version: "2.3.6"
 slug: "cabinet_bridge"
 description: "The premium retro gaming frontend for Home Assistant. Manage ROMs, browse systems, and launch games from your sidebar or TV."
 url: "https://github.com/GlerschNersch/token"
-image: "ghcr.io/glerschnersch/homearcade-{arch}"
-startup: "application"
-boot: "auto"
+boot: auto
 arch:
   - "aarch64"
   - "amd64"
