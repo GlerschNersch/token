@@ -9,10 +9,8 @@ import { renderEmulatorPage, renderEmulatorBootstrap, renderPlayerError } from "
 import { REQUIRED_BIOS } from "./bios";
 import { dataPath } from "../data-dir";
 import path from "node:path";
-
-const BIOS_ROOT = dataPath("bios");
-
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import crypto from "node:crypto";
 import { z } from "zod";
 import { insertUploadedRomSchema } from "@shared/schema";
@@ -20,6 +18,8 @@ import { extractFirstRomFromZip, titleFromFileName, slugify } from "./utils";
 import { fetchTheGamesDBMeta, fetchScreenScraperMeta, findLibretroBoxArt } from "./scrape";
 
 export function registerRomRoutes(app: Express) {
+  const BIOS_ROOT = dataPath("bios");
+
   app.get("/api/upload-limits", (_req, res) => {
     res.json({
       maxUploadMb: MAX_UPLOAD_MB,
@@ -28,9 +28,9 @@ export function registerRomRoutes(app: Express) {
     });
   });
 
+  // Streaming ROM upload handler to handle multi-GB files without OOM
   app.post(
     "/api/roms/upload",
-    express.raw({ type: "*/*", limit: MAX_UPLOAD_BYTES }),
     async (req, res) => {
       const system = String(req.query.system ?? "");
       const favorite = req.query.favorite !== "0";
@@ -40,73 +40,80 @@ export function registerRomRoutes(app: Express) {
         return res.status(400).json({ message: "Choose a supported console before uploading." });
       }
 
-      let body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
-      if (body.length === 0) {
-        return res.status(400).json({ message: "Upload a ROM file before submitting." });
-      }
-
       let originalName = decodeURIComponent(
         String(req.header("x-rom-filename") ?? "uploaded.rom"),
       );
 
-      // Auto-extract ZIPs — find the first matching ROM inside
-      const rawExt = path.extname(originalName).toLowerCase();
-      if (rawExt === ".zip" && body.readUInt32LE(0) === 0x04034b50) {
-        const extracted = await extractFirstRomFromZip(body, allowedExtensions);
-        if (!extracted) {
-          return res.status(400).json({
-            message: `The ZIP archive doesn't contain any supported ${system.toUpperCase()} ROM file. Allowed extensions: ${allowedExtensions.join(", ")}`,
-          });
-        }
-        body = extracted.buffer;
-        originalName = extracted.fileName;
-      }
-
-      const extension = path.extname(originalName).toLowerCase();
-      if (!allowedExtensions.includes(extension)) {
-        return res.status(400).json({
-          message: `.${extension.replace(".", "") || "rom"} files are not configured for ${system.toUpperCase()}. Allowed: ${allowedExtensions.join(", ")}`,
-        });
-      }
-
-      const rawTitle = titleFromFileName(originalName);
-
-      // Detect multi-disc indicators like "(Disc 1)", "[Disk 2]", "CD 3", etc.
-      const discMatch = rawTitle.match(
-        /\s*[\(\[](?:disc|disk|cd)\s*(\d+)[\)\]]|\s+(?:disc|disk|cd)\s*(\d+)/i,
-      );
-      const discNumber = discMatch ? parseInt(discMatch[1] ?? discMatch[2], 10) : null;
-      // Strip the disc tag from the display title
-      const title = discMatch ? rawTitle.replace(discMatch[0], "").trim() : rawTitle;
-      // disc_group is "system/base-title-slug" so all discs share the same key
-      const discGroup = discMatch ? `${system}/${slugify(title)}` : null;
-
-      const baseSlug = slugify(rawTitle);
+      const baseSlug = slugify(titleFromFileName(originalName));
       const uniqueSuffix = Date.now().toString(36);
       const slug = `${system}_${baseSlug}_${uniqueSuffix}`;
+      const extension = path.extname(originalName).toLowerCase();
       const safeName = `${slug}${extension}`;
       const systemDir = path.join(ROM_ROOT, system);
       const filePath = path.join(systemDir, safeName);
 
       await fs.mkdir(systemDir, { recursive: true });
-      await fs.writeFile(filePath, body);
-      const romHash = crypto.createHash("md5").update(body).digest("hex");
+
+      // Stream the request body directly to disk
+      const hash = crypto.createHash("md5");
+      let totalSize = 0;
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const writeStream = fsSync.createWriteStream(filePath);
+          
+          req.on("data", (chunk) => {
+            totalSize += chunk.length;
+            if (totalSize > MAX_UPLOAD_BYTES) {
+              writeStream.destroy();
+              reject(new Error("File too large"));
+              return;
+            }
+            hash.update(chunk);
+          });
+
+          req.pipe(writeStream);
+
+          writeStream.on("finish", () => resolve());
+          writeStream.on("error", (err) => reject(err));
+          req.on("error", (err) => reject(err));
+        });
+      } catch (err: any) {
+        if (fsSync.existsSync(filePath)) await fs.unlink(filePath);
+        return res.status(err.message === "File too large" ? 413 : 500).json({ 
+          message: err.message === "File too large" ? `File exceeds ${MAX_UPLOAD_MB}MB limit` : "Upload failed" 
+        });
+      }
+
+      const romHash = hash.digest("hex");
+
+      const title = titleFromFileName(originalName);
+
+      // Detect multi-disc indicators like "(Disc 1)", "[Disk 2]", "CD 3", etc.
+      const discMatch = title.match(
+        /\s*[\(\[](?:disc|disk|cd)\s*(\d+)[\)\]]|\s+(?:disc|disk|cd)\s*(\d+)/i,
+      );
+      const discNumber = discMatch ? parseInt(discMatch[1] ?? discMatch[2], 10) : null;
+      // Strip the disc tag from the display title
+      const cleanTitle = discMatch ? title.replace(discMatch[0], "").trim() : title;
+      // disc_group is "system/base-title-slug" so all discs share the same key
+      const discGroup = discMatch ? `${system}/${slugify(cleanTitle)}` : null;
 
       // Try ScreenScraper first (rich metadata + art), fall back to Libretro art only
       const settings = await storage.getIntegrationSettings();
-      const tgdbMeta = await fetchTheGamesDBMeta(system, title, settings.tgdbApiKey || "");
-      const ssMeta = tgdbMeta?.artUrl ? null : await fetchScreenScraperMeta(system, safeName, title, settings.ssUserId || "", settings.ssPassword || "");
+      const tgdbMeta = await fetchTheGamesDBMeta(system, cleanTitle, settings.tgdbApiKey || "");
+      const ssMeta = tgdbMeta?.artUrl ? null : await fetchScreenScraperMeta(system, safeName, cleanTitle, settings.ssUserId || "", settings.ssPassword || "");
       const activeMeta = tgdbMeta ?? ssMeta;
-      const libretroArt = activeMeta?.artUrl ? null : await findLibretroBoxArt(system, title);
+      const libretroArt = activeMeta?.artUrl ? null : await findLibretroBoxArt(system, cleanTitle);
 
       const rom = insertUploadedRomSchema.parse({
-        title,
+        title: cleanTitle,
         system,
         slug,
         originalName,
         fileName: safeName,
         filePath,
-        size: body.length,
+        size: totalSize,
         mimeType: req.header("content-type") ?? "application/octet-stream",
         artUrl: activeMeta?.artUrl ?? libretroArt?.url ?? null,
         scrapeStatus: activeMeta?.scrapeStatus ?? (libretroArt?.url ? "matched" : "not_found"),

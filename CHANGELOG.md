@@ -4,6 +4,16 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.4.1] — 2026-05-15
+
+### Fix: PS2 Upload & Diagnostic Safety
+
+- **Streaming Upload Hashing** — Rewrote the ROM upload logic to stream data directly to disk and calculate hashes incrementally. This eliminates the 2GB memory limit and prevents the "data is too long" crash when uploading large PlayStation 2 ISOs.
+- **Frontend Error Boundary** — Integrated a top-level React Error Boundary. If a UI component crashes, the app will now show a descriptive error screen with a "Reload" button instead of a silent white screen.
+- **Improved HA Lifecycle** — Refined the `run.sh` startup script to use official `bashio` standards, ensuring add-on options like the 8GB limit are reliably applied.
+
+---
+
 ## [1.4.0] — 2026-05-15
 
 ### Major: The Definitive Stability Release
