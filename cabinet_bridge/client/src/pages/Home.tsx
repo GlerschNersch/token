@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect, memo, useCallback } from "react";
 import { useLocation } from "wouter";
 import Fuse from "fuse.js";
-import { type Filter } from "@/components/Sidebar";
+import { type Filter, filterToPath, filterKey } from "@/lib/filter";
 import { MobileTopBar } from "@/components/MobileNav";
 import { GameCard, GameCardSkeleton } from "@/components/GameCard";
 import { GameDetailDialog } from "@/components/GameDetailDialog";
@@ -25,7 +25,6 @@ import {
 import { useProfile } from "@/lib/useProfile";
 import { useIntegration } from "@/lib/integration";
 import { apiRequest, apiUrl, queryClient } from "@/lib/queryClient";
-import { filterToPath } from "@/lib/filter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type { GameCollectionWithItems, UploadedRom, ProfileGameState } from "@shared/schema";
 import { WelcomeDialog } from "@/components/WelcomeDialog";
@@ -35,6 +34,16 @@ import { formatRelative } from "@/lib/integration";
 import { useTranslation } from "react-i18next";
 
 type Sort = "title" | "year" | "recent" | "rating" | "plays";
+
+// ── helpers to pattern-match the new Filter union ────────────────────────────
+
+function isSystemFilter(f: Filter): f is { type: "system"; value: SystemId } {
+  return f.type === "system";
+}
+
+function isCollectionFilter(f: Filter): f is { type: "collection"; value: string } {
+  return f.type === "collection";
+}
 
 export default function Home({ filter }: { filter: Filter }) {
   const { t } = useTranslation();
@@ -58,7 +67,6 @@ export default function Home({ filter }: { filter: Filter }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const { currentProfileId } = useProfile();
 
-  // "/" or Cmd+K focuses search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -240,7 +248,7 @@ export default function Home({ filter }: { filter: Filter }) {
 
   const effectiveFilter = useMemo<Filter>(() => {
     if (kioskMode && kiosk?.collectionId) {
-      return `collection:${kiosk.collectionId}` as Filter;
+      return { type: "collection", value: String(kiosk.collectionId) };
     }
     return filter;
   }, [kioskMode, kiosk, filter]);
@@ -248,20 +256,29 @@ export default function Home({ filter }: { filter: Filter }) {
   const filtered = useMemo(() => {
     let list = games;
 
-    if (typeof effectiveFilter === "string" && effectiveFilter.startsWith("collection:")) {
-      const collectionId = Number(effectiveFilter.replace("collection:", ""));
+    if (isCollectionFilter(effectiveFilter)) {
+      const collectionId = Number(effectiveFilter.value);
       const collection = collections.find((item) => item.id === collectionId);
       const romIds = new Set(collection?.romIds ?? []);
       list = list.filter((g) => g.romId && romIds.has(g.romId));
-    } else if (effectiveFilter === "favorites") {
+    } else if (effectiveFilter.type === "favorites") {
       list = list.filter((g) => g.favorite);
-    } else if (effectiveFilter === "recent") {
+    } else if (effectiveFilter.type === "recent") {
       list = list.filter((g) => g.lastPlayed && g.lastPlayed > 0);
-    } else if (effectiveFilter !== "all") {
-      const sys = SYSTEMS.find(s => s.id === effectiveFilter || s.slug === effectiveFilter);
-      const targetId = sys?.id || effectiveFilter;
-      list = list.filter((g) => g.system === targetId || g.system === effectiveFilter);
+    } else if (effectiveFilter.type === "backlog") {
+      list = list.filter((g) => g.playStatus === "backlog");
+    } else if (effectiveFilter.type === "playing") {
+      list = list.filter((g) => g.playStatus === "playing");
+    } else if (effectiveFilter.type === "completed") {
+      list = list.filter((g) => g.playStatus === "completed");
+    } else if (effectiveFilter.type === "dropped") {
+      list = list.filter((g) => g.playStatus === "dropped");
+    } else if (effectiveFilter.type === "status") {
+      list = list.filter((g) => g.playStatus === effectiveFilter.value);
+    } else if (isSystemFilter(effectiveFilter)) {
+      list = list.filter((g) => g.system === effectiveFilter.value);
     }
+    // effectiveFilter.type === "all" → no filtering
 
     if (query.trim()) {
       const fuse = new Fuse(games, {
@@ -300,15 +317,16 @@ export default function Home({ filter }: { filter: Filter }) {
     for (const g of games) {
       if (!g.genre || g.genre === "Uploaded ROM") continue;
       const inFilter = (() => {
-        if (typeof filter === "string" && filter.startsWith("collection:")) {
-          const cid = Number(filter.replace("collection:", ""));
+        if (isCollectionFilter(filter)) {
+          const cid = Number(filter.value);
           const col = collections.find((c) => c.id === cid);
           return !!(g.romId && col?.romIds.includes(g.romId));
         }
-        if (filter === "favorites") return !!g.favorite;
-        if (filter === "recent") return !!(g.lastPlayed && g.lastPlayed > 0);
-        if (filter === "all") return true;
-        return g.system === filter;
+        if (filter.type === "favorites") return !!g.favorite;
+        if (filter.type === "recent") return !!(g.lastPlayed && g.lastPlayed > 0);
+        if (filter.type === "all") return true;
+        if (isSystemFilter(filter)) return g.system === filter.value;
+        return true;
       })();
       if (inFilter) seen.add(g.genre);
     }
@@ -338,28 +356,24 @@ export default function Home({ filter }: { filter: Filter }) {
   );
 
   const visibleRecentlyPlayed = useMemo(() => {
-    if (filter === "favorites") return recentlyPlayed.filter((g) => g.favorite);
-    if (
-      typeof filter === "string" &&
-      !["all", "recent"].includes(filter) &&
-      !filter.startsWith("collection:")
-    )
-      return recentlyPlayed.filter((g) => g.system === filter).slice(0, 6);
+    if (filter.type === "favorites") return recentlyPlayed.filter((g) => g.favorite);
+    if (isSystemFilter(filter)) return recentlyPlayed.filter((g) => g.system === filter.value).slice(0, 6);
     return recentlyPlayed;
   }, [filter, recentlyPlayed]);
 
   const heading = useMemo(() => {
-    if (typeof filter === "string" && filter.startsWith("collection:")) {
-      const collectionId = Number(filter.replace("collection:", ""));
+    if (isCollectionFilter(filter)) {
+      const collectionId = Number(filter.value);
       return collections.find((collection) => collection.id === collectionId)?.name ?? t("home.sections.collectionGames");
     }
-    if (filter === "favorites") return t("home.sections.favorites");
-    if (filter === "recent") return t("home.sections.recentlyPlayed");
-    if (filter === "all") return t("home.sections.allGames");
-    return SYSTEMS.find((s) => s.id === filter)?.name ?? t("home.sections.library");
+    if (filter.type === "favorites") return t("home.sections.favorites");
+    if (filter.type === "recent") return t("home.sections.recentlyPlayed");
+    if (filter.type === "all") return t("home.sections.allGames");
+    if (isSystemFilter(filter)) return SYSTEMS.find((s) => s.id === filter.value)?.name ?? t("home.sections.library");
+    return t("home.sections.library");
   }, [collections, filter, t]);
 
-  const showHero = filter === "favorites" && !query;
+  const showHero = filter.type === "favorites" && !query;
 
   const toggleFav = (g: Game) => {
     const favorite = !g.favorite;
@@ -403,28 +417,22 @@ export default function Home({ filter }: { filter: Filter }) {
     toggleCollectionItem.mutate({ collectionId, romId: game.romId, selected });
   };
 
-  const isCollectionFilter =
-    typeof filter === "string" && filter.startsWith("collection:");
+  const isCollectionView = isCollectionFilter(filter);
 
-  const systemFilter = useMemo<SystemId | undefined>(() => {
-    if (typeof filter !== "string") return undefined;
-    if (filter === "favorites" || filter === "recent" || filter === "all") return undefined;
-    if (filter.startsWith("collection:")) return undefined;
-    return SYSTEMS.some((s) => s.id === filter) ? (filter as SystemId) : undefined;
-  }, [filter]);
+  // True for any system-specific view
+  const isSystemView = isSystemFilter(filter);
 
-  // True for any filter that represents a specific system console view —
-  // includes both known SYSTEMS entries and any unknown/custom system slugs.
-  const isSystemView = useMemo(() => {
-    if (typeof filter !== "string") return false;
-    if (filter === "favorites" || filter === "recent" || filter === "all") return false;
-    if (filter.startsWith("collection:")) return false;
-    return true;
-  }, [filter]);
+  // The system id to pass to RomUpload
+  const romUploadSystem = isSystemFilter(filter) ? filter.value : undefined;
 
-  // The system id/slug to pass to RomUpload. Prefers the typed SystemId when
-  // known; falls back to the raw filter string for custom system slugs.
-  const romUploadSystem = systemFilter ?? (isSystemView ? (filter as SystemId) : undefined);
+  // Show "all" and "favorites" dashboard sections
+  const showDashboardSections = filter.type === "favorites" || filter.type === "all";
+
+  // Show recently-played strip for system/all/favorites views (not recent/collection)
+  const showRecentStrip =
+    (filter.type === "favorites" || filter.type === "all" || isSystemView) &&
+    visibleRecentlyPlayed.length > 0 &&
+    !query;
 
   return (
     <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden" data-testid="main-content">
@@ -608,7 +616,7 @@ export default function Home({ filter }: { filter: Filter }) {
           <ContinueHero game={recentlyPlayed[0]} onOpen={setOpenGame} profileId={currentProfileId} />
         ) : null}
 
-        {recentlyPlayed.length > 0 && (filter === "favorites" || filter === "all") && !query && (
+        {recentlyPlayed.length > 0 && showDashboardSections && !query && (
           <section className="px-4 sm:px-8 pt-5 pb-1">
             <SectionHeading title={t("home.sections.jumpBackIn")} action={null} />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -626,14 +634,14 @@ export default function Home({ filter }: { filter: Filter }) {
           </section>
         )}
 
-        {(filter === "favorites" || filter === "all") && !query ? (
+        {showDashboardSections && !query ? (
           <section className="px-4 sm:px-8 pt-5 pb-1">
             <SectionHeading
               title={t("home.sections.browseSystems")}
               action={
                 <button
                   type="button"
-                  onClick={() => goToFilter("all")}
+                  onClick={() => goToFilter({ type: "all" })}
                   className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                   data-testid="button-see-all-systems"
                 >
@@ -651,7 +659,7 @@ export default function Home({ filter }: { filter: Filter }) {
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => goToFilter(s.id)}
+                    onClick={() => goToFilter({ type: "system", value: s.id })}
                     className="group relative aspect-[16/10] rounded-lg overflow-hidden border border-card-border hover-elevate active-elevate-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     data-testid={`tile-system-${s.id}`}
                   >
@@ -669,20 +677,14 @@ export default function Home({ filter }: { filter: Filter }) {
           </section>
         ) : null}
 
-        {(filter === "favorites" ||
-          filter === "all" ||
-          (typeof filter === "string" &&
-            !filter.startsWith("collection:") &&
-            filter !== "recent")) &&
-        visibleRecentlyPlayed.length > 0 &&
-        !query ? (
+        {showRecentStrip ? (
           <section className="px-4 sm:px-8 pt-5 pb-1">
             <SectionHeading
-              title={filter === "favorites" ? t("home.sections.favoritesRecentlyPlayed") : t("home.sections.recentlyPlayed")}
+              title={filter.type === "favorites" ? t("home.sections.favoritesRecentlyPlayed") : t("home.sections.recentlyPlayed")}
               action={
                 <button
                   type="button"
-                  onClick={() => goToFilter("recent")}
+                  onClick={() => goToFilter({ type: "recent" })}
                   className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground"
                   data-testid="button-see-all-recent"
                 >
@@ -694,7 +696,7 @@ export default function Home({ filter }: { filter: Filter }) {
           </section>
         ) : null}
 
-        {!kioskMode && (isSystemView || filter === "all") && !query ? (
+        {!kioskMode && (isSystemView || filter.type === "all") && !query ? (
           <section className="px-4 sm:px-8 pt-5 pb-1" data-testid="section-rom-upload">
             <RomUpload system={romUploadSystem} variant="inline" />
           </section>
@@ -703,15 +705,17 @@ export default function Home({ filter }: { filter: Filter }) {
         <section className="px-4 sm:px-8 pt-5 pb-8">
           <SectionHeading
             title={
-              filter === "favorites"
+              filter.type === "favorites"
                 ? t("home.sections.favorites")
-                : filter === "all"
+                : filter.type === "all"
                   ? t("home.sections.allGames")
-                  : filter === "recent"
+                  : filter.type === "recent"
                     ? t("home.sections.recentlyPlayed")
-                    : isCollectionFilter
+                    : isCollectionView
                       ? t("home.sections.collectionGames")
-                      : t("home.sections.systemLibrary", { system: SYSTEMS.find((s) => s.id === filter)?.shortName })
+                      : isSystemFilter(filter)
+                        ? t("home.sections.systemLibrary", { system: SYSTEMS.find((s) => s.id === filter.value)?.shortName })
+                        : t("home.sections.library")
             }
             action={
               <div className="flex items-center gap-3">
@@ -768,7 +772,7 @@ export default function Home({ filter }: { filter: Filter }) {
             <EmptyState
               query={query}
               filter={filter}
-              onResetFilter={() => goToFilter("all")}
+              onResetFilter={() => goToFilter({ type: "all" })}
             />
           ) : viewMode === "grid" ? (
           <Grid
@@ -1056,12 +1060,12 @@ function EmptyState({
       <p className="mt-2 font-display text-base text-foreground">
         {query
           ? t("home.status.noMatchesDetail", { query })
-          : filter === "favorites"
+          : filter.type === "favorites"
             ? t("home.status.noFavorites")
             : t("home.status.noGames")}
       </p>
       <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-        {filter === "favorites" ? t("home.status.noFavoritesDetail") : ""}
+        {filter.type === "favorites" ? t("home.status.noFavoritesDetail") : ""}
       </p>
       <Button variant="outline" className="mt-4" onClick={onResetFilter} data-testid="button-empty-reset">
         {t("home.status.browseAll")}
