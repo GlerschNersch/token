@@ -12,10 +12,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Settings as SettingsIcon,
-  Globe,
-  Lock,
-  Zap,
-  Copy,
   Check,
   RotateCcw,
   Wifi,
@@ -24,7 +20,6 @@ import {
   ShieldAlert,
   Loader2,
   Trash2,
-  AlertTriangle,
   Plus,
   Sparkles,
   ScanLine,
@@ -33,7 +28,6 @@ import {
   HelpCircle,
   Activity,
   Database,
-  Link2,
   Gamepad2,
   Keyboard,
   Palette,
@@ -49,57 +43,14 @@ import { BiosManager } from "@/components/BiosManager";
 import { RomUpload } from "@/components/RomUpload";
 
 export default function Settings() {
-  const { config, setConfig, setEndpoint, resetConfig, saveStatus } = useIntegration();
+  const { config, setConfig, resetConfig, saveStatus } = useIntegration();
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [copied, setCopied] = useState<string | null>(null);
-  const [testing, setTesting] = useState(false);
-
-  const copy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
-    toast({ title: t("common.copy"), description: "Endpoint URL is ready to paste." });
-  };
 
   const handleReset = () => {
     if (confirm(t("common.reset") + "?")) {
       resetConfig();
       toast({ title: "Settings reset", description: "Integration defaults restored." });
-    }
-  };
-
-  const handleLiveModeToggle = (live: boolean) => {
-    if (live) {
-      toast({
-        title: "Live Mode Enabled",
-        description: "App will now attempt to call real Home Assistant webhooks.",
-      });
-    }
-    setConfig({ liveMode: live });
-  };
-
-  const testConnection = async () => {
-    setTesting(true);
-    try {
-      await new Promise(r => setTimeout(r, 800));
-      const res = await fetch(`${config.haBaseUrl}/api/config`, {
-        headers: config.haToken ? { Authorization: `Bearer ${config.haToken}` } : undefined
-      });
-      if (res.ok) {
-        toast({ title: "Connection Successful", description: "Cabinet Bridge can reach Home Assistant." });
-      } else {
-        throw new Error(`${res.status} ${res.statusText}`);
-      }
-    } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Connection Failed",
-        description: err instanceof Error ? err.message : "Could not reach Home Assistant base URL."
-      });
-    } finally {
-      setTesting(true);
-      setTimeout(() => setTesting(false), 2000);
     }
   };
 
@@ -136,11 +87,8 @@ export default function Settings() {
             </div>
           </div>
 
-          <Tabs defaultValue="connection" className="w-full">
+          <Tabs defaultValue="display" className="w-full">
             <TabsList className="w-full justify-start bg-sidebar/40 border border-border/50 h-auto p-1 mb-8 overflow-x-auto scrollbar-none flex-nowrap shrink-0">
-              <TabsTrigger value="connection" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Globe className="size-4" /> {t("settings.tabs.connection")}
-              </TabsTrigger>
               <TabsTrigger value="display" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Palette className="size-4" /> {t("settings.tabs.display")}
               </TabsTrigger>
@@ -157,87 +105,12 @@ export default function Settings() {
                 <Wifi className="size-4" /> {t("settings.tabs.services")}
               </TabsTrigger>
               <TabsTrigger value="kiosk" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <Lock className="size-4" /> {t("settings.tabs.kiosk")}
+                <HelpCircle className="size-4" /> {t("settings.tabs.kiosk")}
               </TabsTrigger>
               <TabsTrigger value="help" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <HelpCircle className="size-4" /> {t("settings.tabs.help")}
               </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="connection" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Section
-                title={t("settings.sections.connection.title")}
-                description={t("settings.sections.connection.description")}
-              >
-                <div className="grid gap-6">
-                  <Field label={t("settings.fields.haBaseUrl.label")} hint={t("settings.fields.haBaseUrl.hint")}>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Globe className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          value={config.haBaseUrl}
-                          onChange={(e) => setConfig({ haBaseUrl: e.target.value })}
-                          placeholder="https://homeassistant.local:8123"
-                          className="pl-9 font-mono text-sm"
-                        />
-                      </div>
-                      <Button
-                        variant="secondary"
-                        onClick={testConnection}
-                        disabled={testing || !config.haBaseUrl}
-                        className="gap-2 shrink-0 min-w-[100px]"
-                      >
-                        {testing ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
-                        {t("settings.buttons.test")}
-                      </Button>
-                    </div>
-                  </Field>
-
-                  <Field label={t("settings.fields.haToken.label")} hint={t("settings.fields.haToken.hint")}>
-                    <div className="relative">
-                      <Lock className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        type="password"
-                        value={config.haToken}
-                        onChange={(e) => setConfig({ haToken: e.target.value })}
-                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                        className="pl-9 font-mono text-sm"
-                      />
-                    </div>
-                  </Field>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border border-border bg-sidebar/40">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2 font-display font-semibold text-sm">
-                        <Zap className="size-4 text-accent" />
-                        {t("settings.fields.liveMode.label")}
-                      </div>
-                      <div className="text-xs text-muted-foreground max-w-sm">
-                        {t("settings.fields.liveMode.hint")}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {config.liveMode ? t("settings.fields.liveMode.active") : t("settings.fields.liveMode.simulation")}
-                      </span>
-                      <Switch
-                        checked={config.liveMode}
-                        onCheckedChange={handleLiveModeToggle}
-                      />
-                    </div>
-                  </div>
-
-                  {!config.liveMode && (
-                    <div className="flex items-start gap-3 p-4 rounded-lg border border-accent/20 bg-accent/5">
-                      <AlertTriangle className="size-4 text-accent mt-0.5 shrink-0" />
-                      <div className="text-xs text-accent/90 leading-relaxed">
-                        {t("settings.fields.liveMode.notice")}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Section>
-            </TabsContent>
 
             <TabsContent value="display" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <DisplaySettings />
@@ -278,42 +151,15 @@ export default function Settings() {
                 description={t("settings.sections.help.description")}
               >
                 <ul className="space-y-6">
-                  <Step n={1} title="Create a Wake-on-LAN Script">
-                    Define a script in HA that sends a magic packet to your PC's MAC address.
-                    <Code>{`script:
-  wake_gaming_pc:
-    alias: "Wake Gaming PC"
-    sequence:
-      - service: wake_on_lan.send_magic_packet
-        data:
-          mac: "AA:BB:CC:DD:EE:FF"`}</Code>
+                  <Step n={1} title="Add as Sidebar Item (Optional)">
+                    Add this to your `configuration.yaml` to see Cabinet Bridge in the HA sidebar:
+                    <Code>{`panel_iframe:\n  cabinet:\n    title: "Cabinet"\n    icon: mdi:gamepad-variant\n    url: "\${window.location.origin}\${window.location.pathname}"`}</Code>
                   </Step>
-                  <Step n={2} title="Setup the Webhook Automation">
-                    Create an automation that triggers on the \`cabinet_wake_pc\` webhook and runs your
-                    script.
-                    <Code>{`automation:
-  - alias: "Cabinet: Wake PC"
-    trigger:
-      - platform: webhook
-        webhook_id: cabinet_wake_pc
-    action:
-      - service: script.wake_gaming_pc`}</Code>
+                  <Step n={2} title="Configure PC Sensors">
+                    Install <strong>HASS.Agent</strong> or <strong>IOT Link</strong> on your Windows PC to provide CPU, RAM, and Online sensors back to Home Assistant.
                   </Step>
-                  <Step n={3} title="Configure PC Sensors">
-                    Install the <strong>HASS.Agent</strong> or <strong>IOT Link</strong> on your Windows
-                    PC to provide CPU, RAM, and Online sensors back to Home Assistant.
-                  </Step>
-                  <Step n={4} title="Enable Live Mode">
-                    Go to the <strong>Connection</strong> tab and toggle <strong>Live Mode</strong>. Cabinet Bridge will now send a POST
-                    request to your HA webhooks whenever you click an action button.
-                  </Step>
-                  <Step n={5} title="Add as Sidebar Item (Optional)">
-                    Add this to your \`configuration.yaml\` to see Cabinet Bridge in the HA sidebar:
-                    <Code>{`panel_iframe:
-  cabinet:
-    title: "Cabinet"
-    icon: mdi:gamepad-variant
-    url: "\${window.location.origin}\${window.location.pathname}"`}</Code>
+                  <Step n={3} title="Set Up ROM Watch Directory">
+                    Set <code>CABINET_ROM_WATCH_DIR</code> in the add-on configuration to enable automatic ROM imports from a folder.
                   </Step>
                 </ul>
               </Section>
@@ -356,7 +202,6 @@ function DisplaySettings() {
         <div className="grid sm:grid-cols-2 gap-6">
           <Field label={t("settings.fields.language.label")} hint={t("settings.fields.language.hint")}>
             <div className="flex items-center gap-4">
-              <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
               <Select
                 value={config.language ?? "en"}
                 onValueChange={(val) => setConfig({ language: val })}
@@ -470,9 +315,9 @@ function DisplaySettings() {
                     <Monitor className="size-3.5 text-primary" />
                     {system.label}
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-7 px-2 text-[10px] uppercase font-mono text-muted-foreground hover:text-destructive"
                     onClick={() => {
                       const next = { ...config.systemDisplay };
