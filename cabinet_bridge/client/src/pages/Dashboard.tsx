@@ -340,7 +340,11 @@ export default function Dashboard() {
 
   const { data: nowPlaying } = useQuery<{ playing: boolean; id?: number; title?: string; system?: string }>({   
     queryKey: ["/api/now-playing"],
-    queryFn: async () => { const res = await fetch("/api/now-playing"); return res.json(); },
+    queryFn: async () => { 
+      const res = await fetch(apiUrl("/api/now-playing")); 
+      if (!res.ok) return { playing: false };
+      return res.json(); 
+    },
     refetchInterval: (query) => {
       if (document.hidden) return false;
       return query.state.data?.playing ? 5000 : 15000;

@@ -5,6 +5,7 @@ import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
 import { useQuery } from "@tanstack/react-query";
 import { filterToPath } from "@/lib/filter";
+import { apiUrl } from "@/lib/queryClient";
 import {
   LayoutDashboard,
   Heart,
@@ -87,7 +88,11 @@ export function Sidebar() {
 
   const { data: nowPlaying } = useQuery<{ playing: boolean; id?: number; title?: string; system?: string }>({
     queryKey: ["/api/now-playing"],
-    queryFn: async () => { const res = await fetch("/api/now-playing"); return res.json(); },
+    queryFn: async () => { 
+      const res = await fetch(apiUrl("/api/now-playing")); 
+      if (!res.ok) return { playing: false };
+      return res.json(); 
+    },
     refetchInterval: (query) => {
       if (document.hidden) return false;
       return query.state.data?.playing ? 5000 : 15000;
