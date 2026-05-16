@@ -15,6 +15,7 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       "framer-motion",
+      "motion",
       "react",
       "react-dom",
       "@tanstack/react-query",
@@ -32,7 +33,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom"],
-          "vendor-motion": ["framer-motion"],
+          "vendor-motion": ["framer-motion", "motion"],
           "vendor-query": ["@tanstack/react-query", "wouter"],
           "vendor-radix": [
             "@radix-ui/react-accordion",
