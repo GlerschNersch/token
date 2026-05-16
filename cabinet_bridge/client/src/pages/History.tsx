@@ -1,144 +1,85 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { 
+  History as HistoryIcon, 
+  Clock, 
+  Gamepad2, 
+  ChevronRight, 
+  ChevronLeft, 
+  Calendar,
+  BarChart3,
+  Download,
+  AlertCircle
+} from "lucide-react";
+import { SYSTEMS } from "@/data/library";
+import { formatRelative, useIntegration } from "@/lib/integration";
 import { MobileTopBar } from "@/components/MobileNav";
-import { SYSTEMS, uploadedRomToGame } from "@/data/library";
-import type { UploadedRom } from "@shared/schema";
-import { Clock, Gamepad2, TrendingUp, Calendar, ArrowLeft, BarChart2, ChevronLeft, Download } from "lucide-react";
-import { apiUrl } from "@/lib/queryClient";
-import { useIntegration } from "@/lib/integration";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  Tooltip, 
+  ResponsiveContainer,
+  Cell
+} from "recharts";
 import { useTranslation } from "react-i18next";
-
-interface PlaySession {
-  id: number;
-  romId: number;
-  romTitle: string;
-  romSystem: string;
-  startedAt: number;
-  endedAt: number | null;
-  durationSeconds: number | null;
-}
-
-function fmtDuration(sec: number | null) {
-  if (!sec || sec <= 0) return "< 1m";
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
-function fmtDate(ts: number, t: any) {
-  const d = new Date(ts);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) return t("common.today");
-  if (diffDays === 1) return t("common.yesterday");
-  if (diffDays < 7) return t("common.xDaysAgo", { count: diffDays });
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: diffDays > 300 ? "numeric" : undefined });
-}
-
-function fmtTime(ts: number) {
-  return new Date(ts).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-}
-
-function systemColor(systemId: string) {
-  const colors: Record<string, string> = {
-    nes: "#e53e3e", snes: "#6b46c1", n64: "#2f855a", gba: "#2b6cb0",
-    genesis: "#c05621", ps1: "#2d3748", ps2: "#1a365d", arcade: "#b7791f",
-    gb: "#276749", gbc: "#2c7a7b", nds: "#c53030", psp: "#2a4365",
-    dreamcast: "#e53e3e", saturn: "#553c9a", atari2600: "#744210",
-  };
-  return colors[systemId] ?? "#553c9a";
-}
+import type { UploadedRom } from "@shared/schema";
+import { Button } from "@/components/ui/button";
 
 export default function History() {
   const { t } = useTranslation();
   const { config } = useIntegration();
-  const { data: sessions = [], isLoading } = useQuery<PlaySession[]>({
+  const [selectedGameTitle, setSelectedGameTitle] = useState<string | null>(null);
+
+  const { data: sessions = [], isLoading } = useQuery<Array<{ 
+    id: number; 
+    romId: number; 
+    romTitle: string; 
+    romSystem: string; 
+    startedAt: number; 
+    endedAt: number | null; 
+    durationSeconds: number | null 
+  }>>({
     queryKey: ["/api/sessions"],
   });
-  const { data: uploadedRoms = [] } = useQuery<UploadedRom[]>({
-    queryKey: ["/api/roms"],
-  });
 
-  const romMap = useMemo(() => {
-    const m = new Map<number, UploadedRom>();
-    for (const r of uploadedRoms) m.set(r.id, r);
-    return m;
-  }, [uploadedRoms]);
+  const { data: roms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
 
-  // Stats
-  const totalSeconds = useMemo(
-    () => sessions.reduce((sum: number, s: PlaySession) => sum + (s.durationSeconds ?? 0), 0),
-    [sessions],
-  );
+  const romMap = useMemo(() => new Map(roms.map(r => [r.id, r])), [roms]);
 
-  const topGames = useMemo(() => {
-    const byGame = new Map<string, { title: string; system: string; seconds: number; sessions: number }>();
-    for (const s of sessions) {
-      const key = `${s.romSystem}:${s.romTitle}`;
-      const entry = byGame.get(key) ?? { title: s.romTitle, system: s.romSystem, seconds: 0, sessions: 0 };
-      entry.seconds += s.durationSeconds ?? 0;
-      entry.sessions += 1;
-      byGame.set(key, entry);
-    }
-    return Array.from(byGame.values()).sort((a, b) => b.seconds - a.seconds).slice(0, 5);
+  // Group by day
+  const groupedByDay = useMemo(() => {
+    const days: Record<string, typeof sessions> = {};
+    sessions.forEach(s => {
+      const date = new Date(s.startedAt).toLocaleDateString();
+      if (!days[date]) days[date] = [];
+      days[date].push(s);
+    });
+    return Object.entries(days).sort((a, b) => 
+      new Date(b[0]).getTime() - new Date(a[0]).getTime()
+    );
   }, [sessions]);
 
-  const maxSeconds = topGames[0]?.seconds ?? 1;
-
-  // Group sessions by date
-  const grouped = useMemo(() => {
-    const groups = new Map<string, PlaySession[]>();
-    for (const s of [...sessions].sort((a, b) => b.startedAt - a.startedAt)) {
-      const label = fmtDate(s.startedAt, t);
-      const arr = groups.get(label) ?? [];
-      arr.push(s);
-      groups.set(label, arr);
-    }
-    return Array.from(groups.entries());
-  }, [sessions, t]);
-
-  const systemLabel = (id: string) => SYSTEMS.find((s) => s.id === id)?.name ?? id;
-
-  const exportCsv = () => {
-    const header = ["Date", "Time", "Game", "System", "Duration (s)", "Duration"];
-    const rows = [...sessions]
-      .sort((a, b) => b.startedAt - a.startedAt)
-      .map((s) => [
-        new Date(s.startedAt).toLocaleDateString(),
-        new Date(s.startedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }),
-        `"${s.romTitle.replace(/"/g, '""')}"`,
-        s.romSystem.toUpperCase(),
-        String(s.durationSeconds ?? 0),
-        fmtDuration(s.durationSeconds),
-      ]);
-    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `homearcade-history-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Per-game drill-down
-  const [selectedGameKey, setSelectedGameKey] = useState<string | null>(null);
-
-  const gameSessions = useMemo(() => {
-    if (!selectedGameKey) return [];
-    return sessions
-      .filter((s) => `${s.romSystem}:${s.romTitle}` === selectedGameKey)
-      .sort((a, b) => b.startedAt - a.startedAt);
-  }, [sessions, selectedGameKey]);
+  // Top games chart data
+  const topGames = useMemo(() => {
+    const counts: Record<string, { minutes: number; sessions: number; system: string; id: number }> = {};
+    sessions.forEach(s => {
+      if (!counts[s.romTitle]) counts[s.romTitle] = { minutes: 0, sessions: 0, system: s.romSystem, id: s.romId };
+      counts[s.romTitle].minutes += Math.round((s.durationSeconds || 0) / 60);
+      counts[s.romTitle].sessions += 1;
+    });
+    return Object.entries(counts)
+      .map(([name, stats]) => ({ name, ...stats }))
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, 5);
+  }, [sessions]);
 
   const selectedGameInfo = useMemo(() => {
-    if (!selectedGameKey || gameSessions.length === 0) return null;
-    const first = gameSessions[gameSessions.length - 1];
+    if (!selectedGameTitle) return null;
+    const gameSessions = sessions.filter(s => s.romTitle === selectedGameTitle);
+    if (gameSessions.length === 0) return null;
+    const first = gameSessions[0];
     const totalSec = gameSessions.reduce((sum, s) => sum + (s.durationSeconds ?? 0), 0);
     const avgSec = Math.round(totalSec / gameSessions.length);
     const rom = romMap.get(first.romId);
@@ -148,253 +89,244 @@ export default function History() {
       rom,
       totalSec,
       avgSec,
-      sessionCount: gameSessions.length,
-      firstPlayed: first.startedAt,
-      lastPlayed: gameSessions[0].startedAt,
+      sessions: gameSessions.sort((a, b) => b.startedAt - a.startedAt)
     };
-  }, [selectedGameKey, gameSessions, romMap]);
+  }, [selectedGameTitle, sessions, romMap]);
+
+  if (isLoading) return (
+    <div className="flex-1 flex items-center justify-center">
+      <Clock className="size-8 animate-spin text-muted-foreground/20" />
+    </div>
+  );
+
+  const exportCsv = () => {
+    const headers = ["Date", "Time", "Game", "System", "Duration (s)", "Duration (formatted)"];
+    const rows = sessions.map(s => {
+      const d = new Date(s.startedAt);
+      const dur = s.durationSeconds ?? 0;
+      const fmt = dur < 60 ? `${dur}s` : `${Math.round(dur/60)}m`;
+      return [
+        d.toLocaleDateString(),
+        d.toLocaleTimeString(),
+        s.romTitle,
+        s.romSystem,
+        dur,
+        fmt
+      ].join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `homearcade-history-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <MobileTopBar />
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pb-24 lg:pb-8 space-y-8">
+    <div className="flex-1 min-w-0 flex flex-col h-full bg-background/30 overflow-hidden">
+      <MobileTopBar />
 
+      <main className="flex-1 overflow-y-auto overscroll-y-contain pb-24 lg:pb-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-10">
+          
           {/* Header */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="size-4" />
-            </Link>
-            <div className="flex-1">
-              <h1 className="font-display text-2xl font-bold text-foreground">{t("history.title")}</h1>
-              <p className="text-sm text-muted-foreground font-mono">
-                {t("history.sessionsCount", { count: sessions.length })}
-              </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                {t("history.header") || "Activity"}
+              </div>
+              <h1 className="font-display text-2xl font-bold leading-tight mt-1">
+                {selectedGameTitle ? selectedGameInfo?.title : (t("history.title") || "Play History")}
+              </h1>
             </div>
-            {sessions.length > 0 && (
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-                title={t("history.exportCsv")}
-              >
-                <Download className="size-3.5" /> {t("history.exportCsv")}
-              </button>
+            {!selectedGameTitle && sessions.length > 0 && (
+              <Button variant="outline" size="sm" className="gap-2 h-9 font-mono text-[10px] uppercase tracking-wider" onClick={exportCsv}>
+                <Download className="size-3.5" /> Export CSV
+              </Button>
             )}
           </div>
 
-          {/* ── Per-game drill-down ── */}
-          {selectedGameKey && selectedGameInfo && (
-            <div className="space-y-6">
-              {/* Back button */}
-              <button
-                type="button"
-                onClick={() => setSelectedGameKey(null)}
-                className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+          {selectedGameTitle && selectedGameInfo ? (
+            <div className="space-y-8 animate-in fade-in slide-in-from-left-2 duration-300">
+              <button 
+                onClick={() => setSelectedGameTitle(null)}
+                className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
               >
-                <ChevronLeft className="size-3.5" /> {t("history.allGames")}
+                <ChevronLeft className="size-3.5" /> {t("history.allGames") || "Back to all history"}
               </button>
 
               {/* Game header */}
               <div className="flex items-center gap-4">
                 {selectedGameInfo.rom?.artUrl ? (
-                  <img
-                    src={apiUrl(selectedGameInfo.rom.artUrl)}
-                    alt=""
-                    className="size-16 rounded-lg object-cover border border-border shrink-0"
-                  />
+                  <div className="size-20 rounded-lg overflow-hidden border border-border/50 shrink-0">
+                    <img src={selectedGameInfo.rom.artUrl} className="w-full h-full object-cover" />
+                  </div>
                 ) : (
-                  <div className="size-16 rounded-lg bg-secondary flex items-center justify-center shrink-0 border border-border">
-                    <Gamepad2 className="size-6 text-muted-foreground" />
+                  <div className="size-20 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Gamepad2 className="size-8 text-primary/40" />
                   </div>
                 )}
-                <div className="min-w-0">
-                {config.showSystemLabels && (
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                {systemLabel(selectedGameInfo.system)}
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">
+                    {SYSTEMS.find(s => s.id === selectedGameInfo.system)?.shortName ?? selectedGameInfo.system}
+                  </div>
+                  <h2 className="font-display text-xl font-bold">{selectedGameInfo.title}</h2>
                 </div>
-                )}
-                <h2 className="font-display text-xl font-bold text-foreground leading-tight line-clamp-2">
-                {selectedGameInfo.title}
-                </h2>
-                </div>
-                </div>
+              </div>
 
-                {/* Stats grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Stat grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                { label: t("history.stats.totalTime"), icon: <Clock className="size-3" />, value: fmtDuration(selectedGameInfo.totalSec), color: "text-primary" },
-                { label: t("history.stats.sessions"), icon: <BarChart2 className="size-3" />, value: String(selectedGameInfo.sessionCount), color: "text-blue-400" },
-                { label: t("history.stats.avgSession"), icon: <TrendingUp className="size-3" />, value: fmtDuration(selectedGameInfo.avgSec), color: "text-yellow-400" },
-                { label: t("history.stats.firstPlayed"), icon: <Calendar className="size-3" />, value: fmtDate(selectedGameInfo.firstPlayed, t), color: "text-green-400" },
-                ].map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5">
-                <div className={`flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] ${stat.color}`}>
-                {stat.icon} {stat.label}
-                </div>
-                <div className="font-display text-xl font-bold text-foreground">{stat.value}</div>
-                </div>
-                ))}
-                </div>
-
-                {/* Session list */}
-                <div className="space-y-2">
-                <h3 className="font-display text-sm font-semibold text-foreground">{t("history.allSessions")}</h3>
-                {gameSessions.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-card/60 px-4 py-3">
-                <div className="font-mono text-[10px] text-muted-foreground/50 w-5 text-right shrink-0">
-                {gameSessions.length - i}
-                </div>
-                <div
-                className="w-1 h-8 rounded-full shrink-0"
-                style={{ backgroundColor: systemColor(s.romSystem) }}
-                />
-                <div className="flex-1 min-w-0">
-                <div className="font-mono text-[10px] text-muted-foreground">{fmtDate(s.startedAt, t)}</div>
-                <div className="font-mono text-[9px] text-muted-foreground/50">{fmtTime(s.startedAt)}</div>
-                </div>
-                <div className="font-mono text-sm font-semibold text-foreground shrink-0">
-                {fmtDuration(s.durationSeconds)}
-                </div>
-                </div>
-                ))}
-                </div>
-                </div>
-                )}
-
-                {!selectedGameKey && isLoading ? (
-                <div className="flex justify-center py-20">
-                <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-                </div>
-                ) : !selectedGameKey && sessions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-                <Gamepad2 className="size-10 opacity-30" />
-                <p className="font-mono text-sm uppercase tracking-wider">{t("history.noSessions")}</p>
-                <p className="text-sm">{t("history.startTracking")}</p>
-                </div>
-                ) : !selectedGameKey ? (
-                <>
-                {/* Stats row */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-primary">
-                <Clock className="size-3" /> {t("history.stats.totalPlaytime")}
-                </div>
-                <div className="font-display text-2xl font-bold">{fmtDuration(totalSeconds)}</div>
-                <div className="font-mono text-[10px] text-muted-foreground">{t("history.sessionsCount", { count: sessions.length })}</div>
-                </div>
-                <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5">
-                <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-yellow-400">
-                <TrendingUp className="size-3" /> {t("history.stats.mostPlayed")}
-                </div>
-                <div className="font-display text-lg font-bold leading-tight line-clamp-1">
-                {topGames[0]?.title ?? "—"}
-                </div>
-                <div className="font-mono text-[10px] text-muted-foreground">
-                {topGames[0] ? fmtDuration(topGames[0].seconds) : ""}
-                </div>
-                </div>
-                <div className="rounded-xl border border-border bg-card p-4 flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-green-400">
-                <Calendar className="size-3" /> {t("history.stats.lastSession")}
-                </div>
-                <div className="font-display text-lg font-bold leading-tight line-clamp-1">
-                {sessions[0]?.romTitle ?? "—"}
-                </div>
-                <div className="font-mono text-[10px] text-muted-foreground">
-                {sessions[0] ? fmtDate(sessions[0].startedAt, t) : ""}
-                </div>
-                </div>
-                </div>
-
-                {/* Top games bar chart */}
-                {topGames.length > 0 && (
-                <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="font-display text-sm font-semibold text-foreground mb-4">{t("history.topGames")}</h2>
-                <div className="space-y-3">
-                {topGames.map((g) => (
-                <div key={`${g.system}:${g.title}`} className="space-y-1 cursor-pointer group" onClick={() => setSelectedGameKey(`${g.system}:${g.title}`)}>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-sm font-medium text-foreground line-clamp-1 flex-1 mr-4 group-hover:text-primary transition-colors">{g.title}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">{fmtDuration(g.seconds)}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${Math.round((g.seconds / maxSeconds) * 100)}%`,
-                        backgroundColor: systemColor(g.system),
-                      }}
-                    />
-                  </div>
-                  <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                    {config.showSystemLabels && `${systemLabel(g.system)} · `}{t("history.stats.sessionsCount", { count: g.sessions })}
-                  </div>
-                </div>
-                ))}
-                </div>
-                </div>
-                )}
-
-                {/* Session log grouped by day */}
-                <div className="space-y-6">
-                <h2 className="font-display text-sm font-semibold text-foreground">{t("history.sessionLog")}</h2>
-                {grouped.map(([dateLabel, daySessions]) => (
-                <div key={dateLabel} className="space-y-2">
-                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border-b border-border pb-1.5">
-                {dateLabel}
-                </div>
-                <div className="space-y-1.5">
-                {daySessions.map((s) => {
-                  const rom = romMap.get(s.romId);
-                  const artUrl = rom?.artUrl;
-                  return (
-                    <div
-                      key={s.id}
-                      className="flex items-center gap-3 rounded-lg border border-border bg-card/60 px-3 py-2 hover:bg-card transition-colors cursor-pointer"
-                      onClick={() => setSelectedGameKey(`${s.romSystem}:${s.romTitle}`)}
-                    >
-                      {/* System color bar */}
-                      <div
-                        className="w-1 h-10 rounded-full shrink-0"
-                        style={{ backgroundColor: systemColor(s.romSystem) }}
-                      />
-                      {/* Art thumbnail */}
-                      {artUrl ? (
-                        <img
-                          src={apiUrl(artUrl)}
-                          alt=""
-                          className="size-10 rounded object-cover shrink-0 border border-border/50"
-                        />
-                      ) : (
-                        <div className="size-10 rounded bg-secondary flex items-center justify-center shrink-0">
-                          <Gamepad2 className="size-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-foreground line-clamp-1">{s.romTitle}</div>
-                        {config.showSystemLabels && (
-                          <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
-                            {systemLabel(s.romSystem)}
-                          </div>
-                        )}
-                      </div>                            {/* Time + duration */}
-                            <div className="text-right shrink-0">
-                              <div className="font-mono text-[11px] text-foreground">{fmtDuration(s.durationSeconds)}</div>
-                              <div className="font-mono text-[9px] text-muted-foreground">{fmtTime(s.startedAt)}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  { label: "Total Playtime", value: `${Math.round(selectedGameInfo.totalSec / 60)}m` },
+                  { label: "Sessions", value: String(selectedGameInfo.sessions.length) },
+                  { label: "Avg Session", value: `${Math.round(selectedGameInfo.avgSec / 60)}m` },
+                  { label: "First Played", value: new Date(selectedGameInfo.sessions[selectedGameInfo.sessions.length-1].startedAt).toLocaleDateString() },
+                ].map(s => (
+                  <div key={s.label} className="p-4 rounded-xl border border-border bg-sidebar/20">
+                    <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{s.label}</div>
+                    <div className="text-xl font-display font-bold">{s.value}</div>
                   </div>
                 ))}
               </div>
+
+              {/* Session list */}
+              <div className="space-y-4 pt-4">
+                <h3 className="font-display font-semibold flex items-center gap-2">
+                  <Calendar className="size-4 text-muted-foreground" /> All Sessions
+                </h3>
+                <div className="rounded-xl border border-border bg-sidebar/10 overflow-hidden divide-y divide-border/40">
+                  {selectedGameInfo.sessions.map(s => (
+                    <div key={s.id} className="flex items-center justify-between p-4 bg-background/20">
+                      <div>
+                        <div className="text-sm font-medium">{new Date(s.startedAt).toLocaleDateString()}</div>
+                        <div className="text-[10px] font-mono text-muted-foreground uppercase">{new Date(s.startedAt).toLocaleTimeString()}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold font-display">{Math.round((s.durationSeconds ?? 0) / 60)}m</div>
+                        <div className="text-[10px] font-mono text-muted-foreground uppercase">Duration</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Stats overview */}
+              <div className="grid lg:grid-cols-12 gap-8">
+                {/* Chart */}
+                <div className="lg:col-span-8 space-y-4">
+                  <h2 className="text-sm font-display font-bold uppercase tracking-wider flex items-center gap-2">
+                    <BarChart3 className="size-4 text-primary" /> Most Played Titles
+                  </h2>
+                  <div className="h-[240px] w-full bg-sidebar/10 rounded-2xl border border-border/50 p-6">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topGames} layout="vertical">
+                        <XAxis type="number" hide />
+                        <YAxis 
+                          type="category" 
+                          dataKey="name" 
+                          width={100} 
+                          axisLine={false} 
+                          tickLine={false}
+                          tick={{ fill: 'currentColor', opacity: 0.5, fontSize: 10, fontFamily: 'monospace' }}
+                        />
+                        <Tooltip 
+                          cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                          contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '12px' }}
+                        />
+                        <Bar dataKey="minutes" radius={[0, 4, 4, 0]} onClick={(d) => setSelectedGameTitle(d.name)} className="cursor-pointer">
+                          {topGames.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={systemColor(entry.system)} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Totals */}
+                <div className="lg:col-span-4 grid sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                  {[
+                    { label: "Lifetime Playtime", value: `${Math.round(sessions.reduce((s,v) => s+(v.durationSeconds??0),0)/60)}m`, icon: Clock },
+                    { label: "Total Sessions", value: String(sessions.length), icon: HistoryIcon },
+                    { label: "Unique Games", value: String(new Set(sessions.map(s => s.romId)).size), icon: Gamepad2 },
+                  ].map(s => (
+                    <div key={s.label} className="p-5 rounded-2xl border border-border bg-sidebar/20 flex flex-col justify-between gap-4">
+                       <s.icon className="size-5 text-muted-foreground/30" />
+                       <div>
+                         <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground mb-1">{s.label}</div>
+                         <div className="text-3xl font-display font-black text-foreground">{s.value}</div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Feed */}
+              <div className="space-y-6">
+                <h2 className="text-sm font-display font-bold uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="size-4 text-accent" /> Recent Activity
+                </h2>
+                
+                {groupedByDay.map(([day, daySessions]) => (
+                  <div key={day} className="space-y-3">
+                    <div className="sticky top-0 z-10 py-2 bg-background/95 backdrop-blur shadow-sm -mx-4 px-4 sm:mx-0 sm:px-0">
+                      <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground font-bold">{day}</div>
+                    </div>
+                    <div className="grid gap-3">
+                      {daySessions.sort((a,b) => b.startedAt - a.startedAt).map(s => (
+                        <div 
+                          key={s.id} 
+                          className="group flex items-center gap-4 p-4 rounded-xl border border-border bg-sidebar/5 hover:bg-sidebar/20 transition-all cursor-pointer"
+                          onClick={() => setSelectedGameTitle(s.romTitle)}
+                        >
+                          <div className="size-10 rounded-lg bg-background/50 border border-border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                             <div className="size-3 rounded-full" style={{ background: systemColor(s.romSystem) }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-display font-bold text-foreground truncate group-hover:text-primary transition-colors">{s.romTitle}</div>
+                            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
+                               {config.showSystemLabels && (
+                                 <span className="font-bold text-foreground/40">{SYSTEMS.find(sys => sys.id === s.romSystem)?.shortName ?? s.romSystem}</span>
+                               )}
+                               <span>· {new Date(s.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="font-display font-bold text-foreground">{Math.round((s.durationSeconds ?? 0) / 60)}m</div>
+                            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">{s.durationSeconds ? 'Duration' : 'Current'}</div>
+                          </div>
+                          <ChevronRight className="size-4 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {sessions.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-center opacity-30 gap-4 border-2 border-dashed border-border rounded-3xl">
+                     <AlertCircle className="size-12" />
+                     <div className="font-mono text-xs uppercase tracking-[0.3em]">No play history recorded yet</div>
+                  </div>
+                )}
+              </div>
             </>
-          ) : null}
+          )}
         </div>
-      </div>
+      </main>
     </div>
   );
+}
+
+function systemColor(systemId: string) {
+  const colors: Record<string, string> = {
+    nes: "#e53e3e", snes: "#6b46c1", n64: "#2f855a", gba: "#2b6cb0",
+    genesis: "#c05621", ps1: "#2d3748", ps2: "#1a365d", arcade: "#b7791f",
+    gb: "#276749", gbc: "#c05621", dreamcast: "#3182ce", psp: "#2b6cb0",
+    nds: "#2d3748", atari2600: "#744210", saturn: "#2c5282", gamegear: "#2b6cb0",
+    mastersystem: "#2c5282", tg16: "#c05621", "neo-geo": "#b7791f", virtualboy: "#e53e3e",
+  };
+  return colors[systemId] || "#718096";
 }

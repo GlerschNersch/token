@@ -105,7 +105,7 @@ export default function Settings() {
   return (
     <div className="flex h-full">
       <main className="flex-1 min-w-0 flex flex-col bg-background/30 overflow-y-auto overscroll-y-contain">
-        <MobileTopBar active="settings" />
+        <MobileTopBar />
 
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-8 sm:py-12 space-y-8 pb-24 lg:pb-12">
           {/* Header */}

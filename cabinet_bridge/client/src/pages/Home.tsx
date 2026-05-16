@@ -414,7 +414,7 @@ export default function Home({ filter }: { filter: Filter }) {
   return (
     <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden" data-testid="main-content">
       <WelcomeDialog hasRoms={uploadedRoms.length > 0} />
-      <MobileTopBar active={filter} />
+      <MobileTopBar />
 
       {/* ── Header ── */}
       <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-border">

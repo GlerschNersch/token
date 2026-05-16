@@ -674,7 +674,7 @@ export default function Dashboard() {
             value={String(thisWeek)}
             sub={
               thisWeek !== lastWeekCount
-                ? t("dashboard.stats.vsLastWeek", { count: (thisWeek > lastWeekCount ? "+" : "") + (thisWeek - lastWeekCount) })
+                ? t("dashboard.stats.vsLastWeek", { count: Number(thisWeek - lastWeekCount) })
                 : t("dashboard.stats.sameAsLastWeek")
             }
             accent="text-accent"

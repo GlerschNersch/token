@@ -4,6 +4,26 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [1.3.5] — 2026-05-15
+
+### Major: Professional Stability Overhaul
+
+- **Full Type Safety** — Resolved 20+ TypeScript errors across the codebase, ensuring high-end stability and preventing runtime crashes in the Home Assistant environment.
+- **Persistent Configuration** — Re-engineered the integration layer to correctly handle persistent settings for system labels, aspect ratios, and shaders.
+- **Component Integrity** — Restored missing sub-components on the Settings page and verified all core React imports for the Bento Dashboard.
+- **Store Sync** — Standardized `config.yaml` to ensure the app reliably appears in the Home Assistant Add-on Store.
+
+---
+
+## [1.3.4] — 2026-05-15
+
+### Fix: Repository & Stability Final Pass
+
+- **Store Fix** — Applied strict formatting to `config.yaml` to ensure the add-on correctly appears in the Home Assistant Store after re-adding the repository.
+- **Stability Pass** — Re-verified all core React imports and JSX structures for the Bento Dashboard and Surprise Wheel.
+
+---
+
 ## [1.3.3] — 2026-05-15
 
 ### Fix: Critical Runtime Stability
