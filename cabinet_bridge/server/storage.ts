@@ -1,4 +1,9 @@
-import { appSettings, collectionItems, gameCollections, hltbCache, romSaveSlots, uploadedRoms, users } from '@shared/schema';
+import { 
+  appSettings, collectionItems, gameCollections, hltbCache, romSaveSlots, 
+  uploadedRoms, users, userProfiles, gameCheatCodes, profileGameState, 
+  profileControlBindings, gamepadBindings, cheatIndexCache, cheatFileCache, 
+  activityLog 
+} from '@shared/schema';
 import type {
   GameCollection,
   GameCollectionWithItems,
@@ -20,23 +25,28 @@ import { and, desc, eq } from "drizzle-orm";
 import { dataPath, ensureDir, getDataDir } from "./data-dir";
 import { log } from "./log";
 
-let _sqlite: Database.Database | null = null;
-let _db: any = null;
+// Global references initialized during boot
+export let sqlite: Database.Database;
+export let db: any;
 
+/**
+ * Explicitly initialize the database.
+ * This must be called from the main boot block in index.ts.
+ */
 export function initializeDatabase() {
-  if (_sqlite) return { sqlite: _sqlite, db: _db };
+  if (sqlite) return;
 
   try {
     const dataDir = getDataDir();
     ensureDir(dataDir);
     const dbPath = dataPath("data.db");
     
-    log(`Initializing database at ${dbPath}`, "db");
-    _sqlite = new Database(dbPath);
-    _sqlite.pragma("journal_mode = WAL");
+    log(`Connecting to SQLite at ${dbPath}`, "db");
+    sqlite = new Database(dbPath);
+    sqlite.pragma("journal_mode = WAL");
     
-    // Core Schema
-    _sqlite.exec(`
+    // Core Schema Creation
+    sqlite.exec(`
       CREATE TABLE IF NOT EXISTS uploaded_roms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
@@ -84,14 +94,8 @@ export function initializeDatabase() {
       );
     `);
 
-    // Migrations
+    // Incremental Migrations (Ensuring columns exist)
     const migrations = [
-      "ALTER TABLE uploaded_roms ADD COLUMN art_url TEXT",
-      "ALTER TABLE uploaded_roms ADD COLUMN scrape_status TEXT NOT NULL DEFAULT 'not_scraped'",
-      "ALTER TABLE uploaded_roms ADD COLUMN scrape_message TEXT",
-      "ALTER TABLE uploaded_roms ADD COLUMN rating INTEGER NOT NULL DEFAULT 0",
-      "ALTER TABLE uploaded_roms ADD COLUMN last_played INTEGER NOT NULL DEFAULT 0",
-      "ALTER TABLE uploaded_roms ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0",
       "ALTER TABLE uploaded_roms ADD COLUMN disc_number INTEGER",
       "ALTER TABLE uploaded_roms ADD COLUMN disc_group TEXT",
       "ALTER TABLE uploaded_roms ADD COLUMN description TEXT",
@@ -123,42 +127,26 @@ export function initializeDatabase() {
     ];
 
     for (const stmt of migrations) {
-      try { _sqlite.exec(stmt); } catch { /* ignore exist errors */ }
+      try { sqlite.exec(stmt); } catch { /* ignore existing column/table errors */ }
     }
 
-    // Seed Player 1
+    // Default Profile Seeding
     try {
-      const row = _sqlite.prepare("SELECT id FROM user_profiles WHERE id = 1").get();
-      if (!row) {
-        _sqlite.prepare("INSERT INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', ?)").run(Date.now());
+      const exists = sqlite.prepare("SELECT id FROM user_profiles WHERE id = 1").get();
+      if (!exists) {
+        sqlite.prepare("INSERT INTO user_profiles (id, name, color, created_at) VALUES (1, 'Player 1', '#8b5cf6', ?)").run(Date.now());
       }
-    } catch {}
+    } catch (e) {
+       log("Profile seed failed (non-critical)", "db");
+    }
 
-    _db = drizzle(_sqlite);
+    db = drizzle(sqlite);
     log("Database initialized successfully", "db");
-    return { sqlite: _sqlite, db: _db };
   } catch (err) {
-    log("FATAL: Database initialization failed!", "db");
-    console.error(err);
+    log("CRITICAL: Database initialization failed!", "db");
     throw err;
   }
 }
-
-// Proxy to ensure we don't call db before init
-export const db = new Proxy({} as any, {
-  get: (target, prop) => {
-    if (!_db) throw new Error("Database not initialized! Call initializeDatabase() first.");
-    return _db[prop];
-  }
-});
-
-export const sqlite = new Proxy({} as Database.Database, {
-  get: (target, prop) => {
-    if (!_sqlite) throw new Error("SQLite not initialized! Call initializeDatabase() first.");
-    const val = (_sqlite as any)[prop];
-    return typeof val === "function" ? val.bind(_sqlite) : val;
-  }
-});
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -168,7 +156,7 @@ export interface IStorage {
   getUploadedRom(id: number): Promise<UploadedRom | undefined>;
   createUploadedRom(rom: InsertUploadedRom): Promise<UploadedRom>;
   deleteUploadedRom(id: number): Promise<UploadedRom | undefined>;
-  updateUploadedRomArt(id: number, art: Pick<InsertUploadedRom, "artUrl" | "scrapeStatus" | "scrapeMessage">): Promise<UploadedRom | undefined>;
+  updateUploadedRomArt(id: number, art: any): Promise<UploadedRom | undefined>;
   updateUploadedRomRating(id: number, rating: number): Promise<UploadedRom | undefined>;
   updateUploadedRomFavorite(id: number, favorite: boolean): Promise<UploadedRom | undefined>;
   markUploadedRomPlayed(id: number): Promise<UploadedRom | undefined>;
@@ -177,8 +165,8 @@ export interface IStorage {
   updateUploadedRomPlayStatus(id: number, status: string): Promise<UploadedRom | undefined>;
   createPlaySession(romId: number, romTitle: string, romSystem: string, startedAt: number): Promise<number>;
   endPlaySession(sessionId: number, endedAt: number, durationSeconds: number): Promise<void>;
-  listRecentSessions(limit?: number): Promise<Array<{ id: number; romId: number; romTitle: string; romSystem: string; startedAt: number; endedAt: number | null; durationSeconds: number | null }>>;
-  updateUploadedRomMetadata(id: number, meta: Partial<Pick<InsertUploadedRom, "description" | "releaseYear" | "developer" | "publisher" | "genre" | "players" | "artUrl" | "scrapeStatus" | "scrapeMessage" | "communityScore" | "wheelArtUrl" | "videoUrl">>): Promise<UploadedRom | undefined>;
+  listRecentSessions(limit?: number): Promise<any[]>;
+  updateUploadedRomMetadata(id: number, meta: any): Promise<UploadedRom | undefined>;
   listCollections(): Promise<GameCollectionWithItems[]>;
   createCollection(collection: InsertGameCollection): Promise<GameCollection>;
   deleteCollection(id: number): Promise<boolean>;
@@ -190,36 +178,34 @@ export interface IStorage {
   deleteRomSaveSlot(romId: number, slot: number, userId: string): Promise<boolean>;
   getIntegrationSettings(): Promise<IntegrationSettings>;
   saveIntegrationSettings(settings: IntegrationSettings): Promise<IntegrationSettings>;
-  listProfiles(): Promise<import("../shared/schema").UserProfile[]>;
-  createProfile(name: string, color: string): Promise<import("../shared/schema").UserProfile>;
+  listProfiles(): Promise<UserProfile[]>;
+  createProfile(name: string, color: string): Promise<UserProfile>;
   deleteProfile(id: number): Promise<boolean>;
-  listCheats(romId: number, profileId: number): Promise<import("../shared/schema").GameCheatCode[]>;
-  createCheat(cheat: import("../shared/schema").InsertGameCheatCode): Promise<import("../shared/schema").GameCheatCode>;
+  listCheats(romId: number, profileId: number): Promise<any[]>;
+  createCheat(cheat: any): Promise<any>;
   updateCheatEnabled(id: number, enabled: boolean): Promise<boolean>;
   deleteCheat(id: number): Promise<boolean>;
-  getProfileGameState(profileId: number, romId: number): Promise<import("../shared/schema").ProfileGameState | undefined>;
-  upsertProfileGameState(profileId: number, romId: number, patch: { favorite?: boolean; rating?: number; playStatus?: string }): Promise<import("../shared/schema").ProfileGameState>;
-  listProfileGameStates(profileId: number): Promise<import("../shared/schema").ProfileGameState[]>;
-  getProfileControlBindings(profileId: number, core: string): Promise<Record<number, string>>;
-  setProfileControlBindings(profileId: number, core: string, bindings: Record<number, string>): Promise<void>;
-  getGamepadBindings(profileId: number, gamepadId: string): Promise<Record<number, number>>;
-  setGamepadBindings(profileId: number, gamepadId: string, bindings: Record<number, number>): Promise<void>;
-  listGamepadBindings(profileId: number): Promise<Array<{ gamepadId: string; bindings: Record<number, number> }>>;
-  getCheatIndex(folder: string): Promise<{ name: string; path: string }[] | null>;
-  setCheatIndex(folder: string, files: { name: string; path: string }[]): Promise<void>;
-  getCachedCheats(path: string): Promise<{ desc: string; code: string }[] | null>;
-  setCachedCheats(path: string, cheats: { desc: string; code: string }[]): Promise<void>;
+  getProfileGameState(profileId: number, romId: number): Promise<any>;
+  upsertProfileGameState(profileId: number, romId: number, patch: any): Promise<any>;
+  listProfileGameStates(profileId: number): Promise<any[]>;
+  getProfileControlBindings(profileId: number, core: string): Promise<any>;
+  setProfileControlBindings(profileId: number, core: string, bindings: any): Promise<void>;
+  getGamepadBindings(profileId: number, gamepadId: string): Promise<any>;
+  setGamepadBindings(profileId: number, gamepadId: string, bindings: any): Promise<void>;
+  listGamepadBindings(profileId: number): Promise<any[]>;
+  getCheatIndex(folder: string): Promise<any>;
+  setCheatIndex(folder: string, files: any[]): Promise<void>;
+  getCachedCheats(path: string): Promise<any>;
+  setCachedCheats(path: string, cheats: any[]): Promise<void>;
   clearCheatCache(): Promise<void>;
-  getHltbCache(romId: number): Promise<HltbCache | null>;
-  saveHltbCache(data: { romId: number; hltbTitle: string | null; mainStory: number | null; mainExtra: number | null; completionist: number | null; cachedAt: number }): Promise<void>;
-  addScannedRom(rom: { title: string; system: string; slug: string; originalName: string; fileName: string; filePath: string; size: number; mimeType: string; createdAt: number }): Promise<UploadedRom>;
+  getHltbCache(romId: number): Promise<any>;
+  saveHltbCache(data: any): Promise<void>;
+  addScannedRom(rom: any): Promise<UploadedRom>;
   listRomFilenames(): Promise<string[]>;
-  listActivityLog(limit?: number): Promise<import("../shared/schema").ActivityLogEntry[]>;
-  addActivityLogEntry(entry: import("../shared/schema").InsertActivityLog): Promise<import("../shared/schema").ActivityLogEntry>;
+  listActivityLog(limit?: number): Promise<any[]>;
+  addActivityLogEntry(entry: any): Promise<any>;
   clearActivityLog(): Promise<void>;
 }
-
-const INTEGRATION_SETTINGS_KEY = "integration";
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
@@ -277,12 +263,12 @@ export class DatabaseStorage implements IStorage {
     return db.update(uploadedRoms).set({ lastPlayed: Date.now(), playCount: (rom.playCount ?? 0) + 1 }).where(eq(uploadedRoms.id, id)).returning().get();
   }
   async listCollections(): Promise<GameCollectionWithItems[]> {
-    const collections = db.select().from(gameCollections).orderBy(desc(gameCollections.createdAt)).all();
+    const collections_ = db.select().from(gameCollections).orderBy(desc(gameCollections.createdAt)).all();
     const items = db.select().from(collectionItems).all();
-    return collections.map((collection) => ({
+    return collections_.map((collection) => ({
       ...collection,
       smartFilter: collection.smartFilter ? JSON.parse(collection.smartFilter) : undefined,
-      romIds: items.filter((item) => item.collectionId === collection.id).map((item) => item.romId),
+      romIds: items.filter((item: any) => item.collectionId === collection.id).map((item: any) => item.romId),
     }));
   }
   async createCollection(collection: InsertGameCollection): Promise<GameCollection> {
@@ -302,15 +288,15 @@ export class DatabaseStorage implements IStorage {
     if (!collection || !rom) return undefined;
     const existing = db.select().from(collectionItems).where(and(eq(collectionItems.collectionId, collectionId), eq(collectionItems.romId, romId))).get();
     if (!existing) db.insert(collectionItems).values({ collectionId, romId, createdAt: Date.now() }).run();
-    const collections = await this.listCollections();
-    return collections.find((item) => item.id === collectionId);
+    const collections_ = await this.listCollections();
+    return collections_.find((item) => item.id === collectionId);
   }
   async removeRomFromCollection(collectionId: number, romId: number): Promise<GameCollectionWithItems | undefined> {
     const collection = db.select().from(gameCollections).where(eq(gameCollections.id, collectionId)).get();
     if (!collection) return undefined;
     db.delete(collectionItems).where(and(eq(collectionItems.collectionId, collectionId), eq(collectionItems.romId, romId))).run();
-    const collections = await this.listCollections();
-    return collections.find((item) => item.id === collectionId);
+    const collections_ = await this.listCollections();
+    return collections_.find((item) => item.id === collectionId);
   }
   async listRomSaveSlots(romId: number, userId: string): Promise<RomSaveSlot[]> {
     return db.select().from(romSaveSlots).where(and(eq(romSaveSlots.romId, romId), eq(romSaveSlots.userId, userId))).orderBy(romSaveSlots.slot).all();
@@ -351,13 +337,13 @@ export class DatabaseStorage implements IStorage {
     else db.insert(appSettings).values({ key: INTEGRATION_SETTINGS_KEY, value, updatedAt }).run();
     return settings;
   }
-  async listProfiles() { return db.select().from((await import("@shared/schema")).userProfiles).all(); }
-  async createProfile(name: string, color: string) { return db.insert((await import("@shared/schema")).userProfiles).values({ name, color, createdAt: Date.now() }).returning().get(); }
-  async deleteProfile(id: number) { if (id === 1) return false; return db.delete((await import("@shared/schema")).userProfiles).where(eq((await import("@shared/schema")).userProfiles.id, id)).run().changes > 0; }
-  async listCheats(romId: number, profileId: number) { return db.select().from((await import("@shared/schema")).gameCheatCodes).where(and(eq((await import("@shared/schema")).gameCheatCodes.romId, romId), eq((await import("@shared/schema")).gameCheatCodes.profileId, profileId))).all(); }
-  async createCheat(cheat: any) { return db.insert((await import("@shared/schema")).gameCheatCodes).values(cheat).returning().get(); }
-  async updateCheatEnabled(id: number, enabled: boolean) { return db.update((await import("@shared/schema")).gameCheatCodes).set({ enabled: enabled ? 1 : 0 }).where(eq((await import("@shared/schema")).gameCheatCodes.id, id)).run().changes > 0; }
-  async deleteCheat(id: number) { return db.delete((await import("@shared/schema")).gameCheatCodes).where(eq((await import("@shared/schema")).gameCheatCodes.id, id)).run().changes > 0; }
+  async listProfiles() { return db.select().from(userProfiles).all(); }
+  async createProfile(name: string, color: string) { return db.insert(userProfiles).values({ name, color, createdAt: Date.now() }).returning().get(); }
+  async deleteProfile(id: number) { if (id === 1) return false; return db.delete(userProfiles).where(eq(userProfiles.id, id)).run().changes > 0; }
+  async listCheats(romId: number, profileId: number) { return db.select().from(gameCheatCodes).where(and(eq(gameCheatCodes.romId, romId), eq(gameCheatCodes.profileId, profileId))).all(); }
+  async createCheat(cheat: any) { return db.insert(gameCheatCodes).values(cheat).returning().get(); }
+  async updateCheatEnabled(id: number, enabled: boolean) { return db.update(gameCheatCodes).set({ enabled: enabled ? 1 : 0 }).where(eq(gameCheatCodes.id, id)).run().changes > 0; }
+  async deleteCheat(id: number) { return db.delete(gameCheatCodes).where(eq(gameCheatCodes.id, id)).run().changes > 0; }
   async getProfileGameState(profileId: number, romId: number) { return sqlite.prepare("SELECT * FROM profile_game_state WHERE profile_id=? AND rom_id=?").get(profileId, romId) as any; }
   async upsertProfileGameState(profileId: number, romId: number, patch: any) {
     const now = Date.now();
