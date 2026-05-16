@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiUrl } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
   CheckCircle2, 
@@ -41,7 +41,7 @@ export function BiosManager() {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ file, filename }: { file: File; filename: string }) => {
-      const res = await fetch("/api/bios/upload", {
+      const res = await fetch(apiUrl("/api/bios/upload"), {
         method: "POST",
         headers: {
           "x-bios-filename": encodeURIComponent(filename),

@@ -104,9 +104,6 @@ export default function Settings() {
               <TabsTrigger value="services" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <Wifi className="size-4" /> {t("settings.tabs.services")}
               </TabsTrigger>
-              <TabsTrigger value="kiosk" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
-                <HelpCircle className="size-4" /> {t("settings.tabs.kiosk")}
-              </TabsTrigger>
               <TabsTrigger value="help" className="gap-2 py-2 px-4 rounded-md data-[state=active]:bg-background/80">
                 <HelpCircle className="size-4" /> {t("settings.tabs.help")}
               </TabsTrigger>
@@ -139,10 +136,6 @@ export default function Settings() {
 
             <TabsContent value="services" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <ServicesSettings />
-            </TabsContent>
-
-            <TabsContent value="kiosk" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <KioskSettings />
             </TabsContent>
 
             <TabsContent value="help" className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1066,63 +1059,6 @@ function ServicesSettings() {
               <Progress value={(progress.current / progress.total) * 100} className="h-1.5" />
             </div>
           )}
-        </div>
-      </Section>
-    </div>
-  );
-}
-
-function KioskSettings() {
-  const { config, setConfig } = useIntegration();
-  const { t } = useTranslation();
-  const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({ queryKey: ["/api/collections"] });
-
-  return (
-    <div className="space-y-10">
-      <Section
-        title={t("settings.sections.kiosk.title")}
-        description={t("settings.sections.kiosk.description")}
-      >
-        <div className="grid gap-6">
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-sidebar/40">
-            <div className="space-y-0.5">
-              <div className="font-display font-semibold text-sm">Enable Kiosk Mode</div>
-              <div className="text-xs text-muted-foreground">Restricts navigation and hides technical settings.</div>
-            </div>
-            <Switch
-              checked={config.kioskMode}
-              onCheckedChange={(v) => setConfig({ kioskMode: v })}
-            />
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-6">
-            <Field label={t("settings.fields.kioskPin.label")} hint={t("settings.fields.kioskPin.hint")}>
-              <Input
-                value={config.kioskPin}
-                onChange={(e) => setConfig({ kioskPin: e.target.value })}
-                placeholder="e.g. 1234"
-                className="font-mono text-sm"
-                maxLength={8}
-              />
-            </Field>
-
-            <Field label={t("settings.fields.kioskCollection.label")} hint={t("settings.fields.kioskCollection.hint")}>
-              <Select
-                value={config.kioskCollectionId?.toString() ?? "all"}
-                onValueChange={(v) => setConfig({ kioskCollectionId: v === "all" ? null : parseInt(v, 10) })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("settings.fields.kioskCollection.placeholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("settings.fields.kioskCollection.placeholder")}</SelectItem>
-                  {collections.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
         </div>
       </Section>
     </div>

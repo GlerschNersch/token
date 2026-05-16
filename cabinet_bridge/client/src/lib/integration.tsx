@@ -39,10 +39,6 @@ export interface IntegrationConfig {
   /** ScreenScraper.fr credentials */
   ssUserId?: string;
   ssPassword?: string;
-  /** Kiosk / arcade mode */
-  kioskMode?: boolean;
-  kioskPin?: string;
-  kioskCollectionId?: number | null;
   /** RetroAchievements */
   raUsername?: string;
   raToken?: string;
@@ -111,9 +107,6 @@ const defaultConfig: IntegrationConfig = {
   haBaseUrl: "https://homeassistant.local:8123",
   ssUserId: "",
   ssPassword: "",
-  kioskMode: false,
-  kioskPin: "",
-  kioskCollectionId: null,
   raUsername: "",
   raToken: "",
   tgdbApiKey: "",
@@ -165,9 +158,6 @@ function normalizeConfig(raw: unknown): IntegrationConfig {
     endpoints,
     ssUserId: typeof source.ssUserId === "string" ? source.ssUserId : "",
     ssPassword: typeof source.ssPassword === "string" ? source.ssPassword : "",
-    kioskMode: typeof source.kioskMode === "boolean" ? source.kioskMode : false,
-    kioskPin: typeof source.kioskPin === "string" ? source.kioskPin : "",
-    kioskCollectionId: (typeof source.kioskCollectionId === "number" || source.kioskCollectionId === null) ? source.kioskCollectionId : null,
     raUsername: typeof source.raUsername === "string" ? source.raUsername : "",
     raToken: typeof source.raToken === "string" ? source.raToken : "",
     tgdbApiKey: typeof source.tgdbApiKey === "string" ? source.tgdbApiKey : "",

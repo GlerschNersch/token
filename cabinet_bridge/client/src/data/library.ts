@@ -448,7 +448,9 @@ export function uploadedRomToGame(rom: UploadedRom): Game {
     id: `uploaded-${rom.id}`,
     title: rom.title,
     system: rom.system as SystemId,
-    year: rom.releaseYear ?? new Date(rom.createdAt).getFullYear(),
+    // Use 0 when no scraped year is available — GameDetailDialog guards with `year > 0`
+    // so the year badge simply won't render rather than showing the upload year.
+    year: rom.releaseYear ?? 0,
     genre: rom.genre ?? "Uploaded ROM",
     players: rom.players ?? "1",
     description: rom.description ?? null,
