@@ -17,7 +17,7 @@ COPY package.json package-lock.json ./
 RUN NODE_ENV=development npm install --no-audit --no-fund --ignore-scripts
 RUN npm rebuild better-sqlite3
 
-ARG CACHE_BUST=73
+ARG CACHE_BUST=74
 RUN echo "cache-bust=$CACHE_BUST"
 
 COPY tsconfig.json vite.config.ts tailwind.config.ts postcss.config.js components.json drizzle.config.ts ./
@@ -29,8 +29,9 @@ COPY script ./script
 RUN NODE_ENV=production npm run build
 RUN npm prune --omit=dev
 
-COPY run.sh /run.sh
-RUN chmod a+x /run.sh
+# s6-overlay service definition
+COPY rootfs /
+RUN chmod a+x /etc/services.d/homearcade/run
 
 EXPOSE 5000
-CMD ["/run.sh"]
+CMD ["/init"]
