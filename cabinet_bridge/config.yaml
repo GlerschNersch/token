@@ -18,5 +18,7 @@ hassio_api: true
 homeassistant_api: false
 options:
   max_upload_mb: 8192
+  steamgriddb_api_key: ""
 schema:
   max_upload_mb: "int(16,16384)"
+  steamgriddb_api_key: str?

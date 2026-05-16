@@ -1,0 +1,7 @@
+#!/command/with-contenv bashio
+
+export CABINET_MAX_UPLOAD_MB=$(bashio::config 'max_upload_mb')
+export CABINET_STEAMGRIDDB_KEY=$(bashio::config 'steamgriddb_api_key')
+
+cd /app
+exec node dist/index.cjs

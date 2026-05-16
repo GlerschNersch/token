@@ -38,6 +38,41 @@ export const MAX_UPLOAD_MB = (() => {
 })();
 export const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
+/** SteamGridDB API key — set via CABINET_STEAMGRIDDB_KEY env var (add-on config). */
+export const STEAMGRIDDB_API_KEY: string =
+  process.env.CABINET_STEAMGRIDDB_KEY ?? "";
+
+/**
+ * SteamGridDB platform IDs for each system slug.
+ * https://www.steamgriddb.com/platforms
+ */
+export const STEAMGRIDDB_PLATFORM_IDS: Record<string, number> = {
+  nes: 7,
+  snes: 8,
+  n64: 9,
+  gba: 12,
+  genesis: 6,
+  ps1: 13,
+  ps2: 14,
+  arcade: 51,
+  dreamcast: 16,
+  gb: 11,
+  gbc: 10,
+  nds: 15,
+  psp: 18,
+  atari2600: 2,
+  saturn: 17,
+  gamegear: 30,
+  sms: 5,
+  pce: 22,
+  sega32x: 19,
+  segacd: 20,
+  neogeo: 24,
+  virtualboy: 70,
+  atari7800: 4,
+  lynx: 31,
+};
+
 export const EMULATORJS_CORES: Record<string, string> = {
   nes: "nes",
   snes: "snes",
