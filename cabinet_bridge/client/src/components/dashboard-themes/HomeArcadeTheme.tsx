@@ -216,6 +216,16 @@ export default function HomeArcadeTheme() {
     enabled: !!activeGame?.romId,
   });
 
+  const { data: latestSave, refetch: refetchLatestSave } = useQuery<RomSaveSlot | null>({
+    queryKey: ["save-states", activeGame?.romId, "latest"],
+    queryFn: async () => {
+      const res = await fetch(apiUrl(`/api/roms/${activeGame!.romId}/save-states/latest`));
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!activeGame?.romId,
+  });
+
   const { data: raProgress } = useQuery({
     queryKey: ["ra-progress", activeGame?.raGameId],
     queryFn: async () => {
@@ -563,9 +573,16 @@ export default function HomeArcadeTheme() {
                                    <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Play Time</div>
                                    <div className="font-mono text-2xl font-black text-white/90 tabular-nums">{fmtHoursShort(activeGame.minutesPlayed ?? 0)}</div>
                                 </div>
-                                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
-                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Status</div>
-                                   <div className="font-mono text-xs font-black uppercase tracking-[0.2em] text-primary">{activeGame.playStatus || 'Unplayed'}</div>
+                                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1 relative group cursor-pointer" onClick={() => setActiveTab("saves")}>
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Latest Save</div>
+                                   <div className="font-mono text-xs font-black uppercase tracking-[0.2em] text-primary">
+                                     {latestSave ? `${latestSave.label}` : 'None'}
+                                   </div>
+                                   {latestSave && (
+                                     <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
+                                       <Save className="size-4 text-primary" />
+                                     </div>
+                                   )}
                                 </div>
                              </div>
 
@@ -684,6 +701,19 @@ export default function HomeArcadeTheme() {
 
                   {/* Actions (Pinned to bottom) */}
                   <div className="pt-8 pb-12 sm:pb-0 flex flex-col gap-4 shrink-0">
+                     {latestSave && (
+                       <Button 
+                         variant="outline"
+                         size="lg"
+                         onClick={() => {
+                           const returnTo = encodeURIComponent(window.location.href);
+                           window.location.href = apiUrl(`/api/roms/${activeGame.romId}/player?return=${returnTo}&loadSlot=${latestSave.slot}`);
+                         }}
+                         className="w-full h-14 rounded-2xl border-white/10 bg-white/5 text-white font-black uppercase tracking-[0.2em] text-xs hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center gap-3"
+                       >
+                         <History className="size-4 text-primary" /> Resume {latestSave.label}
+                       </Button>
+                     )}
                      <Button 
                        size="lg"
                        onClick={() => {

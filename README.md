@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.22.12** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.22.13** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -68,13 +68,18 @@ Systems are listed in release-date order.
 
 ## Changelog
 
+### v2.22.13
+- **Feature: Resume from Last Save:** You can now resume your games directly from the dashboard. If a save state exists, a new "Resume" button will appear in the game detail panel, automatically loading your latest progress.
+- **Visual Feedback:** Added a "Latest Save" status card to the game overview, providing quick info on your most recent save slot.
+- **Player Sync:** Enhanced the emulator bootstrap to support direct slot loading via dashboard shortcuts.
+
 ### v2.22.12
 - **Scraper Enhancement:** Improved TheGamesDB matching logic with fuzzy title fallbacks. Descriptions and release dates are now much more likely to populate for existing games.
 - **Data Integrity:** Refined metadata update logic to ensure all fields are correctly cleared or updated in the database during scraper fallbacks.
 - **Improved Monitoring:** Added server-side logs to track scraper performance and matching success rates.
 
 ### v2.22.11
-- **Enhanced Mobile Navigation:** Redesigned the system selector bar to include a pinned "Quick Actions" overlay. The Library and Settings icons are now consistently visible and easier to tap.
+- **Enhanced Mobile Navigation:** Redesigned the system selector bar to include a pinned "Quick Actions" overlay. The Library and Settings icons are now consistently visible and easier to tap, featuring improved contrast and a subtle background gradient to prevent content overlap.
 
 ### v2.22.10
 - **Fix:** Resolved a `ReferenceError: LayoutGrid is not defined` crashing the mobile dashboard.
@@ -110,28 +115,6 @@ Systems are listed in release-date order.
 - **Official Rebranding** — Fully transitioned from PlayHub to **HomeArcade**.
 - **UX Fix** — Corrected game collection management (fixed `handleToggleCollection` reference).
 - **System Stability** — Renamed internal theme components for long-term maintainability.
-
-### v2.21.0
-- **Mobile Overlap Fix** — Added safe area padding to all panels and buttons to ensure they clear mobile navigation bars.
-- **Space Optimization** — Automatically hide duplicate system headers on mobile to reclaim screen real estate.
-- **Improved Tab Visibility** — Increased contrast and brightness of unselected tabs in the management hub.
-- **Translation Fix** — Corrected the 'Library' label in the mobile navigation bar.
-
-### v2.20.0
-- **Intuitive Tab Naming** — Renamed HomeArcade tabs to Overview, Cheats, Saves, and Manage for better clarity.
-- **Mobile Tab Optimization** — The side panel tab bar is now scrollable on mobile to ensure all management buttons are visible.
-- **UX Refinement** — Cleaned up descriptions and mission status labels for a more professional feel.
-
-### v2.19.2
-- **Fix:** Resolved `ReferenceError: Info is not defined` crashing the HomeArcade dashboard.
-- **Improved Management Hub:** Refined the integrated game management panel for better stability.
-
-### v2.19.1
-- **Fix:** Resolved `ReferenceError: useCallback is not defined`.
-
-### v2.19.0
-- **Unified HomeArcade Hub** — Major architectural shift merging game management (saves, cheats, achievements, collections) directly into the HomeArcade side panel.
-- **Zero-Popup UX** — Eliminated the standard detail dialog in favor of a seamless, integrated 'Command Center' within the dashboard.
 
 ---
 

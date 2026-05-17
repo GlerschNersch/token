@@ -140,6 +140,19 @@ export function registerProfileRoutes(app: Express) {
     }
   });
 
+  app.get("/api/roms/:id/save-states/latest", async (req, res) => {
+    try {
+      const romId = Number(req.params.id);
+      const { userId } = getUserFromRequest(req);
+      const slots = await storage.listRomSaveSlots(romId, userId);
+      if (slots.length === 0) return res.json(null);
+      const latest = slots.reduce((prev, curr) => (prev.updatedAt > curr.updatedAt ? prev : curr));
+      res.json(latest);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
   app.get("/api/roms/:id/save-states", async (req, res) => {
     try {
       const romId = Number(req.params.id);

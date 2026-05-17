@@ -2659,8 +2659,18 @@ window.EJS_onGameStart = function () {
   document.addEventListener("visibilitychange", function () { if (document.hidden && window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") try { window.EJS_emulator.saveState(0); cabinetCaptureThumb("auto"); localStorage.setItem("cabinet_autosave_" + (window.EJS_gameID || ""), String(Date.now())); } catch (_e) {} });
   window.addEventListener("pagehide", function () { if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") try { window.EJS_emulator.saveState(0); } catch (_e) {} });
   var _autoKey = "cabinet_autosave_" + (window.EJS_gameID || ""); var _autoTs = null;
+  var _urlParams = new URLSearchParams(window.location.search);
+  var _loadSlot = _urlParams.get("loadSlot");
+
   try { _autoTs = localStorage.getItem(_autoKey); } catch (_e) {}
-  if (_autoTs) {
+  
+  if (_loadSlot) {
+    var slotNum = _loadSlot === "latest" ? 1 : Number(_loadSlot); // 'latest' logic can be improved but 1 is safe default
+    setTimeout(function () { 
+      cabinetToast("Resuming from slot " + slotNum + "\u2026");
+      if (window.EJS_emulator && typeof window.EJS_emulator.loadState === "function") try { window.EJS_emulator.loadState(slotNum); } catch (_e) {} 
+    }, 2500);
+  } else if (_autoTs) {
     try { localStorage.removeItem(_autoKey); } catch (_e) {}
     var _autoMins = Math.round((Date.now() - Number(_autoTs)) / 60000); var _autoLabel = _autoMins < 1 ? "just now" : _autoMins + " min ago";
     setTimeout(function () { cabinetToast("Resuming auto-save from " + _autoLabel + "\u2026"); if (window.EJS_emulator && typeof window.EJS_emulator.loadState === "function") try { window.EJS_emulator.loadState(0); } catch (_e) {} }, 2500);
