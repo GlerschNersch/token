@@ -2046,34 +2046,43 @@ function cabinetSetupWarp() {
     if (manualSection) manualSection.style.display = "none";
     if (qrContainer) {
       qrContainer.style.display = "flex";
-      qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;">Warping...</div>';
+      qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Synchronizing Warp Point...</div>';
     }
 
     try {
-      // 1. Trigger quick save to slot 99 (Handoff slot)
-      var slot = 99;
+      // 1. Trigger quick save to slot 0 (Universally supported Auto-save slot)
+      var slot = 0;
       cabinetSetEmulatorSaveSlot(slot);
       var emulator = window.EJS_emulator;
       var saved = false;
-      if (emulator && emulator.gameManager && typeof emulator.gameManager.quickSave === "function") {
-        try { saved = !!emulator.gameManager.quickSave(String(slot)); } catch (_error) { saved = false; }
+      if (emulator && emulator.gameManager && typeof emulator.gameManager.saveState === "function") {
+        try { emulator.gameManager.saveState(slot); saved = true; } catch (_error) { saved = false; }
       }
       if (!saved) { cabinetSendInput(24, "1"); }
 
-      // Wait for save to complete and upload
-      setTimeout(async function() {
+      // 2. Wait for VFS to flush and upload (Retrying up to 3 times)
+      var attempt = 0;
+      var maxAttempts = 3;
+      var checkAndSync = async function() {
         try {
+          attempt++;
+          // Ensure VFS is synced if the core supports it
+          if (emulator && emulator.gameManager && emulator.gameManager.FS && typeof emulator.gameManager.FS.syncfs === "function") {
+            await new Promise(function(resolve) { emulator.gameManager.FS.syncfs(false, resolve); });
+          }
+
           await cabinetCaptureThumb(slot);
           await cabinetBackupSlot(slot);
           await cabinetRecordSaveSlot(slot);
 
-          // 2. Generate Warp URL
+          // Success -> Generate Warp URL
           var currentUrl = new URL(window.location.href);
           currentUrl.searchParams.set("loadSlot", String(slot));
           currentUrl.searchParams.set("warp", "true");
+          currentUrl.searchParams.set("t", String(Date.now())); // Cache buster
           var warpUrl = currentUrl.toString();
 
-          // 3. Show QR Code using public API
+          // 3. Show QR Code
           if (qrContainer) {
             var qrSize = 200;
             var qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=" + qrSize + "x" + qrSize + "&data=" + encodeURIComponent(warpUrl);
@@ -2081,24 +2090,32 @@ function cabinetSetupWarp() {
             img.width = qrSize; img.height = qrSize;
             img.style.display = "block"; img.style.borderRadius = "4px";
             img.alt = "Warp QR Code";
-            img.onload = function() { qrContainer.innerHTML = ""; qrContainer.appendChild(img); cabinetToast("Warp point synchronized \\u2728"); };
+            img.onload = function() { qrContainer.innerHTML = ""; qrContainer.appendChild(img); cabinetToast("Warp Point Ready \\u2728"); };
             img.onerror = function() {
               qrContainer.style.display = "none";
               if (manualSection && urlInput) {
                 manualSection.style.display = "flex";
                 urlInput.value = warpUrl;
-                cabinetToast("QR generation failed, showing manual link");
+                cabinetToast("QR Blocked (CSP), showing manual link");
               }
             };
             img.src = qrApi;
           }
         } catch (e) {
-           console.error("[Warp] Save/Upload failed:", e);
-           cabinetToast("Warp failed: could not sync save");
+          if (attempt < maxAttempts) {
+            console.log("[Warp] Sync attempt " + attempt + " failed, retrying...");
+            setTimeout(checkAndSync, 1000);
+          } else {
+            console.error("[Warp] Save/Upload failed after " + maxAttempts + " attempts:", e);
+            cabinetToast("Warp failed: could not sync save");
+            if (qrContainer) qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#ef4444;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Warp Failed<br><br>Check BIOS or Core compatibility</div>';
+          }
         }
-      }, 1200);
+      };
+
+      setTimeout(checkAndSync, 1500); // Initial delay
     } catch (e) {
-      console.error("[Warp] Error:", e);
+      console.error("[Warp] Fatal Error:", e);
       cabinetToast("Warp failed");
     }
   });
@@ -2740,34 +2757,43 @@ function cabinetSetupWarp() {
     if (manualSection) manualSection.style.display = "none";
     if (qrContainer) {
       qrContainer.style.display = "flex";
-      qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;">Warping...</div>';
+      qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Synchronizing Warp Point...</div>';
     }
 
     try {
-      // 1. Trigger quick save to slot 99 (Handoff slot)
-      var slot = 99;
+      // 1. Trigger quick save to slot 0 (Universally supported Auto-save slot)
+      var slot = 0;
       cabinetSetEmulatorSaveSlot(slot);
       var emulator = window.EJS_emulator;
       var saved = false;
-      if (emulator && emulator.gameManager && typeof emulator.gameManager.quickSave === "function") {
-        try { saved = !!emulator.gameManager.quickSave(String(slot)); } catch (_error) { saved = false; }
+      if (emulator && emulator.gameManager && typeof emulator.gameManager.saveState === "function") {
+        try { emulator.gameManager.saveState(slot); saved = true; } catch (_error) { saved = false; }
       }
       if (!saved) { cabinetSendInput(24, "1"); }
 
-      // Wait for save to complete and upload
-      setTimeout(async function() {
+      // 2. Wait for VFS to flush and upload (Retrying up to 3 times)
+      var attempt = 0;
+      var maxAttempts = 3;
+      var checkAndSync = async function() {
         try {
+          attempt++;
+          // Ensure VFS is synced if the core supports it
+          if (emulator && emulator.gameManager && emulator.gameManager.FS && typeof emulator.gameManager.FS.syncfs === "function") {
+            await new Promise(function(resolve) { emulator.gameManager.FS.syncfs(false, resolve); });
+          }
+
           await cabinetCaptureThumb(slot);
           await cabinetBackupSlot(slot);
           await cabinetRecordSaveSlot(slot);
 
-          // 2. Generate Warp URL
+          // Success -> Generate Warp URL
           var currentUrl = new URL(window.location.href);
           currentUrl.searchParams.set("loadSlot", String(slot));
           currentUrl.searchParams.set("warp", "true");
+          currentUrl.searchParams.set("t", String(Date.now())); // Cache buster
           var warpUrl = currentUrl.toString();
 
-          // 3. Show QR Code using public API
+          // 3. Show QR Code
           if (qrContainer) {
             var qrSize = 200;
             var qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=" + qrSize + "x" + qrSize + "&data=" + encodeURIComponent(warpUrl);
@@ -2775,24 +2801,32 @@ function cabinetSetupWarp() {
             img.width = qrSize; img.height = qrSize;
             img.style.display = "block"; img.style.borderRadius = "4px";
             img.alt = "Warp QR Code";
-            img.onload = function() { qrContainer.innerHTML = ""; qrContainer.appendChild(img); cabinetToast("Warp point synchronized \\u2728"); };
+            img.onload = function() { qrContainer.innerHTML = ""; qrContainer.appendChild(img); cabinetToast("Warp Point Ready \\u2728"); };
             img.onerror = function() {
               qrContainer.style.display = "none";
               if (manualSection && urlInput) {
                 manualSection.style.display = "flex";
                 urlInput.value = warpUrl;
-                cabinetToast("QR generation failed, showing manual link");
+                cabinetToast("QR Blocked (CSP), showing manual link");
               }
             };
             img.src = qrApi;
           }
         } catch (e) {
-           console.error("[Warp] Save/Upload failed:", e);
-           cabinetToast("Warp failed: could not sync save");
+          if (attempt < maxAttempts) {
+            console.log("[Warp] Sync attempt " + attempt + " failed, retrying...");
+            setTimeout(checkAndSync, 1000);
+          } else {
+            console.error("[Warp] Save/Upload failed after " + maxAttempts + " attempts:", e);
+            cabinetToast("Warp failed: could not sync save");
+            if (qrContainer) qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#ef4444;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Warp Failed<br><br>Check BIOS or Core compatibility</div>';
+          }
         }
-      }, 1200);
+      };
+
+      setTimeout(checkAndSync, 1500); // Initial delay
     } catch (e) {
-      console.error("[Warp] Error:", e);
+      console.error("[Warp] Fatal Error:", e);
       cabinetToast("Warp failed");
     }
   });
