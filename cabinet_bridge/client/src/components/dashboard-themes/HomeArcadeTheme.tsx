@@ -198,7 +198,7 @@ export default function HomeArcadeTheme() {
   const { data: cheats = [], refetch: refetchCheats } = useQuery<GameCheatCode[]>({
     queryKey: ["cheats", activeGame?.romId, 1],
     queryFn: async () => {
-      const res = await fetch(`/api/roms/${activeGame!.romId}/cheats?profileId=1`);
+      const res = await fetch(apiUrl(`/api/roms/${activeGame!.romId}/cheats?profileId=1`));
       if (!res.ok) return [];
       return res.json();
     },
@@ -208,7 +208,7 @@ export default function HomeArcadeTheme() {
   const { data: saveSlots = [], refetch: refetchSlots } = useQuery<RomSaveSlot[]>({
     queryKey: ["save-states", activeGame?.romId],
     queryFn: async () => {
-      const res = await fetch(`/api/roms/${activeGame!.romId}/save-states`);
+      const res = await fetch(apiUrl(`/api/roms/${activeGame!.romId}/save-states`));
       if (!res.ok) return [];
       return res.json();
     },
@@ -219,7 +219,7 @@ export default function HomeArcadeTheme() {
     queryKey: ["ra-progress", activeGame?.raGameId],
     queryFn: async () => {
       if (!activeGame?.raGameId) return null;
-      const res = await fetch(`/api/retroachievements/user-progress/${activeGame.raGameId}`);
+      const res = await fetch(apiUrl(`/api/retroachievements/user-progress/${activeGame.raGameId}`));
       if (!res.ok) return null;
       return res.json();
     },

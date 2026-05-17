@@ -947,7 +947,7 @@ function ServicesSettings() {
     setProgress(null);
 
     try {
-      const res = await fetch("/api/roms/scrape-all", { method: "POST" });
+      const res = await fetch(apiUrl("/api/roms/scrape-all"), { method: "POST" });
       if (!res.ok) throw new Error(res.statusText);
 
       const reader = res.body?.getReader();
