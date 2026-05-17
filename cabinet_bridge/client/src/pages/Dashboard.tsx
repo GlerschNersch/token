@@ -4,6 +4,8 @@ import { useIntegration } from "@/lib/integration";
 // Lazy load themes to keep the initial bundle small
 const NostalgiaTheme = lazy(() => import("@/components/dashboard-themes/NostalgiaTheme"));
 const HorizonTheme = lazy(() => import("@/components/dashboard-themes/HorizonTheme"));
+const PlayHubTheme = lazy(() => import("@/components/dashboard-themes/PlayHubTheme"));
+const GameOSTheme = lazy(() => import("@/components/dashboard-themes/GameOSTheme"));
 
 function ThemeFallback() {
   return (
@@ -19,7 +21,10 @@ export default function Dashboard() {
 
   return (
     <Suspense fallback={<ThemeFallback />}>
-      {theme === "horizon" ? <HorizonTheme /> : <NostalgiaTheme />}
+      {theme === "horizon" && <HorizonTheme />}
+      {theme === "playhub" && <PlayHubTheme />}
+      {theme === "gameos" && <GameOSTheme />}
+      {(theme === "nostalgia" || !["horizon", "playhub", "gameos"].includes(theme)) && <NostalgiaTheme />}
     </Suspense>
   );
 }

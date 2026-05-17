@@ -260,6 +260,8 @@ function DisplaySettings() {
                 <SelectContent>
                   <SelectItem value="nostalgia">Nostalgia Grid (Shelves)</SelectItem>
                   <SelectItem value="horizon">Horizon Ribbon (Switch Style)</SelectItem>
+                  <SelectItem value="playhub">PlayHub (Clean Dashboard)</SelectItem>
+                  <SelectItem value="gameos">gameOS (Cinematic Hero)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
