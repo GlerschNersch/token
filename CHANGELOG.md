@@ -4,6 +4,67 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.23.3] — 2026-05-17
+
+### Fix: Warp Link Reliability & Dashboard UX
+
+- **Universal Warp Point** — Switched the Warp Link handoff logic to use **Slot 0 (Auto-save)**. This slot is universally supported across all emulator cores, ensuring handoff works for all games.
+- **Robust Save Sync** — Added a multi-attempt retry loop with explicit virtual-filesystem flushing. This ensures the core has finished writing the save data before the Warp link is generated.
+- **Manual Warp Fallback** — Added a manual link display if Home Assistant's security policies block the external QR code image generation.
+- **Click-to-Lock Selection** — Dashboard selection now strictly requires a click. This prevents accidental game switching when moving the mouse toward action buttons.
+
+---
+
+## [2.23.0] — 2026-05-17
+
+### Major: Warp Link Handoff & Dashboard Refinement
+
+- **Warp Link Handoff** — Seamlessly transition gameplay from PC to mobile. Save your game on one device and scan a QR code to continue instantly on another.
+- **Enhanced Dashboard UX** — Browsing now requires two presses to launch, allowing you to select a game and view its details/saves without starting the player.
+- **Improved Focus Management** — Full synchronization between keyboard, mouse, and gamepad focus states on the main dashboard.
+
+---
+
+## [2.22.16] — 2026-05-17
+
+### Feature: Background Stability & Atomic Syncing
+
+- **Atomic Metadata Imports** — Implemented database transactions for RetroBat (EmulationStation and LaunchBox) XML imports. Library updates are now "all-or-nothing," preventing database inconsistency if a sync is interrupted.
+- **Feature: Resume from Last Save** — You can now resume games directly from the dashboard. If a save state exists, a new "Resume" button appears in the game detail panel, automatically loading your latest progress.
+- **Feature: Save State Re-Syncing** — Save states are now permanently linked to the game file's unique hash. If you delete and re-upload the same game, the system will automatically find and re-link your previous save states.
+
+---
+
+## [2.22.12] — 2026-05-17
+
+### Feature: Enhanced Scraping & Routing
+
+- **Scraper Enhancement** — Improved TheGamesDB matching logic with fuzzy title fallbacks. Descriptions and release dates are now much more likely to populate for existing games.
+- **HA Ingress Routing Fix** — Resolved widespread "Not Found" errors by correctly resolving relative base paths for all API calls when running behind the Home Assistant proxy.
+- **Mobile Access Fix** — Added a persistent settings and library icon to the system selector bar, ensuring mobile and tablet users can access the settings panel even when the desktop header is hidden.
+
+---
+
+## [2.22.5] — 2026-05-17
+
+### Fix: BIOS Detection & Visual Polish
+
+- **BIOS Gate Fix** — Resolved "bootstrap.js blocked" error on systems requiring a BIOS (PS1, PS2, SegaCD, GBA, etc.) by correctly handling metadata object lookups.
+- **Visual Polish** — Hidden unwanted browser scrollbars for a cleaner "app-like" experience and removed redundant headers on mobile to reclaim screen real estate.
+- **Action Update** — Changed primary action button text to "Play Game" for a more standard user experience.
+
+---
+
+## [2.22.1] — 2026-05-17
+
+### Major: Official Rebranding to HomeArcade
+
+- **Official Rebranding** — Fully transitioned from PlayHub to **HomeArcade** across the codebase, UI, and manifests.
+- **UX Fix** — Corrected game collection management (fixed `handleToggleCollection` reference).
+- **System Stability** — Renamed internal theme components for long-term maintainability.
+
+---
+
 ## [2.22.0] — 2026-05-17
 
 ### Major: Console-Grade UX Navigation
