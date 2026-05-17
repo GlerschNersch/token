@@ -133,28 +133,41 @@ export default function PlayHubTheme() {
         </div>
       </div>
 
-      {/* Background Ambience */}
+      {/* Background Ambience & Fanart */}
       <AnimatePresence mode="wait">
         {activeGame && (
           <motion.div
             key={activeGame.id}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.2 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 0.8 }}
             className="absolute inset-0 z-0 pointer-events-none"
-            style={{
-              background: `radial-gradient(circle at 80% 20%, hsl(${activeGame.art[0]}), transparent 75%), 
-                           radial-gradient(circle at 20% 80%, hsl(${activeGame.art[1]}), transparent 75%)`
-            }}
-          />
+          >
+            {activeGame.artUrl ? (
+              <img 
+                src={activeGame.artUrl} 
+                className="w-full h-full object-cover opacity-30 blur-[12px] scale-110" 
+                alt="" 
+              />
+            ) : (
+              <div 
+                className="w-full h-full opacity-20"
+                style={{
+                  background: `radial-gradient(circle at 80% 20%, hsl(${activeGame.art[0]}), transparent 75%), 
+                               radial-gradient(circle at 20% 80%, hsl(${activeGame.art[1]}), transparent 75%)`
+                }}
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0b] via-transparent to-[#0a0a0b]/80" />
+          </motion.div>
         )}
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col min-h-0 relative z-10">
         
         {/* System Selector */}
-        <div className="flex gap-3 p-4 sm:p-8 overflow-x-auto scrollbar-none no-scrollbar h-20 sm:h-24 shrink-0 items-center border-b border-white/5 bg-black/10">
+        <div className="flex gap-3 p-4 sm:p-8 overflow-x-auto scrollbar-none no-scrollbar h-20 sm:h-24 shrink-0 items-center border-b border-white/5 bg-black/20 backdrop-blur-md">
            {systemsWithGames.map((group, i) => (
              <button
                key={group.system.id}
@@ -203,13 +216,13 @@ export default function PlayHubTheme() {
                         }
                       }}
                     >
-                      {game.artUrl ? (
-                        <img src={game.artUrl} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-neutral-900 flex items-center justify-center p-4 text-center">
-                          <span className="text-[10px] font-bold uppercase text-white/20">{game.title}</span>
-                        </div>
-                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/50">
+                        {game.artUrl ? (
+                          <img src={game.artUrl} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase text-white/20 px-4 text-center">{game.title}</span>
+                        )}
+                      </div>
                       
                       {/* Pulse effect for active item */}
                       {isActive && (
@@ -235,7 +248,7 @@ export default function PlayHubTheme() {
                  animate={{ x: 0, opacity: 1 }}
                  exit={{ x: "100%", opacity: 0 }}
                  transition={{ type: "spring", damping: 30, stiffness: 200 }}
-                 className={`fixed right-0 top-16 bottom-12 w-full sm:w-[400px] xl:w-[450px] 2xl:w-[500px] border-l border-white/10 bg-black/60 backdrop-blur-3xl z-30 flex flex-col p-6 sm:p-10 ${!showMobileDetails && "hidden 1280:flex"}`}
+                 className={`fixed right-0 top-16 bottom-12 w-full sm:w-[400px] xl:w-[450px] 2xl:w-[500px] border-l border-white/10 bg-black/60 backdrop-blur-3xl z-30 flex flex-col p-6 sm:p-10 ${!showMobileDetails && "hidden xl:flex"}`}
                >
                   {/* Close button for mobile */}
                   <Button 
