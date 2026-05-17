@@ -71,13 +71,15 @@ export function registerBiosRoutes(app: Express) {
 
       // Case-insensitive match — find the canonical filename from our allowed list
       const allAllowedFiles = Object.values(REQUIRED_BIOS).flat();
-      const canonicalFilename = allAllowedFiles.find(
-        (f) => f.toLowerCase() === rawFilename.toLowerCase()
+      const matchedMeta = allAllowedFiles.find(
+        (m) => m.filename.toLowerCase() === rawFilename.toLowerCase()
       );
 
-      if (!canonicalFilename) {
+      if (!matchedMeta) {
         return res.status(400).json({ message: `Filename '${rawFilename}' is not a recognized BIOS file.` });
       }
+
+      const canonicalFilename = matchedMeta.filename;
 
       const body = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
       if (body.length === 0) {
