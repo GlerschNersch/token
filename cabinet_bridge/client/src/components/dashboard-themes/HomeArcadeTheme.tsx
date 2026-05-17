@@ -31,7 +31,8 @@ import {
   ToggleRight,
   Trash2,
   Timer,
-  Info
+  Info,
+  LayoutGrid
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
