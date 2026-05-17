@@ -57,7 +57,6 @@ export function GameDetailDialog({
   const [wheelArtError, setWheelArtError] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [scrapingArt, setScrapingArt] = useState(false);
-  const [deepScanning, setDeepScanning] = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(false);
   useEffect(() => { setVideoPlaying(false); }, [game?.id]);
   const [selectedRomId, setSelectedRomId] = useState<number | null>(null);
@@ -200,25 +199,6 @@ export function GameDetailDialog({
     }
   }, [game, toast]);
 
-  const runDeepScan = useCallback(async () => {
-    if (!game?.romId) return;
-    setDeepScanning(true);
-    try {
-      const res = await apiRequest("POST", `/api/roms/${game.romId}/deep-scan`);
-      const data = await res.json();
-      if (data.success) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
-        toast({ title: "Identification successful", description: `Identified as "${data.match.name}" via Libretro CRC.` });
-      } else {
-        toast({ title: "Identification failed", description: data.message || "No CRC match found.", variant: "destructive" });
-      }
-    } catch (err) {
-      toast({ title: "Deep scan failed", description: String(err), variant: "destructive" });
-    } finally {
-      setDeepScanning(false);
-    }
-  }, [game, toast]);
-
   if (!game) return null;
   const system = SYSTEMS.find((s) => s.id === game.system);
   const endpoint = gameLaunchEndpoint(game);
@@ -348,19 +328,6 @@ export function GameDetailDialog({
                 >
                   {scrapingArt ? <Loader2 className="size-3 animate-spin" /> : <ImagePlus className="size-3" />}
                   {scrapingArt ? "Scraping…" : "Refresh art"}
-                </button>
-              )}
-              {game.romId && (
-                <button
-                  type="button"
-                  onClick={runDeepScan}
-                  disabled={deepScanning}
-                  className="flex items-center gap-1.5 rounded-md border border-white/20 bg-black/55 backdrop-blur-sm px-2 py-1.5 font-mono text-[9px] uppercase tracking-wider text-white/80 hover:bg-black/75 hover:text-white focus:outline-none"
-                  aria-label="CRC Deep Scan"
-                  title="Identify ROM using binary fingerprint"
-                >
-                  {deepScanning ? <Loader2 className="size-3 animate-spin" /> : <Database className="size-3" />}
-                  {deepScanning ? "Scanning…" : "Deep scan"}
                 </button>
               )}
             </div>

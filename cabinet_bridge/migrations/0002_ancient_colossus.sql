@@ -1,1 +1,0 @@
-ALTER TABLE `uploaded_roms` ADD `crc32` text;

@@ -2,9 +2,6 @@ import { Express } from "express";
 import { storage } from "../storage";
 import { LIBRETRO_PLAYLISTS, SYSTEM_IMAGE_FETCH_HEADERS } from "./shared";
 import { decodeHtml, normalizeSearchTitle, normalizeTitle, numberTokens, significantTokens } from "./utils";
-import { identifyRomByCrc } from "../libretro";
-import fs from "fs";
-import zlib from "zlib";
 
 // ── TheGamesDB ────────────────────────────────────────────────────────────────
 const TGDB_PLATFORM_IDS: Record<string, number> = {
@@ -261,53 +258,6 @@ export async function findLibretroBoxArt(system: string, title: string) {
 }
 
 export function registerScrapeRoutes(app: Express) {
-  // ── CRC Deep Scan ──────────────────────────────────────────────────────────
-  app.post("/api/roms/:id/deep-scan", async (req, res) => {
-    const id = Number(req.params.id);
-    const rom = await storage.getUploadedRom(id);
-    if (!rom) return res.status(404).json({ message: "ROM not found." });
-
-    try {
-      let crc32 = rom.crc32;
-      
-      // Calculate CRC32 if it doesn't exist in DB
-      if (!crc32) {
-        if (!fs.existsSync(rom.filePath)) {
-          return res.status(404).json({ message: "ROM file not found on disk." });
-        }
-        const buffer = fs.readFileSync(rom.filePath);
-        crc32 = zlib.crc32(buffer).toString(16).toUpperCase().padStart(8, '0');
-        await storage.updateUploadedRom(id, { crc32 });
-      }
-
-      const match = await identifyRomByCrc(rom.system, crc32);
-      if (!match) {
-        return res.json({ 
-          success: false, 
-          message: `No CRC match found in Libretro database for ${crc32}.` 
-        });
-      }
-
-      // Update with official title and description from Libretro
-      const updated = await storage.updateUploadedRom(id, { 
-        title: match.name,
-        description: match.description,
-        scrapeStatus: "not_scraped", // Force a re-scrape with the correct title
-        scrapeMessage: `Identified via Libretro CRC: ${crc32}`
-      });
-
-      res.json({ 
-        success: true, 
-        message: `Identified as "${match.name}"`, 
-        match,
-        updated
-      });
-    } catch (error) {
-      console.error("[DeepScan] Error:", error);
-      res.status(500).json({ message: "Deep scan failed." });
-    }
-  });
-
   app.post("/api/roms/:id/scrape-art", async (req, res) => {
     const id = Number(req.params.id);
     const rom = await storage.getUploadedRom(id);

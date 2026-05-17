@@ -20,7 +20,6 @@
 
 import fs from "fs";
 import path from "path";
-import zlib from "zlib";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lookup tables
@@ -150,7 +149,6 @@ type AddRomFn = (rom: {
   title: string; system: string; slug: string;
   originalName: string; fileName: string; filePath: string;
   size: number; mimeType: string; createdAt: number;
-  crc32?: string;
 }) => Promise<unknown>;
 
 type ListFilenamesFn = () => Promise<string[]>;
@@ -272,9 +270,6 @@ async function scanPath(
 
     try {
       const stat = fs.statSync(filePath);
-      const buffer = fs.readFileSync(filePath);
-      const crc32 = zlib.crc32(buffer).toString(16).toUpperCase().padStart(8, '0');
-
       await _addRom({
         title, system, slug,
         originalName: fileName,
@@ -283,7 +278,6 @@ async function scanPath(
         size: stat.size,
         mimeType: "application/octet-stream",
         createdAt: Date.now(),
-        crc32
       });
       // Mark as seen so duplicate filenames in other paths don't re-import.
       existingNames.add(fileName);
