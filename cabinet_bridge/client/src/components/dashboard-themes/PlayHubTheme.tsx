@@ -499,25 +499,25 @@ export default function PlayHubTheme() {
                      </div>
                   </div>
 
-                  {/* Internal Navigation Tabs */}
-                  <div className="flex gap-2 mb-8 shrink-0">
+                  {/* Internal Navigation Tabs - Optimized for Mobile */}
+                  <div className="flex gap-2 mb-8 shrink-0 overflow-x-auto scrollbar-none no-scrollbar pb-2">
                      {[
-                       { id: "info", label: "Mission", icon: Info },
-                       { id: "cheats", label: "Tactics", icon: Zap },
-                       { id: "saves", label: "Archives", icon: Save },
-                       { id: "meta", label: "Sector", icon: Database },
+                       { id: "info", label: "Overview", icon: Info },
+                       { id: "cheats", label: "Cheats", icon: Zap },
+                       { id: "saves", label: "Saves", icon: Save },
+                       { id: "meta", label: "Manage", icon: Database },
                      ].map(tab => (
                        <button
                          key={tab.id}
                          onClick={() => setActiveTab(tab.id as any)}
-                         className={`flex-1 flex flex-col items-center py-2 rounded-xl border transition-all ${
+                         className={`flex-1 min-w-[80px] flex flex-col items-center py-2.5 rounded-xl border transition-all ${
                            activeTab === tab.id 
                              ? "bg-white/10 border-white/20 text-white" 
                              : "bg-transparent border-transparent text-white/20 hover:text-white/40"
                          }`}
                        >
                           <tab.icon className="size-4 mb-1" />
-                          <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
+                          <span className="text-[9px] font-bold uppercase tracking-widest">{tab.label}</span>
                        </button>
                      ))}
                   </div>
@@ -537,18 +537,18 @@ export default function PlayHubTheme() {
                                 )}
                              </div>
                              <div className="space-y-3">
-                                <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Briefing</div>
-                                <p className="text-base text-white/60 leading-relaxed font-medium italic">{activeGame.description || "The definitive experience is ready. Software integrity confirmed. Initialize to begin."}</p>
+                                <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Game Description</div>
+                                <p className="text-base text-white/60 leading-relaxed font-medium">{activeGame.description || "No description available for this title."}</p>
                              </div>
                              
                              <div className="grid grid-cols-2 gap-4">
                                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
-                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Logged</div>
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Play Time</div>
                                    <div className="font-mono text-2xl font-black text-white/90 tabular-nums">{fmtHoursShort(activeGame.minutesPlayed ?? 0)}</div>
                                 </div>
                                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
                                    <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Status</div>
-                                   <div className="font-mono text-xs font-black uppercase tracking-[0.2em] text-primary">{activeGame.playStatus || 'Active'}</div>
+                                   <div className="font-mono text-xs font-black uppercase tracking-[0.2em] text-primary">{activeGame.playStatus || 'Unplayed'}</div>
                                 </div>
                              </div>
 
@@ -556,7 +556,7 @@ export default function PlayHubTheme() {
                                 <div className="p-6 rounded-3xl bg-primary/5 border border-primary/20 space-y-4">
                                    <div className="flex items-center justify-between">
                                       <div className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold flex items-center gap-2">
-                                         <Trophy className="size-3" /> Service Record
+                                         <Trophy className="size-3" /> RetroAchievements
                                       </div>
                                       <div className="text-[10px] font-mono font-black text-white/80">{raProgress.NumAwarded} / {raProgress.NumAchievements}</div>
                                    </div>
@@ -571,15 +571,15 @@ export default function PlayHubTheme() {
                         {activeTab === "cheats" && (
                           <motion.div key="cheats" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                              <div className="flex items-center justify-between">
-                                <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Tactical Database</div>
-                                <button onClick={fetchCheatsFromDb} disabled={fetchingCheats} className="text-primary hover:text-white transition-colors disabled:opacity-40">
+                                <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Cheat Codes</div>
+                                <button onClick={fetchCheatsFromDb} disabled={fetchingCheats} className="text-primary hover:text-white transition-colors disabled:opacity-40" title="Fetch from Libretro">
                                    {fetchingCheats ? <Loader2 className="size-4 animate-spin" /> : <Database className="size-4" />}
                                 </button>
                              </div>
                              
                              {fetchedCheats && (
                                 <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
-                                   <div className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold">New Transmissions Available</div>
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold">Cloud Codes Found</div>
                                    <div className="max-h-48 overflow-y-auto space-y-2 pr-2 scrollbar-none">
                                       {fetchedCheats.map((c, i) => (
                                          <button 
@@ -594,7 +594,7 @@ export default function PlayHubTheme() {
                                          </button>
                                       ))}
                                    </div>
-                                   <Button onClick={importSelectedCheats} className="w-full h-12 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest">Load Sequences</Button>
+                                   <Button onClick={importSelectedCheats} className="w-full h-12 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest">Import Selected</Button>
                                 </div>
                              )}
 
@@ -605,7 +605,7 @@ export default function PlayHubTheme() {
                                 {cheats.length === 0 && !fetchingCheats && !fetchedCheats && (
                                    <div className="py-12 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
                                       <Zap className="size-8 mx-auto mb-3" />
-                                      <span className="text-[10px] font-mono uppercase tracking-widest">No Tactical Overrides</span>
+                                      <span className="text-[10px] font-mono uppercase tracking-widest">No cheats added</span>
                                    </div>
                                 )}
                              </div>
@@ -614,7 +614,7 @@ export default function PlayHubTheme() {
 
                         {activeTab === "saves" && (
                           <motion.div key="saves" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                             <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Archive Segments</div>
+                             <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Save States</div>
                              <div className="grid grid-cols-3 gap-3">
                                 {saveSlots.map(s => (
                                    <SaveSlotCard key={s.slot} slot={s} romId={activeGame.romId!} onDelete={() => deleteSlot(s.slot)} />
@@ -622,7 +622,7 @@ export default function PlayHubTheme() {
                                 {saveSlots.length === 0 && (
                                    <div className="col-span-3 py-12 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
                                       <Save className="size-8 mx-auto mb-3" />
-                                      <span className="text-[10px] font-mono uppercase tracking-widest">No Logged Snapshots</span>
+                                      <span className="text-[10px] font-mono uppercase tracking-widest">No save states</span>
                                    </div>
                                 )}
                              </div>
@@ -631,16 +631,16 @@ export default function PlayHubTheme() {
 
                         {activeTab === "meta" && (
                           <motion.div key="meta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
-                             <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Sector Configuration</div>
+                             <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Management</div>
                              
                              <div className="space-y-4">
                                 <Button onClick={refreshArt} disabled={scrapingArt} variant="outline" className="w-full h-14 rounded-2xl border-white/5 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white uppercase tracking-widest text-[10px] font-black gap-3">
                                    {scrapingArt ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
-                                   Synchronize Visual Assets
+                                   Refresh Cover Art
                                 </Button>
                                 
                                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
-                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Game Collections</div>
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Collections</div>
                                    <div className="flex flex-wrap gap-2">
                                       {collections.map(c => {
                                          const isMember = c.romIds.includes(activeGame.romId!);
