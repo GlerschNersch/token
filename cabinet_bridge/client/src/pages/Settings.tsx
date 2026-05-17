@@ -260,8 +260,6 @@ function DisplaySettings() {
                 <SelectContent>
                   <SelectItem value="nostalgia">Nostalgia Grid (Shelves)</SelectItem>
                   <SelectItem value="playhub">PlayHub (Clean Dashboard)</SelectItem>
-                  <SelectItem value="gameos">gameOS (Cinematic Hero)</SelectItem>
-                  <SelectItem value="slate">Slate (Desktop Edition)</SelectItem>
                   <SelectItem value="colorful">Colorful (High Vibrancy)</SelectItem>
                   <SelectItem value="alekfull-nx">Alekfull NX (Switch Style)</SelectItem>
                   <SelectItem value="art-book">Art Book Next (Magazine)</SelectItem>

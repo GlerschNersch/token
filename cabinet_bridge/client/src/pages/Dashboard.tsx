@@ -4,8 +4,6 @@ import { useIntegration } from "@/lib/integration";
 // Lazy load themes to keep the initial bundle small
 const NostalgiaTheme = lazy(() => import("@/components/dashboard-themes/NostalgiaTheme"));
 const PlayHubTheme = lazy(() => import("@/components/dashboard-themes/PlayHubTheme"));
-const GameOSTheme = lazy(() => import("@/components/dashboard-themes/GameOSTheme"));
-const SlateTheme = lazy(() => import("@/components/dashboard-themes/SlateTheme"));
 const ColorfulTheme = lazy(() => import("@/components/dashboard-themes/ColorfulTheme"));
 const AlekfullNXTheme = lazy(() => import("@/components/dashboard-themes/AlekfullNXTheme"));
 const ArtBookNextTheme = lazy(() => import("@/components/dashboard-themes/ArtBookNextTheme"));
@@ -25,12 +23,10 @@ export default function Dashboard() {
   return (
     <Suspense fallback={<ThemeFallback />}>
       {theme === "playhub" && <PlayHubTheme />}
-      {theme === "gameos" && <GameOSTheme />}
-      {theme === "slate" && <SlateTheme />}
       {theme === "colorful" && <ColorfulTheme />}
       {theme === "alekfull-nx" && <AlekfullNXTheme />}
       {theme === "art-book" && <ArtBookNextTheme />}
-      {(theme === "nostalgia" || !["playhub", "gameos", "slate", "colorful", "alekfull-nx", "art-book"].includes(theme)) && <NostalgiaTheme />}
+      {(theme === "nostalgia" || !["playhub", "colorful", "alekfull-nx", "art-book"].includes(theme)) && <NostalgiaTheme />}
     </Suspense>
   );
 }
