@@ -478,6 +478,16 @@
   .md-label-small { font-size: var(--md-type-label-small-size); line-height: var(--md-type-label-small-line); letter-spacing: var(--md-type-label-small-track); font-weight: var(--md-type-label-small-weight); }
   .hide-on-touch { @media (hover: none) { display: none !important; } }
 
+  .no-scrollbar::-webkit-scrollbar,
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar,
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .hover-tilt-scale {
     @apply transition-all duration-300 ease-out;
   }

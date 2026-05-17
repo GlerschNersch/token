@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.22.1** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.22.3** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -67,6 +67,13 @@ Systems are listed in release-date order.
 ---
 
 ## Changelog
+
+### v2.22.3
+- **Visual Polish** — Hidden unwanted browser scrollbars for a cleaner "app-like" experience.
+
+### v2.22.2
+- **UI Refinement** — Removed the bottom bar and controller hints for a cleaner interface.
+- **Action Update** — Changed primary action button text to "Play Game".
 
 ### v2.22.1
 - **Official Rebranding** — Fully transitioned from PlayHub to **HomeArcade**.
