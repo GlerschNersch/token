@@ -401,34 +401,38 @@ export default function HomeArcadeTheme() {
       <div className="flex-1 flex flex-col min-h-0 relative z-10">
         
         {/* System Selector (Horizontal Tabs) */}
-        <div className="flex gap-3 p-8 overflow-x-auto scrollbar-none no-scrollbar h-24 shrink-0 items-center border-b border-white/5 bg-black/10 pr-20 relative">
-           {systemsWithGames.map((group, i) => (
-             <button
-               key={group.system.id}
-               onClick={() => { setActiveSystemIdx(i); setActiveGameIdx(0); }}
-               className={`px-6 py-2 rounded-full font-display text-[10px] font-black uppercase tracking-[0.25em] transition-all whitespace-nowrap ${
-                 i === activeSystemIdx 
-                   ? "bg-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.4)] scale-105" 
-                   : "bg-white/5 text-white/30 hover:bg-white/10"
-               }`}
-             >
-               {group.system.name}
-             </button>
-           ))}
+        <div className="relative h-24 shrink-0 border-b border-white/5 bg-black/10">
+           <div className="flex gap-3 p-8 overflow-x-auto scrollbar-none no-scrollbar items-center h-full pr-28">
+              {systemsWithGames.map((group, i) => (
+                <button
+                  key={group.system.id}
+                  onClick={() => { setActiveSystemIdx(i); setActiveGameIdx(0); }}
+                  className={`px-6 py-2 rounded-full font-display text-[10px] font-black uppercase tracking-[0.25em] transition-all whitespace-nowrap ${
+                    i === activeSystemIdx 
+                      ? "bg-primary text-white shadow-[0_0_20px_rgba(var(--primary),0.4)] scale-105" 
+                      : "bg-white/5 text-white/30 hover:bg-white/10"
+                  }`}
+                >
+                  {group.system.name}
+                </button>
+              ))}
+           </div>
 
-           {/* Mobile Settings Access */}
-           <div className="xl:hidden absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-              <div className="h-8 w-px bg-white/5 mx-2" />
-              <Link href="/library/all">
-                <Button variant="ghost" size="icon" className="text-white/20 hover:text-white">
-                  <LayoutGrid className="size-5" />
-                </Button>
-              </Link>
-              <Link href="/settings">
-                <Button variant="ghost" size="icon" className="text-white/20 hover:text-white">
-                  <SettingsIcon className="size-5" />
-                </Button>
-              </Link>
+           {/* Mobile Quick Actions (Pinned to right) */}
+           <div className="xl:hidden absolute right-0 top-0 bottom-0 flex items-center px-4 bg-gradient-to-l from-[#0c0c0c] via-[#0c0c0c]/80 to-transparent z-20">
+              <div className="h-8 w-px bg-white/10 mr-2" />
+              <div className="flex items-center gap-0.5">
+                <Link href="/library/all">
+                  <Button variant="ghost" size="icon" className="text-white/70 hover:text-white">
+                    <LayoutGrid className="size-5" />
+                  </Button>
+                </Link>
+                <Link href="/settings">
+                  <Button variant="ghost" size="icon" className="text-white/70 hover:text-white">
+                    <SettingsIcon className="size-5" />
+                  </Button>
+                </Link>
+              </div>
            </div>
         </div>
 
