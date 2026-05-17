@@ -1055,6 +1055,7 @@ export function renderEmulatorPage({ title, returnTo, romHash }: { title: string
         <button type="button" id="cabinet-display-open" data-testid="button-display-settings">Display</button>
         <button type="button" id="cabinet-remap-open" data-testid="button-remap-controls">Remap Keys</button>
         <button type="button" id="cabinet-gamepad-test-open" data-testid="button-gamepad-tester">Test Pad</button>
+        <button type="button" id="cabinet-warp-open" data-testid="button-warp-handoff">Warp Link</button>
         <button type="button" id="cabinet-netplay-open" data-testid="button-netplay">Netplay</button>
         <button type="button" id="cabinet-sleep-open" data-testid="button-sleep-timer">Sleep Timer</button>
         <button type="button" id="cabinet-crt-toggle" aria-pressed="false" data-testid="button-crt-filter">CRT Filter</button>
@@ -1226,6 +1227,23 @@ export function renderEmulatorPage({ title, returnTo, romHash }: { title: string
           </div>
         </div>
         <div id="cabinet-netplay-status" style="font:600 11px ui-monospace,monospace;color:rgba(248,250,252,0.4);min-height:16px;" data-testid="text-netplay-status"></div>
+      </div>
+    </section>
+    <section class="cabinet-save-panel" id="cabinet-warp-panel" aria-label="Warp link" aria-hidden="true" data-testid="panel-warp">
+      <div class="cabinet-save-panel__header">
+        <div>
+          <p class="cabinet-save-title">Warp to Mobile</p>
+          <p class="cabinet-save-subtitle">Scan to continue playing on your phone</p>
+        </div>
+        <button type="button" class="cabinet-save-close" id="cabinet-warp-close" aria-label="Close warp" data-testid="button-close-warp">×</button>
+      </div>
+      <div style="padding:24px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;">
+        <div id="cabinet-warp-qr" style="padding:16px;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+          <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;">Warping...</div>
+        </div>
+        <div style="max-width:280px;color:rgba(248,250,252,0.6);font:600 11px ui-monospace,monospace;letter-spacing:0.05em;line-height:1.5;">
+          Your current game state will be saved and synced automatically to a dedicated handoff slot.
+        </div>
       </div>
     </section>
     <div class="cabinet-toast" id="cabinet-toast" role="status" aria-live="polite"></div>
@@ -1996,14 +2014,71 @@ function cabinetSetupSystemMenu() {
     cabinetSetMenuOpen(false);
     cabinetSetSaveManagerOpen(false);
     cabinetSetControlsPanel(false);
+    cabinetSetPanelOpen("cabinet-warp-panel", false);
   });
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") {
       cabinetSetMenuOpen(false);
       cabinetSetSaveManagerOpen(false);
       cabinetSetControlsPanel(false);
+      cabinetSetPanelOpen("cabinet-warp-panel", false);
     }
   });
+}
+function cabinetSetupWarp() {
+  var openBtn = document.querySelector("#cabinet-warp-open");
+  var closeBtn = document.querySelector("#cabinet-warp-close");
+  var panel = document.querySelector("#cabinet-warp-panel");
+  var qrContainer = document.querySelector("#cabinet-warp-qr");
+  
+  if (!openBtn || !panel) return;
+
+  openBtn.addEventListener("click", async function () {
+    cabinetSetMenuOpen(false);
+    cabinetSetPanelOpen("cabinet-warp-panel", true);
+    
+    if (qrContainer) qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;">Warping...</div>';
+
+    // 1. Trigger quick save to slot 99 (Handoff slot)
+    var slot = 99;
+    cabinetSetEmulatorSaveSlot(slot);
+    var emulator = window.EJS_emulator;
+    var saved = false;
+    if (emulator && emulator.gameManager && typeof emulator.gameManager.quickSave === "function") {
+      try {
+        saved = !!emulator.gameManager.quickSave(String(slot));
+      } catch (_error) {
+        saved = false;
+      }
+    }
+    if (!saved) {
+      cabinetSendInput(24, "1"); // Hotkey fallback
+    }
+
+    // Wait for save to complete and upload
+    setTimeout(async function() {
+      await cabinetCaptureThumb(slot);
+      await cabinetBackupSlot(slot);
+      await cabinetRecordSaveSlot(slot);
+
+      // 2. Generate Warp URL
+      var currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set("loadSlot", String(slot));
+      currentUrl.searchParams.set("warp", "true");
+      var warpUrl = currentUrl.toString();
+
+      // 3. Show QR Code using public API
+      if (qrContainer) {
+        var qrSize = 200;
+        var qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=" + qrSize + "x" + qrSize + "&data=" + encodeURIComponent(warpUrl);
+        qrContainer.innerHTML = '<img src="' + qrApi + '" width="' + qrSize + '" height="' + qrSize + '" style="display:block;border-radius:4px;" alt="Warp QR Code" />';
+      }
+      
+      cabinetToast("Warp point synchronized \\u2728");
+    }, 1000);
+  });
+
+  if (closeBtn) closeBtn.addEventListener("click", function() { cabinetSetPanelOpen("cabinet-warp-panel", false); });
 }
 document.addEventListener("click", function (event) {
   var target = event.target;
@@ -2098,7 +2173,7 @@ document.addEventListener("click", function (event) {
     var _crtOn = _game && _game.classList.contains("cabinet-filter-crt");
     cabinetApplyFilter(_crtOn ? "none" : "crt");
     var _crtBtn = document.querySelector("#cabinet-crt-toggle");
-    if (_crtBtn) { _crtBtn.setAttribute("aria-pressed", _crtOn ? "false" : "true"); _crtBtn.textContent = _crtOn ? "CRT Filter" : "CRT On"; }
+    if (_crtBtn) { _crtBtn.setAttribute("aria-pressed", _on ? "false" : "true"); _crtBtn.textContent = _on ? "CRT Filter" : "CRT On"; }
   }
   if (target.id === "cabinet-display-open") { cabinetSetDisplayPanel(true); }
   if (target.id === "cabinet-display-close") { cabinetSetDisplayPanel(false); }
@@ -2623,7 +2698,62 @@ function cabinetSetupNetplay() {
     });
   });
 }
-cabinetSetupSystemMenu(); cabinetSetupVirtualPad(); cabinetSetupGamepadPanel(); cabinetSetupRemapProfiles(); cabinetSetupNetplay(); cabinetFetchSaveSlots(); cabinetFetchServerBackups();
+function cabinetSetupWarp() {
+  var openBtn = document.querySelector("#cabinet-warp-open");
+  var closeBtn = document.querySelector("#cabinet-warp-close");
+  var panel = document.querySelector("#cabinet-warp-panel");
+  var qrContainer = document.querySelector("#cabinet-warp-qr");
+  
+  if (!openBtn || !panel) return;
+
+  openBtn.addEventListener("click", async function () {
+    cabinetSetMenuOpen(false);
+    cabinetSetPanelOpen("cabinet-warp-panel", true);
+    
+    if (qrContainer) qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;">Warping...</div>';
+
+    // 1. Trigger quick save to slot 99 (Handoff slot)
+    var slot = 99;
+    cabinetSetEmulatorSaveSlot(slot);
+    var emulator = window.EJS_emulator;
+    var saved = false;
+    if (emulator && emulator.gameManager && typeof emulator.gameManager.quickSave === "function") {
+      try {
+        saved = !!emulator.gameManager.quickSave(String(slot));
+      } catch (_error) {
+        saved = false;
+      }
+    }
+    if (!saved) {
+      cabinetSendInput(24, "1"); // Hotkey fallback
+    }
+
+    // Wait for save to complete and upload
+    setTimeout(async function() {
+      await cabinetCaptureThumb(slot);
+      await cabinetBackupSlot(slot);
+      await cabinetRecordSaveSlot(slot);
+
+      // 2. Generate Warp URL
+      var currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set("loadSlot", String(slot));
+      currentUrl.searchParams.set("warp", "true");
+      var warpUrl = currentUrl.toString();
+
+      // 3. Show QR Code using public API
+      if (qrContainer) {
+        var qrSize = 200;
+        var qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=" + qrSize + "x" + qrSize + "&data=" + encodeURIComponent(warpUrl);
+        qrContainer.innerHTML = '<img src="' + qrApi + '" width="' + qrSize + '" height="' + qrSize + '" style="display:block;border-radius:4px;" alt="Warp QR Code" />';
+      }
+      
+      cabinetToast("Warp point synchronized \u2728");
+    }, 1000);
+  });
+
+  if (closeBtn) closeBtn.addEventListener("click", function() { cabinetSetPanelOpen("cabinet-warp-panel", false); });
+}
+cabinetSetupSystemMenu(); cabinetSetupVirtualPad(); cabinetSetupGamepadPanel(); cabinetSetupRemapProfiles(); cabinetSetupNetplay(); cabinetSetupWarp(); cabinetFetchSaveSlots(); cabinetFetchServerBackups();
 (function () {
   var RETROPAD_TO_PHYSICAL = ${JSON.stringify(gamepadBindings)};
   var DEFAULT_MAP = { 0: 0, 1: 2, 2: 8, 3: 9, 4: 12, 5: 13, 6: 14, 7: 15, 8: 1, 9: 3, 10: 4, 11: 5, 12: 6, 13: 7, 14: 10, 15: 11, };

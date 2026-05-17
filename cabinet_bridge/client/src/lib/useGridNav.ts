@@ -40,13 +40,18 @@ export function useGridNav({
   const disabledRef = useRef(disabled);
   const mappingRef = useRef(mapping);
   const onFocusChangeRef = useRef(onFocusChange);
+  const onActivateRef = useRef(onActivate);
+  const onFavRef = useRef(onFav);
   const onExitRef = useRef(onExit);
+  
   focusedRef.current = focusedIndex;
   onExitRef.current = onExit;
   countRef.current = count;
   disabledRef.current = disabled;
   mappingRef.current = mapping;
   onFocusChangeRef.current = onFocusChange;
+  onActivateRef.current = onActivate;
+  onFavRef.current = onFav;
 
   // Reset focus when games list changes length (new filter, search, etc.)
   useEffect(() => {
@@ -138,18 +143,18 @@ export function useGridNav({
         case "ArrowDown":  e.preventDefault(); move("down");  break;
         case "ArrowUp":    e.preventDefault(); move("up");    break;
         case "Enter":
-          if (focusedRef.current >= 0) { e.preventDefault(); onActivate(focusedRef.current); }
+          if (focusedRef.current >= 0) { e.preventDefault(); onActivateRef.current?.(focusedRef.current); }
           break;
         case "f":
         case "F":
-          if (focusedRef.current >= 0) { e.preventDefault(); onFav(focusedRef.current); }
+          if (focusedRef.current >= 0) { e.preventDefault(); onFavRef.current?.(focusedRef.current); }
           break;
       }
     };
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [disabled, move, onActivate, onFav]);
+  }, [disabled, move]);
 
   // ── Gamepad polling ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -195,19 +200,19 @@ export function useGridNav({
       // Select button → open
       const selectIdx = m.select ?? 0;
       const curSelect = gp.buttons[selectIdx]?.pressed ?? false;
-      if (curSelect && !prevSelect && focusedRef.current >= 0) onActivate(focusedRef.current);
+      if (curSelect && !prevSelect && focusedRef.current >= 0) onActivateRef.current?.(focusedRef.current);
       prevSelect = curSelect;
 
       // Favorite button → favourite
       const favIdx = m.favorite ?? 3;
       const curFav = gp.buttons[favIdx]?.pressed ?? false;
-      if (curFav && !prevFav && focusedRef.current >= 0) onFav(focusedRef.current);
+      if (curFav && !prevFav && focusedRef.current >= 0) onFavRef.current?.(focusedRef.current);
       prevFav = curFav;
     };
 
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [move, onActivate, onFav]);
+  }, [move]);
 
   return { focusedIndex, setFocusedIndex };
 }

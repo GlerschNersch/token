@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.22.17** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.23.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -68,17 +68,21 @@ Systems are listed in release-date order.
 
 ## Changelog
 
+### v2.23.0
+- **Feature: Warp Link Handoff:** Seamlessly transition gameplay from PC to mobile. Save your game on one device and scan a QR code to continue instantly on another.
+- **Enhanced Dashboard UX:** Browsing now requires two presses to launch, allowing you to select a game and view its details/saves without starting the player.
+- **Improved Focus Management:** Full synchronization between keyboard, mouse, and gamepad focus states on the main dashboard.
+
 ### v2.22.17
-- **Fix:** Resolved a `ReferenceError: useRef is not defined` that caused the dashboard to crash after the navigation update.
+- **Fix:** Resolved a `ReferenceError: useRef is not defined` that caused the dashboard to crash.
 
 ### v2.22.16
-- **Atomic Metadata Imports:** Implemented database transactions for RetroBat (EmulationStation and LaunchBox) XML imports. This ensures that library updates are "all-or-nothing," preventing database inconsistency if a connection is lost during a large sync.
-- **Improved Import Stability:** Added robust error handling and logging for XML parsing and database commit failures.
+- **Atomic Metadata Imports:** Implemented database transactions for RetroBat XML imports to prevent library corruption.
 
 ### v2.22.15
-- **Console-Grade Dashboard:** Enabled full physical gamepad navigation for the main dashboard. You can now browse covers with the D-pad/Left Stick and launch games with the 'A' button.
-- **Micro-UX Touch Controls:** Optimized the on-screen touchpad for mobile devices. Using a higher-quality "modern" layout with haptic feedback (vibration) and improved button sizing.
-- **Overscan Safety:** Added CSS safe-area handling to the emulator player to prevent UI elements from being cut off on high-end mobile displays and TVs.
+- **Console-Grade Dashboard:** Enabled full physical gamepad navigation for the main dashboard.
+- **Micro-UX Touch Controls:** Optimized the on-screen touchpad for mobile devices with haptic feedback.
+- **Overscan Safety:** Added CSS safe-area handling to the emulator player.
 
 ### v2.22.14
 - **Feature: Save State Re-Syncing:** Save states are now permanently linked to the game file's unique hash. If you delete and re-upload the same game, the system will automatically find and re-link your previous save states.

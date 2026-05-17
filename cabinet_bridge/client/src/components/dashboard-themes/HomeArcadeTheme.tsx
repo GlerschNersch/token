@@ -195,12 +195,15 @@ export default function HomeArcadeTheme() {
     gridRef,
     disabled: !!dialogGame || (window.innerWidth < 1280 && showMobileDetails),
     onActivate: (idx) => {
-      setActiveGameIdx(idx);
-      if (window.innerWidth < 1280) setShowMobileDetails(true);
-      else {
+      if (activeGameIdx === idx) {
+        // Already active -> Launch
         const game = currentSystem.games[idx];
         const returnTo = encodeURIComponent(window.location.href);
         window.location.href = apiUrl(`/api/roms/${game.romId}/player?return=${returnTo}`);
+      } else {
+        // Not active -> Select
+        setActiveGameIdx(idx);
+        if (window.innerWidth < 1280) setShowMobileDetails(true);
       }
     },
     onFav: (idx) => {
