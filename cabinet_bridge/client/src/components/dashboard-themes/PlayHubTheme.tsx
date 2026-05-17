@@ -30,7 +30,8 @@ import {
   ToggleLeft,
   ToggleRight,
   Trash2,
-  Timer
+  Timer,
+  Info
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
