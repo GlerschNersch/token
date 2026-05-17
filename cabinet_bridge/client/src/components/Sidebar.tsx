@@ -45,7 +45,7 @@ import {
 // Re-export Filter type for consumers that used to import it from here
 export type { Filter } from "@/lib/filter";
 
-export function Sidebar() {
+export function Sidebar({ onReturnToGrid }: { onReturnToGrid?: () => void }) {
   const [location] = useLocation();
   const { t } = useTranslation();
 
@@ -104,8 +104,26 @@ export function Sidebar() {
     staleTime: 5000,
   });
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight" || e.key === "Enter") {
+      // If we are on a menu button, we might want to go back to the grid
+      const isMenuButton = (e.target as HTMLElement).closest('[data-sidebar="menu-button"]');
+      if (isMenuButton && onReturnToGrid) {
+        // Only return to grid on ArrowRight, Enter should still navigate
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          onReturnToGrid();
+        }
+      }
+    }
+  };
+
   return (
-    <ShadcnSidebar collapsible="icon" className="border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md">
+    <ShadcnSidebar 
+      collapsible="icon" 
+      className="border-r border-sidebar-border bg-sidebar/80 backdrop-blur-md"
+      onKeyDown={handleKeyDown}
+    >
       <SidebarHeader className="h-16 flex items-center justify-between px-4">
         {state === "expanded" && (
           <Link href="/" className="flex-1 outline-none">

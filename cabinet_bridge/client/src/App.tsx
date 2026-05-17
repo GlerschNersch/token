@@ -158,6 +158,8 @@ function App() {
     }
   }, []);
 
+  const [sidebarFocused, setSidebarFocused] = React.useState(false);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -171,7 +173,12 @@ function App() {
               <Toaster />
               <Router hook={useHashLocation}>
                 <div className="h-dvh min-h-dvh flex w-full overflow-hidden">
-                  <Sidebar />
+                  <Sidebar onReturnToGrid={() => {
+                    const grid = document.querySelector('[data-testid="grid-games"]') as HTMLElement;
+                    grid?.focus();
+                    // We need a way to tell the Home page to re-enable grid navigation
+                    window.dispatchEvent(new CustomEvent("homearcade:focus-grid"));
+                  }} />
                   <SidebarInset className="flex flex-col min-h-0 overflow-hidden">
                     <PageTransition>
                       <AppRouter />

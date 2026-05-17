@@ -19,6 +19,7 @@ export function useGridNav({
   onActivate,
   onFav,
   onFocusChange,
+  onExit,
   disabled = false,
   mapping = { select: 0, favorite: 3 },
 }: {
@@ -27,6 +28,7 @@ export function useGridNav({
   onActivate: (index: number) => void;
   onFav: (index: number) => void;
   onFocusChange?: (index: number) => void;
+  onExit?: (dir: "left" | "right" | "up" | "down") => void;
   disabled?: boolean;
   mapping?: { select?: number; favorite?: number };
 }) {
@@ -38,7 +40,9 @@ export function useGridNav({
   const disabledRef = useRef(disabled);
   const mappingRef = useRef(mapping);
   const onFocusChangeRef = useRef(onFocusChange);
+  const onExitRef = useRef(onExit);
   focusedRef.current = focusedIndex;
+  onExitRef.current = onExit;
   countRef.current = count;
   disabledRef.current = disabled;
   mappingRef.current = mapping;
@@ -81,10 +85,34 @@ export function useGridNav({
         next = dir === "up" || dir === "left" ? countRef.current - 1 : 0;
       } else {
         switch (dir) {
-          case "right": next = Math.min(countRef.current - 1, cur + 1); break;
-          case "left":  next = Math.max(0, cur - 1); break;
-          case "down":  next = Math.min(countRef.current - 1, cur + cols); break;
-          case "up":    next = Math.max(0, cur - cols); break;
+          case "right": 
+            if (cur + 1 >= countRef.current) {
+              onExitRef.current?.("right");
+              return;
+            }
+            next = cur + 1; 
+            break;
+          case "left":  
+            if (cur % cols === 0) {
+              onExitRef.current?.("left");
+              return;
+            }
+            next = Math.max(0, cur - 1); 
+            break;
+          case "down":  
+            if (cur + cols >= countRef.current) {
+              onExitRef.current?.("down");
+              return;
+            }
+            next = cur + cols; 
+            break;
+          case "up":    
+            if (cur - cols < 0) {
+              onExitRef.current?.("up");
+              return;
+            }
+            next = cur - cols; 
+            break;
         }
       }
 

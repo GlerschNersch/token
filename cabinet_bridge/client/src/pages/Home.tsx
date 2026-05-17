@@ -60,6 +60,13 @@ export default function Home({ filter }: { filter: Filter }) {
   const [ratingOverrides, setRatingOverrides] = useState<Record<string, number>>({});
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [gridDisabled, setGridDisabled] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setGridDisabled(false);
+    window.addEventListener("homearcade:focus-grid", handler);
+    return () => window.removeEventListener("homearcade:focus-grid", handler);
+  }, []);
 
   const persistSort = (s: Sort) => { setSort(s); try { localStorage.setItem("ha-sort", s); } catch {} };
   const persistGenre = (g: string) => { setGenreFilter(g); try { localStorage.setItem("ha-genre", g); } catch {} };
@@ -779,8 +786,16 @@ export default function Home({ filter }: { filter: Filter }) {
             games={filtered}
             onOpen={setOpenGame}
             onToggleFav={toggleFav}
-            disabled={openGame !== null}
+            disabled={openGame !== null || gridDisabled}
             mapping={config.uiGamepadMapping}
+            onExit={(dir) => {
+              if (dir === "left") {
+                setGridDisabled(true);
+                // Focus the sidebar trigger or first sidebar item
+                const sidebarItem = document.querySelector('[data-sidebar="menu-button"]') as HTMLElement;
+                sidebarItem?.focus();
+              }
+            }}
           />
         ) : (
           <ListView
@@ -842,12 +857,14 @@ const Grid = memo(function Grid({
   onToggleFav,
   disabled,
   mapping,
+  onExit,
 }: {
   games: Game[];
   onOpen: (g: Game) => void;
   onToggleFav: (g: Game) => void;
   disabled?: boolean;
   mapping?: { select?: number; favorite?: number };
+  onExit?: (dir: "left" | "right" | "up" | "down") => void;
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const { focusedIndex } = useGridNav({
@@ -856,6 +873,7 @@ const Grid = memo(function Grid({
     disabled,
     onActivate: (i) => { if (games[i]) onOpen(games[i]); },
     onFav: (i) => { if (games[i]) onToggleFav(games[i]); },
+    onExit,
     mapping,
   });
 

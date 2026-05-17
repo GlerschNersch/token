@@ -139,9 +139,9 @@ export const GameCard = memo(function GameCard({
         "group relative rounded-xl overflow-hidden bg-card min-h-[140px]",
         "md3-state md3-state-on-surface",
         "focus:outline-none [touch-action:manipulation]",
-        "transition-[box-shadow,transform] duration-150 hover-tilt-scale",
+        "transition-[box-shadow,transform] duration-200",
         focused
-          ? "ring-2 ring-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_18px_hsl(var(--primary)/0.35)] scale-[1.02]"
+          ? "ring-4 ring-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.5),0_0_30px_hsl(var(--primary)/0.5)] scale-[1.05] z-10"
           : [
               "shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_2px_6px_1px_hsl(0_0%_0%/0.15)]",
               "hover:shadow-[0_1px_2px_hsl(0_0%_0%/0.3),0_4px_12px_2px_hsl(0_0%_0%/0.25)]",

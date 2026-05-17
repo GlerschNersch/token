@@ -4,6 +4,17 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.22.0] — 2026-05-17
+
+### Major: Console-Grade UX Navigation
+
+- **Bidirectional Sidebar Navigation** — Seamlessly jump between the Sidebar and Game Grid using a controller or keyboard. Pressing **ArrowLeft** on the first column of the grid now shifts focus to the Sidebar, and pressing **ArrowRight** from the Sidebar returns focus instantly to the grid.
+- **Enhanced Visual Selection** — Focused game cards now feature a more aggressive **1.05x scale effect** and a **high-intensity primary glow**, making the active selection significantly more visible from a distance (perfect for couch gaming).
+- **Premium Interaction Timing** — Tuned all navigation transitions to a cinematic **200ms duration** for a smoother, more "snappy" feel that mimics high-end gaming consoles.
+- **Intelligent Focus Handshake** — Implemented a custom event-driven focus system that ensures the UI always remembers your last position when switching between navigation zones.
+
+---
+
 ## [1.4.1] — 2026-05-15
 
 ### Fix: PS2 Upload & Diagnostic Safety
