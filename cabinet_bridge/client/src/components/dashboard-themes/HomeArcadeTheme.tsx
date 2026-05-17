@@ -349,33 +349,6 @@ export default function HomeArcadeTheme() {
   // ── Info Panel Sections ──────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<"info" | "cheats" | "saves" | "meta">("info");
 
-  // Navigation Logic
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (dialogGame) return;
-
-      if (e.key === "ArrowRight") {
-        setActiveGameIdx(i => Math.min(i + 1, (currentSystem?.games.length || 1) - 1));
-      } else if (e.key === "ArrowLeft") {
-        setActiveGameIdx(i => Math.max(i - 1, 0));
-      } else if (e.key === "ArrowDown") {
-        setActiveSystemIdx(i => (i + 1) % systemsWithGames.length);
-        setActiveGameIdx(0);
-      } else if (e.key === "ArrowUp") {
-        setActiveSystemIdx(i => (i - 1 + systemsWithGames.length) % systemsWithGames.length);
-        setActiveGameIdx(0);
-      } else if (e.key === "Enter" && activeGame) {
-        if (window.innerWidth < 1280) setShowMobileDetails(true);
-        else {
-          const returnTo = encodeURIComponent(window.location.href);
-          window.location.href = apiUrl(`/api/roms/${activeGame.romId}/player?return=${returnTo}`);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeSystemIdx, activeGameIdx, systemsWithGames, dialogGame, currentSystem, activeGame]);
-
   const [time, setTime] = useState(new Date());
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
