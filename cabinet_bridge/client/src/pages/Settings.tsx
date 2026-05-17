@@ -33,6 +33,7 @@ import {
   Palette,
   Monitor,
   RefreshCw,
+  LayoutGrid,
 } from "lucide-react";
 import type { SmartFilterRules, GameCollectionWithItems } from "@shared/schema";
 import { useTranslation } from "react-i18next";
@@ -246,7 +247,23 @@ function DisplaySettings() {
             </div>
           </Field>
 
-          <div />
+          <Field label="Dashboard Layout" hint="Choose the visual style of your landing page.">
+            <div className="flex items-center gap-4">
+              <LayoutGrid className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Select
+                value={config.dashboardTheme || "nostalgia"}
+                onValueChange={(val) => setConfig({ dashboardTheme: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nostalgia">Nostalgia Grid (Shelves)</SelectItem>
+                  <SelectItem value="horizon">Horizon Ribbon (Switch Style)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </Field>
 
           <Field label={t("settings.fields.aspectRatio.label")} hint={t("settings.fields.aspectRatio.hint")}>
             <Select
