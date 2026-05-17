@@ -2586,7 +2586,10 @@ async function cabinetBackupSlot(slot) {
   } catch (_scanErr) {}
   var data;
   for (var ci = 0; ci < candidates.length; ci++) { try { data = FS.readFile(candidates[ci], { encoding: "binary" }); if (data && data.length > 0) break; } catch (_e) {} }
-  if (!data || data.length === 0) { cabinetToast("No save data in slot " + slot + " to back up"); return; }
+  if (!data || data.length === 0) { 
+    console.warn("[Backup] No data found for slot " + slot + " yet.");
+    throw new Error("Save data not found yet"); // Throw to trigger retry logic
+  }
   try {
     var r = await fetch("./save-backup/" + slot, { method: "PUT", headers: { "Content-Type": "application/octet-stream" }, body: data instanceof Uint8Array ? data : new Uint8Array(data), });
     if (!r.ok) throw new Error((await r.json()).message || "Failed");

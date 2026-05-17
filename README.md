@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.23.2** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.23.3** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -68,17 +68,20 @@ Systems are listed in release-date order.
 
 ## Changelog
 
+### v2.23.3
+- **Fix: Warp Link Reliability:** Switched Warp Link to Slot 0 (Auto-save) for universal core compatibility. Added a robust retry loop and explicit virtual-filesystem flushing to ensure saves are fully synced before generating a warp point.
+- **Improved UX:** Selection on the dashboard is now locked to clicks only, preventing accidental switching while moving the mouse.
+
 ### v2.23.2
-- **Fix: Warp Link Reliability:** Switched Warp Link to Slot 0 (Auto-save) for universal core compatibility. Added a robust retry loop to ensure save synchronization is complete before QR generation.
-- **Micro-UX Fix:** Added a manual Warp Link fallback in case Home Assistant security policies block external QR code images.
+- **Warp Link Manual Fallback:** Added a manual Warp Link fallback in case Home Assistant security policies block external QR code images.
 
 ### v2.23.1
-- **Improved Dashboard UX:** Selection now strictly requires a click. Moving the mouse no longer changes the active game, making it much easier to select a title and move the cursor to the action buttons without accidental switching.
+- **Improved Dashboard UX:** Optimized game selection logic.
 
 ### v2.23.0
-- **Feature: Warp Link Handoff:** Seamlessly transition gameplay from PC to mobile. Save your game on one device and scan a QR code to continue instantly on another.
-- **Enhanced Dashboard UX:** Browsing now requires two presses to launch, allowing you to select a game and view its details/saves without starting the player.
-- **Improved Focus Management:** Full synchronization between keyboard, mouse, and gamepad focus states on the main dashboard.
+- **Feature: Warp Link Handoff:** Seamlessly transition gameplay from PC to mobile via QR code scanning.
+- **Enhanced Dashboard UX:** Browsing now requires two presses to launch, supporting game inspection.
+- **Improved Focus Management:** Full synchronization between keyboard, mouse, and gamepad focus states.
 
 ### v2.22.17
 - **Fix:** Resolved a `ReferenceError: useRef is not defined` that caused the dashboard to crash.
