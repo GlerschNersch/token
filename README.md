@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.22.3** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.22.4** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -46,9 +46,9 @@ Systems are listed in release-date order.
 | Sega Master System | smsgg | `.sms` `.zip` |
 | TurboGrafx-16 / PC Engine | pce | `.pce` `.zip` |
 | Genesis / Mega Drive | segaMD | `.md` `.bin` `.smd` `.zip` |
-| Game Boy | gambatte | `.gb` `.zip` |
+| Game Boy | gambatte | `.gb" ".zip` |
 | Atari Lynx | mednafen_lynx | `.lnx` `.zip` |
-| Game Gear | smsgg | `.gg` `.zip` |
+| Game Gear | smsgg | `.gg" ".zip` |
 | Neo Geo | fbneo | `.zip` |
 | SNES | snes9x | `.smc" ".sfc" ".zip` |
 | Sega CD | segaCD | `.cue+.bin" ".iso" ".chd" ".zip` |
@@ -67,6 +67,9 @@ Systems are listed in release-date order.
 ---
 
 ## Changelog
+
+### v2.22.4
+- **Layout Optimization** — Reduced redundant headers and improved vertical spacing on mobile devices for a more compact UI.
 
 ### v2.22.3
 - **Visual Polish** — Hidden unwanted browser scrollbars for a cleaner "app-like" experience.

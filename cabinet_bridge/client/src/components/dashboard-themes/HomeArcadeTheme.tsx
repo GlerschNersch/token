@@ -343,10 +343,6 @@ export default function HomeArcadeTheme() {
 
   return (
     <div className="fixed inset-0 z-[50] bg-[#0c0c0c] text-white flex flex-col select-none overflow-hidden font-sans">
-      {/* Hide standard OS header on mobile to reclaim space */}
-      <div className="hidden sm:block">
-        <MobileTopBar />
-      </div>
 
       {/* Dynamic Background Fanart (High Blur) */}
       <AnimatePresence mode="wait">
@@ -377,7 +373,7 @@ export default function HomeArcadeTheme() {
       </AnimatePresence>
 
       {/* Top Navigation Bar */}
-      <div className="h-16 px-8 flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-2xl z-20">
+      <div className="h-16 px-8 hidden xl:flex items-center justify-between border-b border-white/5 bg-black/40 backdrop-blur-2xl z-20">
         <div className="flex items-center gap-6">
           <div className="text-primary font-black tracking-tighter text-xl italic uppercase">HomeArcade</div>
           <div className="h-4 w-px bg-white/10" />
@@ -476,7 +472,7 @@ export default function HomeArcadeTheme() {
                  animate={{ x: 0, opacity: 1 }}
                  exit={{ x: "100%", opacity: 0 }}
                  transition={{ type: "spring", damping: 28, stiffness: 180 }}
-                 className={`fixed right-0 top-0 sm:top-16 bottom-0 w-full sm:w-[450px] 2xl:w-[500px] border-l border-white/10 bg-black/80 backdrop-blur-3xl z-[60] flex flex-col p-8 sm:p-12 ${!showMobileDetails && "hidden xl:flex"}`}
+                 className={`fixed right-0 top-0 sm:top-16 bottom-0 w-full sm:w-[450px] 2xl:w-[500px] border-l border-white/10 bg-black/80 backdrop-blur-3xl z-[60] flex flex-col p-6 sm:p-12 ${!showMobileDetails && "hidden xl:flex"}`}
                >
                   <Button 
                     variant="ghost" 
@@ -488,7 +484,7 @@ export default function HomeArcadeTheme() {
                   </Button>
 
                   {/* Header Area */}
-                  <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 mb-10 shrink-0 relative shadow-2xl group">
+                  <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 mb-6 shrink-0 relative shadow-2xl group">
                      {activeGame.artUrl ? (
                        <img src={activeGame.artUrl} className="w-full h-full object-cover opacity-80" alt="" />
                      ) : (
@@ -501,7 +497,7 @@ export default function HomeArcadeTheme() {
                   </div>
 
                   {/* Internal Navigation Tabs - Optimized for Mobile */}
-                  <div className="flex gap-2 mb-8 shrink-0 overflow-x-auto scrollbar-none no-scrollbar pb-2">
+                  <div className="flex gap-2 mb-6 shrink-0 overflow-x-auto scrollbar-none no-scrollbar pb-2">
                      {[
                        { id: "info", label: "Overview", icon: Info },
                        { id: "cheats", label: "Cheats", icon: Zap },
@@ -524,10 +520,10 @@ export default function HomeArcadeTheme() {
                   </div>
 
                   {/* Dynamic Content Body */}
-                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2 pb-32 sm:pb-0">
+                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2 pb-12 sm:pb-0">
                      <AnimatePresence mode="wait">
                         {activeTab === "info" && (
-                          <motion.div key="info" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                          <motion.div key="info" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                              <div className="flex flex-wrap gap-3">
                                 <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-white/50">{activeGame.year || '----'}</div>
                                 <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-black italic">{currentSystem.system.name}</div>
@@ -667,7 +663,7 @@ export default function HomeArcadeTheme() {
                   </div>
 
                   {/* Actions (Pinned to bottom) */}
-                  <div className="pt-12 pb-24 sm:pb-0 flex flex-col gap-4 shrink-0">
+                  <div className="pt-8 pb-12 sm:pb-0 flex flex-col gap-4 shrink-0">
                      <Button 
                        size="lg"
                        onClick={() => {
