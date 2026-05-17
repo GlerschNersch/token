@@ -2,6 +2,7 @@
   "nav": {
     "home": "Home",
     "dashboard": "Dashboard",
+    "library": "Library",
     "history": "History",
     "achievements": "Achievements",
     "settings": "Settings"

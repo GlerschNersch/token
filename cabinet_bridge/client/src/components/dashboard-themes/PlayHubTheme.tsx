@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { apiUrl } from "@/lib/queryClient";
 import { useIntegration } from "@/lib/integration";
 import { useGameDialogState } from "@/lib/useGameDialogState";
-import type { UploadedRom, GameCollectionWithItems } from "@shared/schema";
+import type { UploadedRom, GameCollectionWithItems, RomSaveSlot, GameCheatCode } from "@shared/schema";
 import { 
   Play, 
   Search,
@@ -37,8 +37,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
@@ -327,7 +326,6 @@ export default function PlayHubTheme() {
       } else if (e.key === "Enter" && activeGame) {
         if (window.innerWidth < 1280) setShowMobileDetails(true);
         else {
-          // Double-enter logic: if in info tab, launch. Otherwise, do nothing or switch to info.
           const returnTo = encodeURIComponent(window.location.href);
           window.location.href = apiUrl(`/api/roms/${activeGame.romId}/player?return=${returnTo}`);
         }
@@ -345,7 +343,10 @@ export default function PlayHubTheme() {
 
   return (
     <div className="fixed inset-0 z-[50] bg-[#0c0c0c] text-white flex flex-col select-none overflow-hidden font-sans">
-      <MobileTopBar />
+      {/* Hide standard OS header on mobile to reclaim space */}
+      <div className="hidden sm:block">
+        <MobileTopBar />
+      </div>
 
       {/* Dynamic Background Fanart (High Blur) */}
       <AnimatePresence mode="wait">
@@ -475,13 +476,13 @@ export default function PlayHubTheme() {
                  animate={{ x: 0, opacity: 1 }}
                  exit={{ x: "100%", opacity: 0 }}
                  transition={{ type: "spring", damping: 28, stiffness: 180 }}
-                 className={`fixed right-0 top-16 bottom-0 w-full sm:w-[450px] 2xl:w-[500px] border-l border-white/5 bg-black/60 backdrop-blur-3xl z-30 flex flex-col p-8 sm:p-12 ${!showMobileDetails && "hidden xl:flex"}`}
+                 className={`fixed right-0 top-0 sm:top-16 bottom-0 w-full sm:w-[450px] 2xl:w-[500px] border-l border-white/10 bg-black/80 backdrop-blur-3xl z-[60] flex flex-col p-8 sm:p-12 ${!showMobileDetails && "hidden xl:flex"}`}
                >
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={() => setShowMobileDetails(false)}
-                    className="absolute top-6 left-6 xl:hidden text-white/30 hover:text-white"
+                    className="absolute top-6 left-6 xl:hidden text-white/50 hover:text-white z-[70]"
                   >
                     <ChevronLeft className="size-6 rotate-180" />
                   </Button>
@@ -510,10 +511,10 @@ export default function PlayHubTheme() {
                        <button
                          key={tab.id}
                          onClick={() => setActiveTab(tab.id as any)}
-                         className={`flex-1 min-w-[80px] flex flex-col items-center py-2.5 rounded-xl border transition-all ${
+                         className={`flex-1 min-w-[85px] flex flex-col items-center py-3 rounded-xl border transition-all ${
                            activeTab === tab.id 
-                             ? "bg-white/10 border-white/20 text-white" 
-                             : "bg-transparent border-transparent text-white/20 hover:text-white/40"
+                             ? "bg-white/15 border-white/30 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]" 
+                             : "bg-white/[0.04] border-white/5 text-white/40 hover:text-white/60"
                          }`}
                        >
                           <tab.icon className="size-4 mb-1" />
@@ -523,7 +524,7 @@ export default function PlayHubTheme() {
                   </div>
 
                   {/* Dynamic Content Body */}
-                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2">
+                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2 pb-32 sm:pb-0">
                      <AnimatePresence mode="wait">
                         {activeTab === "info" && (
                           <motion.div key="info" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
@@ -640,7 +641,7 @@ export default function PlayHubTheme() {
                                 </Button>
                                 
                                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
-                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Collections</div>
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Game Collections</div>
                                    <div className="flex flex-wrap gap-2">
                                       {collections.map(c => {
                                          const isMember = c.romIds.includes(activeGame.romId!);
@@ -666,7 +667,7 @@ export default function PlayHubTheme() {
                   </div>
 
                   {/* Actions (Pinned to bottom) */}
-                  <div className="pt-12 flex flex-col gap-4 shrink-0">
+                  <div className="pt-12 pb-24 sm:pb-0 flex flex-col gap-4 shrink-0">
                      <Button 
                        size="lg"
                        onClick={() => {
@@ -686,22 +687,18 @@ export default function PlayHubTheme() {
 
 
       {/* Bottom Interface Hints */}
-      <div className="h-12 px-8 border-t border-white/5 bg-black/60 backdrop-blur-2xl flex items-center justify-between z-20 shrink-0">
+      <div className="h-12 px-8 border-t border-white/5 bg-black/60 backdrop-blur-2xl flex items-center justify-between z-20 shrink-0 mb-[64px] sm:mb-0">
          <div className="flex items-center gap-8">
            <div className="flex items-center gap-3">
-              <div className="size-6 rounded-full bg-white/10 flex items-center justify-center font-mono text-[10px] font-black">A</div>
+              <div className="size-6 rounded-full bg-white/10 flex items-center justify-center font-mono text-[10px] font-black text-white/40">A</div>
               <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Select</span>
            </div>
            <div className="flex items-center gap-3">
-              <div className="size-6 rounded-full bg-white/10 flex items-center justify-center font-mono text-[10px] font-black">B</div>
+              <div className="size-6 rounded-full bg-white/10 flex items-center justify-center font-mono text-[10px] font-black text-white/40">B</div>
               <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Back</span>
            </div>
-           <div className="hidden sm:flex items-center gap-3">
-              <div className="size-6 rounded-full bg-white/10 flex items-center justify-center font-mono text-[10px] font-black">X</div>
-              <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Favorite</span>
-           </div>
          </div>
-         <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/10 italic">PlayHub OS v2.19</div>
+         <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/10 italic">PlayHub OS v2.21</div>
       </div>
 
       <WelcomeDialog hasRoms={roms.length > 0} />
