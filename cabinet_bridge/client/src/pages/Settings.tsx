@@ -262,6 +262,7 @@ function DisplaySettings() {
                   <SelectItem value="horizon">Horizon Ribbon (Switch Style)</SelectItem>
                   <SelectItem value="playhub">PlayHub (Clean Dashboard)</SelectItem>
                   <SelectItem value="gameos">gameOS (Cinematic Hero)</SelectItem>
+                  <SelectItem value="slate">Slate (Desktop Edition)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

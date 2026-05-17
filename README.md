@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.9.1** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.10.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -68,7 +68,11 @@ Systems are listed in release-date order.
 
 ## Changelog
 
-### v2.3.6
+### v2.10.0
+- **Slate Theme** — Added a new professional, high-density layout inspired by EmulationStation Desktop Edition.
+- **Improved List Navigation** — Smooth vertical scrolling and metadata panels for power users.
+
+### v2.9.1
 - **Rebranding** — Finalized transition from "Cabinet Bridge" to **HomeArcade** across all UI and documentation.
 - **Global Localization** — Updated all translation files to reflect the new HomeArcade branding.
 - **Premium Frontend Engine** — Rebuilt from the ground up with Vite + React + Tailwind v4.

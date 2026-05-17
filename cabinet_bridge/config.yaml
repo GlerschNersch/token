@@ -1,5 +1,5 @@
 name: "HomeArcade"
-version: "2.9.1"
+version: "2.10.0"
 slug: "cabinet_bridge"
 description: "The premium retro gaming frontend for Home Assistant. Manage ROMs, browse systems, and launch games from your sidebar or TV."
 url: "https://github.com/GlerschNersch/token"
