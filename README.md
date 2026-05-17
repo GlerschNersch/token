@@ -4,7 +4,7 @@
 
 HomeArcade is a powerful Home Assistant Add-on that turns your sidebar into a full retro gaming hub. Manage ROMs, browse systems with rich metadata, launch games in a high-performance in-browser emulator, and sync with your local PC via RetroBat integration.
 
-**Current version: 2.18.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
+**Current version: 2.19.0** · [Report a bug](https://github.com/GlerschNersch/token/issues/new) · [View source](https://github.com/GlerschNersch/token)
 
 [![Venmo](https://img.shields.io/badge/Venmo-@vincusmalincus-3D95CE?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/vincusmalincus)
 
@@ -68,6 +68,11 @@ Systems are listed in release-date order.
 
 ## Changelog
 
+### v2.19.0
+- **Unified PlayHub Hub** — Major architectural shift merging game management (saves, cheats, achievements, collections) directly into the PlayHub side panel.
+- **Zero-Popup UX** — Eliminated the standard detail dialog in favor of a seamless, integrated 'Command Center' within the dashboard.
+- **Tabbed Glass Hub** — New high-density, tabbed navigation for Mission (Bio), Tactics (Cheats), Archives (Saves), and Sector (Metadata) management.
+
 ### v2.18.0
 - **Structural Simplification** — Removed the CRC32 binary fingerprinting and "Deep Scan" features to streamline the database and ROM scanning logic. 
 - **Database Revert** — Cleaned up migration history and reverted to a simpler ROM identification schema.
@@ -82,23 +87,6 @@ Systems are listed in release-date order.
 - **PlayHub Refocus** — Reset the dashboard system to focus exclusively on a clean, high-performance re-implementation of the PlayHub theme.
 - **Improved Glassmorphism** — Added deep backdrop blurs and refined gradients for a premium "Switch-like" feel.
 - **Dynamic Backgrounds** — High-blur fanart backgrounds that transition smoothly as you browse.
-
-### v2.16.1
-- **Fix:** Resolved a crash in the tltlvilus theme when navigating systems with empty libraries.
-
-### v2.16.0
-- **tltlvilus Theme** — Added a modern minimalist dashboard layout with high-impact system silhouettes and master-detail navigation.
-
-### v2.15.0
-- **Final Theme Fine-Tuning** — Refined all dashboard layouts for pixel-perfect mobile and browser display.
-
-### v2.14.0
-- **Libretro Deep Integration** — Professional-grade automation features powered by the Libretro database.
-- **CRC Deep Scan** — Perfect ROM identification using binary fingerprints (CRC32). Identifies games regardless of filename.
-- **Gamepad Autoconfig** — Plug-and-play controller support.
-
-### v2.13.0
-- **Global Theme Optimization** — Massive pass across all themes to ensure 100% mobile responsiveness.
 
 ---
 

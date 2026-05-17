@@ -16,11 +16,125 @@ import {
   Star,
   ChevronRight,
   ChevronLeft,
-  Clock
+  Clock,
+  Zap,
+  Save,
+  Trophy,
+  History,
+  Folder,
+  Plus,
+  Loader2,
+  ImagePlus,
+  Database,
+  Check,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  Timer
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+
+// ─── sub-components ──────────────────────────────────────────────────────────
+
+function SaveSlotCard({
+  slot,
+  romId,
+  onDelete,
+}: {
+  slot: RomSaveSlot;
+  romId: number;
+  onDelete: () => void;
+}) {
+  const [thumbError, setThumbError] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const thumbUrl = `/api/roms/${romId}/save-thumb/${slot.slot}`;
+
+  const timeAgo = (() => {
+    const diffMs = Date.now() - slot.updatedAt;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return `${Math.floor(diffHrs / 24)}d ago`;
+  })();
+
+  return (
+    <div className="group relative rounded-2xl border border-white/5 bg-white/5 overflow-hidden w-[100px] shrink-0">
+      <div className="relative w-full aspect-video bg-neutral-900 flex items-center justify-center">
+        {!thumbError ? (
+          <img
+            src={thumbUrl}
+            alt={`Slot ${slot.slot}`}
+            className="w-full h-full object-cover"
+            onError={() => setThumbError(true)}
+            decoding="async"
+          />
+        ) : (
+          <Save className="size-5 text-white/10" />
+        )}
+        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          {confirming ? (
+            <div className="flex flex-col items-center gap-1">
+              <button onClick={onDelete} className="text-[8px] font-black uppercase text-red-400">Delete?</button>
+              <button onClick={() => setConfirming(false)} className="text-[8px] font-black uppercase text-white/40">No</button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirming(true)} className="p-2 bg-black/40 rounded-full text-white/60 hover:text-white">
+              <Trash2 className="size-3" />
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="p-2 text-center">
+        <div className="font-mono text-[9px] font-bold text-white/80 truncate">{slot.label}</div>
+        <div className="font-mono text-[8px] text-white/30 truncate">{timeAgo}</div>
+      </div>
+    </div>
+  );
+}
+
+function CheatRow({
+  cheat,
+  onToggle,
+  onDelete,
+}: {
+  cheat: GameCheatCode;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3">
+      <button onClick={onToggle} className="shrink-0 text-white/20 hover:text-white transition-colors">
+        {cheat.enabled ? <ToggleRight className="size-5 text-primary" /> : <ToggleLeft className="size-5" />}
+      </button>
+      <div className="flex-1 min-w-0">
+        <div className={`font-mono text-[11px] font-bold truncate ${cheat.enabled ? "text-white" : "text-white/20"}`}>
+          {cheat.description}
+        </div>
+        <div className="font-mono text-[9px] text-white/20 truncate tracking-widest uppercase">
+          {cheat.code}
+        </div>
+      </div>
+      {confirming ? (
+        <div className="flex items-center gap-2">
+          <button onClick={onDelete} className="text-[9px] font-black uppercase text-red-400">Yes</button>
+          <button onClick={() => setConfirming(false)} className="text-[9px] font-black uppercase text-white/40">No</button>
+        </div>
+      ) : (
+        <button onClick={() => setConfirming(true)} className="p-2 text-white/10 hover:text-red-400 transition-colors">
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function fmtHoursShort(minutes: number) {
@@ -32,6 +146,7 @@ function fmtHoursShort(minutes: number) {
 export default function PlayHubTheme() {
   const { config } = useIntegration();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { data: roms = [] } = useQuery<UploadedRom[]>({ queryKey: ["/api/roms"] });
   const { data: collections = [] } = useQuery<GameCollectionWithItems[]>({
     queryKey: ["/api/collections"],
@@ -71,6 +186,128 @@ export default function PlayHubTheme() {
   const currentSystem = systemsWithGames[activeSystemIdx];
   const activeGame = currentSystem?.games[activeGameIdx];
 
+  // ── Management Logic ─────────────────────────────────────────────────────────
+  const [scrapingArt, setScrapingArt] = useState(false);
+  const [cheatDesc, setCheatDesc] = useState("");
+  const [cheatCode, setCheatCode] = useState("");
+  const [addingCheat, setAddingCheat] = useState(false);
+  const [fetchingCheats, setFetchingCheats] = useState(false);
+  const [fetchedCheats, setFetchedCheats] = useState<{ desc: string; code: string; selected: boolean }[] | null>(null);
+  const [fetchMsg, setFetchMsg] = useState<string | null>(null);
+
+  const { data: cheats = [], refetch: refetchCheats } = useQuery<GameCheatCode[]>({
+    queryKey: ["cheats", activeGame?.romId, 1],
+    queryFn: async () => {
+      const res = await fetch(`/api/roms/${activeGame!.romId}/cheats?profileId=1`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!activeGame?.romId,
+  });
+
+  const { data: saveSlots = [], refetch: refetchSlots } = useQuery<RomSaveSlot[]>({
+    queryKey: ["save-states", activeGame?.romId],
+    queryFn: async () => {
+      const res = await fetch(`/api/roms/${activeGame!.romId}/save-states`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!activeGame?.romId,
+  });
+
+  const { data: raProgress } = useQuery({
+    queryKey: ["ra-progress", activeGame?.raGameId],
+    queryFn: async () => {
+      if (!activeGame?.raGameId) return null;
+      const res = await fetch(`/api/retroachievements/user-progress/${activeGame.raGameId}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!activeGame?.raGameId && !!config.raUsername && !!config.raToken,
+  });
+
+  const refreshArt = useCallback(async () => {
+    if (!activeGame?.romId) return;
+    setScrapingArt(true);
+    try {
+      const res = await apiRequest("POST", `/api/roms/${activeGame.romId}/scrape-art`);
+      const data = await res.json() as UploadedRom;
+      await queryClient.invalidateQueries({ queryKey: ["/api/roms"] });
+      toast({ title: "Sector Synchronized", description: data.artUrl ? "Visual assets updated." : "No new data found." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Sync Failed", description: String(err) });
+    } finally {
+      setScrapingArt(false);
+    }
+  }, [activeGame, toast]);
+
+  const addCheat = async () => {
+    if (!activeGame?.romId || !cheatDesc.trim() || !cheatCode.trim()) return;
+    setAddingCheat(true);
+    try {
+      await apiRequest("POST", `/api/roms/${activeGame.romId}/cheats`, {
+        description: cheatDesc.trim(),
+        code: cheatCode.trim(),
+        profileId: 1,
+      });
+      setCheatDesc("");
+      setCheatCode("");
+      await refetchCheats();
+    } finally {
+      setAddingCheat(false);
+    }
+  };
+
+  const fetchCheatsFromDb = async () => {
+    if (!activeGame?.romId) return;
+    setFetchingCheats(true);
+    setFetchedCheats(null);
+    setFetchMsg(null);
+    try {
+      const res = await fetch(apiUrl(`/api/roms/${activeGame.romId}/fetch-cheats`));
+      const data = await res.json() as { cheats: { desc: string; code: string }[]; message?: string };
+      if (data.cheats.length === 0) setFetchMsg(data.message ?? "No database entries.");
+      else setFetchedCheats(data.cheats.map((c) => ({ ...c, selected: false })));
+    } catch {
+      setFetchMsg("Link offline.");
+    } finally {
+      setFetchingCheats(false);
+    }
+  };
+
+  const importSelectedCheats = async () => {
+    if (!activeGame?.romId || !fetchedCheats) return;
+    const selected = fetchedCheats.filter((c) => c.selected);
+    for (const c of selected) {
+      await apiRequest("POST", `/api/roms/${activeGame.romId}/cheats`, {
+        description: c.desc,
+        code: c.code,
+        profileId: 1,
+      });
+    }
+    await refetchCheats();
+    setFetchedCheats(null);
+  };
+
+  const toggleCheat = async (id: number, enabled: boolean) => {
+    await apiRequest("PATCH", `/api/cheats/${id}`, { enabled });
+    await refetchCheats();
+  };
+
+  const deleteCheat = async (id: number) => {
+    await apiRequest("DELETE", `/api/cheats/${id}`);
+    await refetchCheats();
+  };
+
+  const deleteSlot = async (slot: number) => {
+    if (!activeGame?.romId) return;
+    await apiRequest("DELETE", `/api/roms/${activeGame.romId}/save-states/${slot}`);
+    await refetchSlots();
+  };
+
+  // ── Info Panel Sections ──────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<"info" | "cheats" | "saves" | "meta">("info");
+
   // Navigation Logic
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -88,7 +325,11 @@ export default function PlayHubTheme() {
         setActiveGameIdx(0);
       } else if (e.key === "Enter" && activeGame) {
         if (window.innerWidth < 1280) setShowMobileDetails(true);
-        else openGame(activeGame);
+        else {
+          // Double-enter logic: if in info tab, launch. Otherwise, do nothing or switch to info.
+          const returnTo = encodeURIComponent(window.location.href);
+          window.location.href = apiUrl(`/api/roms/${activeGame.romId}/player?return=${returnTo}`);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -199,7 +440,6 @@ export default function PlayHubTheme() {
                       onClick={() => {
                         setActiveGameIdx(i);
                         if (window.innerWidth < 1280) setShowMobileDetails(true);
-                        else openGame(game);
                       }}
                     >
                       <div className="absolute inset-0 bg-neutral-900/50 flex items-center justify-center">
@@ -226,7 +466,7 @@ export default function PlayHubTheme() {
              </div>
           </div>
 
-          {/* Right Info Panel (The Glass Engine) */}
+          {/* Right Info Panel (The Glass Hub) */}
           <AnimatePresence>
              {(activeGame && (window.innerWidth >= 1280 || showMobileDetails)) && (
                <motion.div
@@ -246,7 +486,7 @@ export default function PlayHubTheme() {
                   </Button>
 
                   {/* Header Area */}
-                  <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 mb-10 shrink-0 relative shadow-2xl">
+                  <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 mb-10 shrink-0 relative shadow-2xl group">
                      {activeGame.artUrl ? (
                        <img src={activeGame.artUrl} className="w-full h-full object-cover opacity-80" alt="" />
                      ) : (
@@ -258,38 +498,174 @@ export default function PlayHubTheme() {
                      </div>
                   </div>
 
-                  {/* Metadata Tags */}
-                  <div className="flex flex-wrap gap-3 mb-10">
-                     <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-white/50">{activeGame.year || '----'}</div>
-                     <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-black italic">{currentSystem.system.name}</div>
-                     {activeGame.rating > 0 && (
-                        <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5 text-yellow-500 font-black font-mono text-[10px] tracking-widest">
-                           <Star className="size-3 fill-current" /> {activeGame.rating}/5
-                        </div>
-                     )}
+                  {/* Internal Navigation Tabs */}
+                  <div className="flex gap-2 mb-8 shrink-0">
+                     {[
+                       { id: "info", label: "Mission", icon: Info },
+                       { id: "cheats", label: "Tactics", icon: Zap },
+                       { id: "saves", label: "Archives", icon: Save },
+                       { id: "meta", label: "Sector", icon: Database },
+                     ].map(tab => (
+                       <button
+                         key={tab.id}
+                         onClick={() => setActiveTab(tab.id as any)}
+                         className={`flex-1 flex flex-col items-center py-2 rounded-xl border transition-all ${
+                           activeTab === tab.id 
+                             ? "bg-white/10 border-white/20 text-white" 
+                             : "bg-transparent border-transparent text-white/20 hover:text-white/40"
+                         }`}
+                       >
+                          <tab.icon className="size-4 mb-1" />
+                          <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
+                       </button>
+                     ))}
                   </div>
 
-                  {/* Description Section */}
-                  <div className="space-y-8 flex-1 overflow-y-auto scrollbar-none no-scrollbar">
-                     <div className="space-y-3">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Mission Briefing</div>
-                        <p className="text-base text-white/60 leading-relaxed font-medium italic">{activeGame.description || "The definitive experience is ready. Software integrity confirmed. Initialize to begin."}</p>
-                     </div>
+                  {/* Dynamic Content Body */}
+                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2">
+                     <AnimatePresence mode="wait">
+                        {activeTab === "info" && (
+                          <motion.div key="info" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                             <div className="flex flex-wrap gap-3">
+                                <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-white/50">{activeGame.year || '----'}</div>
+                                <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-black italic">{currentSystem.system.name}</div>
+                                {activeGame.rating > 0 && (
+                                   <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5 text-yellow-500 font-black font-mono text-[10px] tracking-widest">
+                                      <Star className="size-3 fill-current" /> {activeGame.rating}/5
+                                   </div>
+                                )}
+                             </div>
+                             <div className="space-y-3">
+                                <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Briefing</div>
+                                <p className="text-base text-white/60 leading-relaxed font-medium italic">{activeGame.description || "The definitive experience is ready. Software integrity confirmed. Initialize to begin."}</p>
+                             </div>
+                             
+                             <div className="grid grid-cols-2 gap-4">
+                                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Logged</div>
+                                   <div className="font-mono text-2xl font-black text-white/90 tabular-nums">{fmtHoursShort(activeGame.minutesPlayed ?? 0)}</div>
+                                </div>
+                                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Status</div>
+                                   <div className="font-mono text-xs font-black uppercase tracking-[0.2em] text-primary">{activeGame.playStatus || 'Active'}</div>
+                                </div>
+                             </div>
 
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
-                           <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Time Logged</div>
-                           <div className="font-mono text-2xl font-black text-white/90 tabular-nums">{fmtHoursShort(activeGame.minutesPlayed ?? 0)}</div>
-                        </div>
-                        <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-1">
-                           <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Status</div>
-                           <div className="font-mono text-xs font-black uppercase tracking-[0.2em] text-primary">{activeGame.playStatus || 'Active'}</div>
-                        </div>
-                     </div>
+                             {raProgress && raProgress.NumAchievements > 0 && (
+                                <div className="p-6 rounded-3xl bg-primary/5 border border-primary/20 space-y-4">
+                                   <div className="flex items-center justify-between">
+                                      <div className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold flex items-center gap-2">
+                                         <Trophy className="size-3" /> Service Record
+                                      </div>
+                                      <div className="text-[10px] font-mono font-black text-white/80">{raProgress.NumAwarded} / {raProgress.NumAchievements}</div>
+                                   </div>
+                                   <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                      <div className="h-full bg-primary" style={{ width: `${(raProgress.NumAwarded / raProgress.NumAchievements) * 100}%` }} />
+                                   </div>
+                                </div>
+                             )}
+                          </motion.div>
+                        )}
+
+                        {activeTab === "cheats" && (
+                          <motion.div key="cheats" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                             <div className="flex items-center justify-between">
+                                <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Tactical Database</div>
+                                <button onClick={fetchCheatsFromDb} disabled={fetchingCheats} className="text-primary hover:text-white transition-colors disabled:opacity-40">
+                                   {fetchingCheats ? <Loader2 className="size-4 animate-spin" /> : <Database className="size-4" />}
+                                </button>
+                             </div>
+                             
+                             {fetchedCheats && (
+                                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 space-y-4">
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-primary font-bold">New Transmissions Available</div>
+                                   <div className="max-h-48 overflow-y-auto space-y-2 pr-2 scrollbar-none">
+                                      {fetchedCheats.map((c, i) => (
+                                         <button 
+                                           key={i} 
+                                           onClick={() => setFetchedCheats(p => p?.map((x, j) => j === i ? { ...x, selected: !x.selected } : x) ?? null)}
+                                           className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${c.selected ? "bg-primary/20 border-primary/40" : "bg-white/5 border-transparent opacity-60 hover:opacity-100"}`}
+                                         >
+                                            <div className={`size-4 rounded-full border-2 flex items-center justify-center ${c.selected ? "bg-primary border-primary" : "border-white/10"}`}>
+                                               {c.selected && <Check className="size-2.5 text-black" />}
+                                            </div>
+                                            <span className="text-[10px] font-bold uppercase truncate">{c.desc}</span>
+                                         </button>
+                                      ))}
+                                   </div>
+                                   <Button onClick={importSelectedCheats} className="w-full h-12 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest">Load Sequences</Button>
+                                </div>
+                             )}
+
+                             <div className="space-y-3">
+                                {cheats.map(c => (
+                                   <CheatRow key={c.id} cheat={c} onToggle={() => toggleCheat(c.id, !c.enabled)} onDelete={() => deleteCheat(c.id)} />
+                                ))}
+                                {cheats.length === 0 && !fetchingCheats && !fetchedCheats && (
+                                   <div className="py-12 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
+                                      <Zap className="size-8 mx-auto mb-3" />
+                                      <span className="text-[10px] font-mono uppercase tracking-widest">No Tactical Overrides</span>
+                                   </div>
+                                )}
+                             </div>
+                          </motion.div>
+                        )}
+
+                        {activeTab === "saves" && (
+                          <motion.div key="saves" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                             <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Archive Segments</div>
+                             <div className="grid grid-cols-3 gap-3">
+                                {saveSlots.map(s => (
+                                   <SaveSlotCard key={s.slot} slot={s} romId={activeGame.romId!} onDelete={() => deleteSlot(s.slot)} />
+                                ))}
+                                {saveSlots.length === 0 && (
+                                   <div className="col-span-3 py-12 text-center border-2 border-dashed border-white/5 rounded-3xl opacity-20">
+                                      <Save className="size-8 mx-auto mb-3" />
+                                      <span className="text-[10px] font-mono uppercase tracking-widest">No Logged Snapshots</span>
+                                   </div>
+                                )}
+                             </div>
+                          </motion.div>
+                        )}
+
+                        {activeTab === "meta" && (
+                          <motion.div key="meta" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                             <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/20">Sector Configuration</div>
+                             
+                             <div className="space-y-4">
+                                <Button onClick={refreshArt} disabled={scrapingArt} variant="outline" className="w-full h-14 rounded-2xl border-white/5 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white uppercase tracking-widest text-[10px] font-black gap-3">
+                                   {scrapingArt ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+                                   Synchronize Visual Assets
+                                </Button>
+                                
+                                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                                   <div className="text-[10px] font-mono uppercase tracking-widest text-white/20">Game Collections</div>
+                                   <div className="flex flex-wrap gap-2">
+                                      {collections.map(c => {
+                                         const isMember = c.romIds.includes(activeGame.romId!);
+                                         return (
+                                           <button 
+                                             key={c.id} 
+                                             onClick={() => onToggleCollection(c.id, activeGame, !isMember)}
+                                             className={`px-4 py-2 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all ${isMember ? "bg-primary/20 border-primary text-primary" : "bg-white/5 border-transparent text-white/30"}`}
+                                           >
+                                              {c.name}
+                                           </button>
+                                         );
+                                      })}
+                                      <button onClick={handleCreateCollection} className="px-4 py-2 rounded-full border border-dashed border-white/20 text-white/20 hover:text-white hover:border-white/40 transition-all">
+                                         <Plus className="size-3" />
+                                      </button>
+                                   </div>
+                                </div>
+                             </div>
+                          </motion.div>
+                        )}
+                     </AnimatePresence>
                   </div>
 
-                  {/* Actions */}
-                  <div className="pt-12 flex flex-col gap-4">
+                  {/* Actions (Pinned to bottom) */}
+                  <div className="pt-12 flex flex-col gap-4 shrink-0">
                      <Button 
                        size="lg"
                        onClick={() => {
@@ -298,14 +674,7 @@ export default function PlayHubTheme() {
                        }}
                        className="w-full h-16 rounded-2xl bg-white hover:bg-neutral-200 text-black font-black uppercase tracking-[0.3em] text-sm shadow-[0_20px_50px_rgba(255,255,255,0.1)] transition-transform active:scale-95"
                      >
-                       <Play className="size-5 mr-3 fill-current" /> Initialize
-                     </Button>
-                     <Button 
-                       variant="outline"
-                       onClick={() => openGame(activeGame)}
-                       className="w-full h-14 rounded-2xl border-white/10 bg-white/5 text-white font-black uppercase tracking-[0.2em] text-xs hover:bg-white/10"
-                     >
-                       Detailed Stats
+                       <Play className="size-5 mr-3 fill-current" /> Initialize Sequence
                      </Button>
                   </div>
                </motion.div>
@@ -313,6 +682,7 @@ export default function PlayHubTheme() {
           </AnimatePresence>
         </div>
       </div>
+
 
       {/* Bottom Interface Hints */}
       <div className="h-12 px-8 border-t border-white/5 bg-black/60 backdrop-blur-2xl flex items-center justify-between z-20 shrink-0">
@@ -330,19 +700,9 @@ export default function PlayHubTheme() {
               <span className="text-[10px] font-mono uppercase tracking-widest text-white/30">Favorite</span>
            </div>
          </div>
-         <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/10 italic">PlayHub Engine v2.17</div>
+         <div className="text-[10px] font-mono uppercase tracking-[0.5em] text-white/10 italic">PlayHub OS v2.19</div>
       </div>
 
-      <GameDetailDialog
-        game={dialogGame}
-        onClose={closeGame}
-        onToggleFav={handleToggleFav}
-        onRate={handleRate}
-        collections={collections}
-        onCreateCollection={handleCreateCollection}
-        onToggleCollection={handleToggleCollection}
-        onSetStatus={handleSetStatus}
-      />
       <WelcomeDialog hasRoms={roms.length > 0} />
     </div>
   );
