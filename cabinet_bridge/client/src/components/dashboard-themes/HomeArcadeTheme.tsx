@@ -32,8 +32,11 @@ import {
   Trash2,
   Timer,
   Info,
-  LayoutGrid
+  LayoutGrid,
+  Camera,
+  QrCode
 } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
@@ -97,6 +100,59 @@ function SaveSlotCard({
         <div className="font-mono text-[9px] font-bold text-white/80 truncate">{slot.label}</div>
         <div className="font-mono text-[8px] text-white/30 truncate">{timeAgo}</div>
       </div>
+    </div>
+  );
+}
+
+function WarpScanner({
+  onScan,
+  onClose
+}: {
+  onScan: (url: string) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const scanner = new Html5Qrcode("warp-scanner-viewport");
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    scanner.start(
+      { facingMode: "environment" },
+      config,
+      (text) => {
+        // Simple check to ensure it's a HomeArcade warp link
+        if (text.includes("/api/roms/") && text.includes("warp=true")) {
+          scanner.stop().then(() => onScan(text));
+        }
+      },
+      () => {}
+    ).catch(err => {
+      console.error("Scanner failed", err);
+    });
+
+    return () => {
+      if (scanner.isScanning) {
+        scanner.stop().catch(e => console.error("Scanner cleanup failed", e));
+      }
+    };
+  }, [onScan]);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-sm aspect-square relative rounded-3xl overflow-hidden border-2 border-primary shadow-[0_0_50px_rgba(var(--primary),0.3)]">
+        <div id="warp-scanner-viewport" className="w-full h-full" />
+        {/* Subtle scan guide overlay */}
+        <div className="absolute inset-0 pointer-events-none border-[40px] border-black/40" />
+      </div>
+      <p className="mt-8 text-white/60 text-xs font-bold uppercase tracking-widest text-center max-w-[240px]">
+        Scan the Warp Link on your PC to continue playing
+      </p>
+      <Button 
+        onClick={onClose} 
+        variant="outline" 
+        className="mt-12 w-full max-w-xs h-14 rounded-2xl border-white/10 bg-white/5 font-black uppercase tracking-widest"
+      >
+        Cancel Scan
+      </Button>
     </div>
   );
 }
@@ -184,6 +240,7 @@ export default function HomeArcadeTheme() {
   const [activeSystemIdx, setActiveSystemIdx] = useState(0);
   const [activeGameIdx, setActiveGameIdx] = useState(0);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   
   const currentSystem = systemsWithGames[activeSystemIdx];
   const activeGame = currentSystem?.games[activeGameIdx];
@@ -438,6 +495,15 @@ export default function HomeArcadeTheme() {
            <div className="xl:hidden absolute right-0 top-0 bottom-0 flex items-center px-4 bg-gradient-to-l from-[#0c0c0c] via-[#0c0c0c]/80 to-transparent z-20">
               <div className="h-8 w-px bg-white/10 mr-2" />
               <div className="flex items-center gap-0.5">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setShowScanner(true)}
+                  className="text-primary hover:text-primary/80"
+                  title="Scan Warp Link"
+                >
+                  <QrCode className="size-5" />
+                </Button>
                 <Link href="/library/all">
                   <Button variant="ghost" size="icon" className="text-white/70 hover:text-white">
                     <LayoutGrid className="size-5" />
@@ -738,6 +804,17 @@ export default function HomeArcadeTheme() {
 
 
       <WelcomeDialog hasRoms={roms.length > 0} />
+
+      {showScanner && (
+        <WarpScanner 
+          onClose={() => setShowScanner(false)}
+          onScan={(url) => {
+            setShowScanner(false);
+            // Internal redirect to the scanned warp link
+            window.location.href = url;
+          }}
+        />
+      )}
     </div>
   );
 }

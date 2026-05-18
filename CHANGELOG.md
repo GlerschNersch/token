@@ -4,7 +4,16 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
-## [2.23.8] — 2026-05-17
+## [2.24.0] — 2026-05-17
+
+### Major Feature: In-App Warp Scanner
+
+- **Native QR Scanner** — Integrated a high-performance QR code scanner directly into the mobile dashboard. Users can now scan Warp Links without leaving the Home Assistant app, bypassing 401 Unauthorized errors and session mismatches.
+- **Instant Device Handoff** — Scanned links instantly trigger the emulator and automatically load the handoff save state (Slot 9), enabling a seamless transition from PC to mobile in seconds.
+
+---
+
+## [2.23.7] — 2026-05-17
 
 ### Fix: Warp Link Save Method
 

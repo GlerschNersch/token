@@ -1,6 +1,6 @@
 {
   "name": "rest-express",
-  "version": "2.23.9",
+  "version": "2.24.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -58,6 +58,7 @@
     "framer-motion": "^11.13.1",
     "fuse.js": "^7.3.0",
     "howlongtobeat": "^1.8.0",
+    "html5-qrcode": "^2.3.8",
     "i18next": "^23.16.8",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
