@@ -1,3 +1,7 @@
+## 2.24.10 – 2026-05-17
+
+- **Fix**: **Exit Game Button** — Fixed a bug where the "Exit Game" button in the emulator menu was non-functional. It now correctly returns you to the library.
+
 ## 2.24.9 – 2026-05-17
 
 - **Fix**: **Warp Link Database Error** — Resolved the "no such column: rom_hash" error that prevented save-state syncing during Warp sessions.

@@ -762,6 +762,7 @@ function cabinetSetupSystemMenu() {
   var btn = document.getElementById("cabinet-menu-toggle");
   var backdrop = document.getElementById("cabinet-menu-backdrop");
   var panel = document.getElementById("cabinet-menu-panel");
+  var exitBtn = document.getElementById("cabinet-exit");
   if (!btn || !backdrop || !panel) return;
   btn.onclick = function() {
     panel.classList.toggle("is-open");
@@ -772,6 +773,15 @@ function cabinetSetupSystemMenu() {
     backdrop.classList.remove("is-open");
     cabinetSetPanelOpen("cabinet-warp-panel", false);
   };
+  if (exitBtn) {
+    exitBtn.onclick = function() {
+      if (window.CABINET_RETURN_TO) {
+        window.location.href = window.CABINET_RETURN_TO;
+      } else {
+        window.location.href = "/";
+      }
+    };
+  }
 }
 window.EJS_ready = function () { cabinetSetLaunchProgress(62, "Core ready"); };
 window.EJS_onGameStart = function() {
