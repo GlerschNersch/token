@@ -442,7 +442,7 @@ export default function Home({ filter }: { filter: Filter }) {
     !query;
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden pb-20 lg:pb-0" data-testid="main-content">
+    <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden" data-testid="main-content">
       <WelcomeDialog hasRoms={uploadedRoms.length > 0} />
       <MobileTopBar />
 
@@ -618,7 +618,7 @@ export default function Home({ filter }: { filter: Filter }) {
       )}
 
       {/* ── Content area ── */}
-      <div className="flex-1 overflow-y-auto pb-20 lg:pb-0 overscroll-y-contain scroll-smooth">
+      <div className="flex-1 overflow-y-auto pb-24 lg:pb-8 overscroll-y-contain scroll-smooth">
         {showHero && pc.online && recentlyPlayed[0] ? (
           <ContinueHero game={recentlyPlayed[0]} onOpen={setOpenGame} profileId={currentProfileId} />
         ) : null}

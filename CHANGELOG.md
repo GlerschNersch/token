@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.22] — 2026-05-17
+
+### Fix: Mobile Layout Refinement
+
+- **Optimized Content Padding** — Refined the page layouts to prevent the global mobile navigation bar from overlapping the system selector and other top-level elements. Content padding is now applied surgically to scrollable areas rather than the entire page container.
+- **Improved Desktop Consistency** — Ensured the bottom navigation remains strictly hidden on large screens and doesn't interfere with the PC/TV layout.
+
+---
+
 ## [2.24.21] — 2026-05-17
 
 ### UX: Global Mobile Navigation

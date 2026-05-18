@@ -424,7 +424,7 @@ export default function HomeArcadeTheme() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[50] bg-[#0c0c0c] text-white flex flex-col select-none overflow-hidden font-sans pb-20 lg:pb-0">
+    <div className="fixed inset-0 z-[50] bg-[#0c0c0c] text-white flex flex-col select-none overflow-hidden font-sans">
 
       {/* Dynamic Background Fanart (High Blur) */}
       <AnimatePresence mode="wait">
@@ -530,7 +530,7 @@ export default function HomeArcadeTheme() {
         <div className="flex-1 flex min-h-0 overflow-hidden">
           
           {/* Game Grid */}
-          <div className="flex-1 overflow-y-auto p-8 scrollbar-none overscroll-y-contain">
+          <div className="flex-1 overflow-y-auto p-8 scrollbar-none overscroll-y-contain pb-24 lg:pb-8">
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-6">
                 {currentSystem?.games.map((game, i) => {
                   const isActive = i === activeGameIdx;
@@ -629,7 +629,7 @@ export default function HomeArcadeTheme() {
                   </div>
 
                   {/* Dynamic Content Body */}
-                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2 pb-12 sm:pb-0">
+                  <div className="flex-1 overflow-y-auto scrollbar-none no-scrollbar pr-2 -mr-2 pb-24 sm:pb-0">
                      <AnimatePresence mode="wait">
                         {activeTab === "info" && (
                           <motion.div key="info" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
