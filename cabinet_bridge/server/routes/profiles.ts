@@ -336,7 +336,7 @@ export function registerProfileRoutes(app: Express) {
 
       let resolvedDuration: number | undefined;
       if (event === "started") {
-        updateNowPlaying({ id: rom.id, title: rom.title, system: rom.system });
+        updateNowPlaying({ id: rom.id, title: rom.title, system: rom.system, startedAt: Date.now() });
         const start = Date.now();
         const sessionId = await storage.createPlaySession(rom.id, rom.title, rom.system, start).catch(() => null);
         updateActiveSession(sessionId, start);

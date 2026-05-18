@@ -18,6 +18,7 @@ import { THEMES, AppTheme } from "./lib/themes";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Sidebar } from "@/components/Sidebar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NowPlayingBar } from "@/components/NowPlayingBar";
 
 /**
  * Ensures scroll position is reset or restored correctly on navigation.
@@ -195,6 +196,7 @@ function App() {
                   </SidebarInset>
                 </div>
               </Router>
+              <NowPlayingBar />
             </SidebarProvider>
           </TooltipProvider>
         </IntegrationProvider>

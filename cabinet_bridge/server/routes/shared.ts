@@ -2,7 +2,7 @@ import path from "node:path";
 import { dataPath } from "../data-dir";
 
 // In-memory "now playing" state — tracks the game currently open in the browser player
-export let nowPlayingRom: { id: number; title: string; system: string } | null = null;
+export let nowPlayingRom: { id: number; title: string; system: string; startedAt: number } | null = null;
 export let activeSessionId: number | null = null;
 export let activeSessionStart = 0;
 

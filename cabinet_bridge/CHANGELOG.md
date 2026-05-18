@@ -1,8 +1,8 @@
+## 2.24.26 – 2026-05-18
+
+- **Feature**: **Persistent Now Playing Bar** — Added `NowPlayingBar` component that slides up from the bottom when a game is active, showing cover art, game title, system, live session timer, Return and Exit buttons. Survives navigation between pages and sits above the mobile bottom nav. Backed by new `startedAt` field on the `/api/now-playing` endpoint. Includes a Playwright test suite (`e2e/now-playing.spec.ts`).
+
 ## 2.24.25 – 2026-05-18
-
-- **Feature**: **Art Coverage Test Suite** — Added `e2e/art-coverage.spec.ts` to diagnose missing game cover thumbnails. Reports per-game and per-system art coverage, flags recently-played games missing art, and distinguishes real images vs. gradient fallbacks.
-
-## 2.24.24 – 2026-05-18
 
 - **Feature**: **Comprehensive Playwright UX Test Suite** — Added `e2e/ux.spec.ts` covering sidebar navigation, game library interactions, search/sort/filter, game detail dialogs, settings, keyboard navigation, mobile responsive, and edge cases.
 
