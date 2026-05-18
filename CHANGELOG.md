@@ -4,6 +4,14 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.16] — 2026-05-17
+
+### Fix: Hardened Warp State Loading
+
+- **Aggressive State Restoration** — Refactored the Warp handoff logic to try multiple restoration methods (`quickLoad` and `loadState`) and increased the initialization buffer to 3 seconds. This ensures games resume exactly where you left off on PC, providing a true "warp" experience across all emulator cores.
+
+---
+
 ## [2.24.15] — 2026-05-17
 
 ### Performance: Optimized QR Scanner

@@ -792,17 +792,40 @@ function cabinetSetupSystemMenu() {
     };
   }
 }
-window.EJS_ready = function () { cabinetSetLaunchProgress(62, "Core ready"); };
 window.EJS_onGameStart = function() {
   cabinetSetLaunchProgress(100, "Ready");
-  setTimeout(function() { document.getElementById("cabinet-launch-overlay").classList.add("is-hidden"); }, 500);
+  setTimeout(function() { 
+    var overlay = document.getElementById("cabinet-launch-overlay");
+    if (overlay) overlay.classList.add("is-hidden"); 
+  }, 500);
+  
   var params = new URLSearchParams(window.location.search);
   var loadSlot = params.get("loadSlot");
   if (loadSlot) {
     (async function() {
       try {
-        await cabinetRestoreBackup(Number(loadSlot));
-        setTimeout(function() { window.EJS_emulator.loadState(Number(loadSlot)); }, 2000);
+        var slot = Number(loadSlot);
+        await cabinetRestoreBackup(slot);
+        
+        // Give the core 3 seconds to fully initialize before forcing a load
+        setTimeout(function() { 
+          var emu = window.EJS_emulator;
+          var loaded = false;
+          console.log("[Warp] Attempting to load state from slot " + slot + "...");
+          
+          if (emu && emu.gameManager && typeof emu.gameManager.quickLoad === "function") {
+            try { loaded = !!emu.gameManager.quickLoad(String(slot)); } catch(e) { loaded = false; }
+          }
+          if (!loaded && emu && typeof emu.loadState === "function") {
+            try { emu.loadState(slot); loaded = true; } catch(e) { loaded = false; }
+          }
+          
+          if (loaded) {
+            cabinetToast("Warp Complete ✨");
+          } else {
+            console.warn("[Warp] Auto-load failed, please load slot " + slot + " manually.");
+          }
+        }, 3000);
       } catch(e) {
         console.error("[Warp] Restore failed:", e);
       }
