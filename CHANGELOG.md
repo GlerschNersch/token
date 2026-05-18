@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.19] — 2026-05-17
+
+### Fix: Box Art Visibility & Selective Security
+
+- **Surgical Security Headers** — Optimized the security context by applying `COOP`/`COEP` headers only to the emulator player routes. This restores box art visibility on PC dashboards while maintaining the necessary isolation for the emulator's high-performance `SharedArrayBuffer` features.
+- **Cross-Origin Image Support** — Added explicit `crossOrigin` attributes to the game art components to improve compatibility with strict security policies.
+
+---
+
 ## [2.24.18] — 2026-05-17
 
 ### Fix: Box Art & Cross-Origin Performance

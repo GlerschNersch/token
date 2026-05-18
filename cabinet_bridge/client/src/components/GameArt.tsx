@@ -40,6 +40,7 @@ export function GameArt({
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
+          crossOrigin="anonymous"
           data-testid={`img-art-${game.id}`}
         />
       ) : null}
