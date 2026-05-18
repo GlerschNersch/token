@@ -4,6 +4,17 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.11] — 2026-05-17
+
+### Fix: Warp to Mobile Stability
+
+- **Universal Handoff Point** — Standardized on Slot 9 as the primary handoff point for Warp Link, ensuring consistent behavior across all systems and preventing conflicts with Slot 0 auto-saves.
+- **Warp QR Resolution** — Fixed a routing error that prevented QR codes from generating correctly when launched from the in-game menu.
+- **Manual Warp Link** — Enabled a manual URL fallback in the Warp panel, ensuring the feature remains functional even if strict browser security policies block the QR image.
+- **Smart Redirects** — Updated device handoff links to ensure users return to the HomeArcade dashboard instead of the Home Assistant root when exiting a game.
+
+---
+
 ## [2.24.7] — 2026-05-17
 
 ### Stability: Warp Link Release Candidate

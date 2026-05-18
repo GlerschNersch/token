@@ -23,7 +23,7 @@ export function WarpLinkDialog({
     const generateWarp = async () => {
       setLoading(true);
       try {
-        const returnTo = encodeURIComponent(window.location.origin + "/");
+        const returnTo = encodeURIComponent(window.location.origin + apiUrl("/"));
         // We use window.location.origin to ensure the mobile device hits the same host
         const baseUrl = window.location.origin + apiUrl(`/api/roms/${game.romId}/player?return=${returnTo}`);
         const warpUrl = new URL(baseUrl);

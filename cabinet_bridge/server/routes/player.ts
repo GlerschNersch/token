@@ -711,13 +711,13 @@ function cabinetSetupWarp() {
     cabinetSetPanelOpen("cabinet-warp-panel", true);
     var qr = document.querySelector("#cabinet-warp-qr");
     qr.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Warping...</div>';
-    var slot = 0; // Universal Auto-save slot
+    var slot = 9; // Slot 9 is the primary handoff point (Slot 0 is fallback)
     
     cabinetSetEmulatorSaveSlot(slot);
     var emu = window.EJS_emulator;
     var saved = false;
     
-    console.log("[Warp] Triggering save...");
+    console.log("[Warp] Triggering save to slot " + slot + "...");
     if (emu && emu.gameManager && typeof emu.gameManager.quickSave === "function") {
       try { saved = !!emu.gameManager.quickSave(String(slot)); } catch(e) { saved = false; }
     }
@@ -736,7 +736,16 @@ function cabinetSetupWarp() {
         url.searchParams.set("loadSlot", String(slot));
         url.searchParams.set("warp", "true");
         
-        var response = await fetch("../../roms/warp-qr?url=" + encodeURIComponent(url.toString()));
+        // Populate manual link
+        var manualBox = document.getElementById("cabinet-warp-manual");
+        var manualInput = document.getElementById("cabinet-warp-url");
+        if (manualBox && manualInput) {
+          manualInput.value = url.toString();
+          manualBox.style.display = "block";
+        }
+        
+        // Correct path: from /api/roms/:id/player to /api/roms/warp-qr is ../warp-qr
+        var response = await fetch("../warp-qr?url=" + encodeURIComponent(url.toString()));
         var data = await response.json();
         if (data.dataUrl) {
           qr.innerHTML = '<img src="'+data.dataUrl+'" style="display:block;margin:0 auto;max-width:100%;height:auto;border-radius:8px;box-shadow:0 0 20px rgba(0,0,0,0.2);" />';
