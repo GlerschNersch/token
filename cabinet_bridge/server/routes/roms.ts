@@ -18,6 +18,7 @@ import { z } from "zod";
 import { insertUploadedRomSchema } from "@shared/schema";
 import { extractFirstRomFromZip, titleFromFileName, slugify } from "./utils";
 import { fetchTheGamesDBMeta, fetchScreenScraperMeta, findLibretroBoxArt } from "./scrape";
+import QRCode from "qrcode";
 
 // ── EmulatorJS asset disk cache ─────────────────────────────────────────────
 // Caches CDN assets on disk so repeated visits (or different users launching
@@ -508,5 +509,24 @@ export function registerRomRoutes(app: Express) {
       try { await fs.unlink(resolved); fileRemoved = true; } catch { fileRemoved = false; }
     }
     res.json({ deleted: true, id: deleted.id, fileRemoved });
+  });
+
+  app.get("/api/roms/warp-qr", async (req, res) => {
+    const url = String(req.query.url ?? "");
+    if (!url) return res.status(400).send("No URL provided");
+    try {
+      const qrBuffer = await QRCode.toBuffer(url, {
+        margin: 1,
+        width: 400,
+        color: { dark: "#000000", light: "#ffffff" }
+      });
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      // Critical: add CORP header to allow loading under COEP require-corp
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      res.send(qrBuffer);
+    } catch (err) {
+      res.status(500).send("QR generation failed");
+    }
   });
 }

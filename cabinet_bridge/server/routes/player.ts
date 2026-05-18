@@ -663,8 +663,9 @@ function cabinetSetupWarp() {
         var url = new URL(window.location.href);
         url.searchParams.set("loadSlot", "9");
         url.searchParams.set("warp", "true");
-        var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url.toString());
-        qr.innerHTML = '<img src="'+qrUrl+'" style="display:block;margin:0 auto;" />';
+        // Use our local QR generator endpoint to avoid COEP/CSP blocks
+        var qrUrl = "../../roms/warp-qr?url=" + encodeURIComponent(url.toString());
+        qr.innerHTML = '<img src="'+qrUrl+'" style="display:block;margin:0 auto;max-width:100%;height:auto;" />';
         cabinetToast("Warp Point Ready ✨");
       } catch(e) {
         if (attempt < 6) setTimeout(check, 1500);
