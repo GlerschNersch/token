@@ -1,0 +1,1 @@
+ALTER TABLE `rom_save_slots` ADD `rom_hash` text;
