@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.23.8] — 2026-05-17
+
+### Fix: Warp Link Save Method
+
+- **Resolved TypeError** — Fixed the `saveState is not a function` error by switching to the established `quickSave` method and adding a reliable fallback to the top-level emulator save function.
+- **Extended Sync Timeout** — Increased the retry window and added a slight delay to the synchronization check to ensure that even slower emulator cores have finished writing their data.
+
+---
+
 ## [2.23.7] — 2026-05-17
 
 ### Stability: Player Logic Restoration
