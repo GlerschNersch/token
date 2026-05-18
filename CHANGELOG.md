@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.13] — 2026-05-17
+
+### Fix: SQL Fail-safe for rom_hash
+
+- **Automatic Schema Recovery** — Added a low-level fail-safe that detects if the `rom_hash` column is missing and adds it manually during startup. This provides an absolute guarantee that the "no such column" error is resolved, even if migrations are blocked by filesystem permissions.
+- **Improved Deployment Logic** — Refined the versioning and startup scripts to ensure all Home Assistant users receive the correct database structure immediately upon update.
+
+---
+
 ## [2.24.12] — 2026-05-17
 
 ### Fix: Database Migration Reliability

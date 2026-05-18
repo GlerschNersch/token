@@ -69,6 +69,17 @@ export function initializeDatabase() {
       } catch {}
     }
 
+    // Fail-safe for missing rom_hash column in rom_save_slots
+    try {
+      const info = sqlite.prepare("PRAGMA table_info(rom_save_slots)").all() as any[];
+      if (!info.some(col => col.name === "rom_hash")) {
+        log("Fail-safe: Adding rom_hash column to rom_save_slots", "db");
+        sqlite.prepare("ALTER TABLE rom_save_slots ADD COLUMN rom_hash TEXT").run();
+      }
+    } catch (e: any) {
+      log(`Fail-safe (rom_hash) error: ${e.message}`, "db");
+    }
+
     // Default Profile
     try {
       const exists = db.select().from(userProfiles).where(eq(userProfiles.id, 1)).get();
