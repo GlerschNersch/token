@@ -738,7 +738,7 @@ export default function HomeArcadeTheme() {
                           <motion.div key="info" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                              <div className="flex flex-wrap gap-3">
                                 <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-white/50">{activeGame.year || '----'}</div>
-                                <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-black italic">{currentSystem.system.name}</div>
+                                <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 font-mono text-[10px] uppercase tracking-widest text-primary font-black italic">{SYSTEMS.find(s => s.id === activeGame.system)?.name ?? activeGame.system}</div>
                                 {activeGame.rating > 0 && (
                                    <div className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-1.5 text-yellow-500 font-black font-mono text-[10px] tracking-widest">
                                       <Star className="size-3 fill-current" /> {activeGame.rating}/5
