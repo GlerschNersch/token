@@ -184,7 +184,8 @@
       "completed": "Completed",
       "backlog": "Backlog",
       "dropped": "Dropped",
-      "untracked": "Untracked"
+      "untracked": "Untracked",
+      "startTracking": "Play a game to start tracking your history."
     },
     "activity": {
       "lastWeek": "Last week",
