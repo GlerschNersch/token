@@ -1,8 +1,8 @@
+## 2.24.28 – 2026-05-18
+
+- **UX**: **Sidebar de-clutter — systems moved to Dashboard grid** — Removed the 25-item system list from the sidebar. Library section now contains only Favorites, Recently Played, All Games, Backlog (if non-zero), and Completed (if non-zero). Systems are browsed exclusively via the "Browse Systems" grid on the Dashboard, eliminating redundancy and visual overload.
+
 ## 2.24.27 – 2026-05-18
-
-- **Fix**: **Art CORS Proxy** — Added `GET /api/roms/:id/art` server-side proxy that fetches from Libretro/TheGamesDB/ScreenScraper and streams back with proper CORS headers. Art is cached to disk in `data/art-cache/` on first fetch. `GameArt` now routes uploaded ROM cover art through the proxy (`/api/roms/:id/art`) and falls back to the gradient on error — eliminating CORS errors and 404s on thumbnails.
-
-## 2.24.26 – 2026-05-18
 
 - **Feature**: **Comprehensive Playwright UX Test Suite** — Added `e2e/ux.spec.ts` covering sidebar navigation, game library interactions, search/sort/filter, game detail dialogs, settings, keyboard navigation, mobile responsive, and edge cases.
 

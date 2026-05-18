@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
-import { SYSTEMS, type SystemId, GAMES } from "@/data/library";
+import { GAMES } from "@/data/library";
 import type { GameCollectionWithItems, UploadedRom } from "@shared/schema";
 import { Wordmark } from "@/components/Logo";
 import { useQuery } from "@tanstack/react-query";
@@ -11,15 +11,12 @@ import {
   Clock,
   LayoutGrid,
   BookMarked,
-  Gamepad2,
   CheckCircle2,
   Settings as SettingsIcon,
   Trophy,
   Folder,
   History,
   ChevronsUpDown,
-  Radio,
-  PanelLeft,
 } from "lucide-react";
 import { useProfile } from "@/lib/useProfile";
 import type { UserProfile } from "@shared/schema";
@@ -87,12 +84,7 @@ export function Sidebar({ onReturnToGrid }: { onReturnToGrid?: () => void }) {
   const playingCount   = uploadedRoms.filter((r) => r.playStatus === "playing").length;
   const completedCount = uploadedRoms.filter((r) => r.playStatus === "completed").length;
 
-  const systemCounts = Object.fromEntries(
-    SYSTEMS.map((system) => [
-      system.id,
-      GAMES.filter((g) => g.system === system.id).length + uploadedRoms.filter((r) => r.system === system.id).length,
-    ]),
-  ) as Record<string, number>;
+  // systemCounts removed — systems now browsed via Dashboard grid, not sidebar
 
   const { data: nowPlaying } = useQuery<{ playing: boolean; id?: number; title?: string; system?: string }>({
     queryKey: ["/api/now-playing"],
@@ -235,32 +227,7 @@ export function Sidebar({ onReturnToGrid }: { onReturnToGrid?: () => void }) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Systems */}
-        {!kioskMode && (
-          <SidebarGroup>
-            <SidebarGroupLabel>{t("dashboard.sections.browseSystems")}</SidebarGroupLabel>
-            <SidebarMenu>
-              {SYSTEMS.map((s) => (
-                <SidebarMenuItem key={s.id}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive({ type: "system", value: s.id })}
-                    tooltip={s.shortName}
-                  >
-                    <Link href={filterToPath({ type: "system", value: s.id })}>
-                      <span
-                        className="inline-block size-3 rounded-sm shrink-0"
-                        style={{ background: `linear-gradient(135deg, hsl(${s.art[0]}), hsl(${s.art[1]}))` }}
-                      />
-                      <span>{s.shortName}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                  <SidebarMenuBadge>{systemCounts[s.id] ?? 0}</SidebarMenuBadge>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        )}
+        {/* — Systems moved to Dashboard Browse Systems grid — */}
 
         {/* Collections */}
         {collections.length > 0 && (
