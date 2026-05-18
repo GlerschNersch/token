@@ -10,7 +10,7 @@ export function MobileTopBar() {
 
   return (
     <div
-      className="lg:hidden flex items-center justify-between px-4 h-14 landscape:h-12 border-b border-border bg-sidebar/80 backdrop-blur-md sticky top-0 z-30 transition-[height]"
+      className="flex items-center justify-between px-4 h-14 landscape:h-12 border-b border-border bg-sidebar/80 backdrop-blur-md sticky top-0 z-30 transition-[height]"
       data-testid="bar-mobile-top"
     >
       {/* Mobile home button — replaces SidebarTrigger */}
