@@ -27,9 +27,13 @@ import { and, desc, eq } from "drizzle-orm";
 import { dataPath, ensureDir, getDataDir } from "./data-dir";
 import { log } from "./log";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export let sqlite: Database.Database;
 export let db: any;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function initializeDatabase() {
   if (sqlite) return;
@@ -47,12 +51,22 @@ export function initializeDatabase() {
 
     // Run migrations
     log("Running migrations...", "db");
-    const migrationsFolder = path.join(process.cwd(), "migrations");
+    // Bundle-safe migration path: dist/index.cjs is one level down from root (dist/)
+    // so we go up one level and then into migrations/
+    const migrationsFolder = path.join(__dirname, "..", "migrations");
     try {
       migrate(db, { migrationsFolder });
       log("Migrations complete", "db");
     } catch (migErr: any) {
       log(`Migration error: ${migErr.message}`, "db");
+      // Fallback to process.cwd() just in case
+      try {
+        const fallbackPath = path.join(process.cwd(), "migrations");
+        if (fallbackPath !== migrationsFolder) {
+          migrate(db, { migrationsFolder: fallbackPath });
+          log("Migrations complete (fallback)", "db");
+        }
+      } catch {}
     }
 
     // Default Profile

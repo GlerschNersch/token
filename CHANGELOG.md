@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.12] — 2026-05-17
+
+### Fix: Database Migration Reliability
+
+- **Hardened Migration Path** — Fixed a critical issue where database migrations could fail to run depending on the execution environment. This ensures the `rom_hash` column is correctly added to the `rom_save_slots` table, resolving SQL errors during Warp Link operations.
+- **Improved Boot Logging** — Updated the startup sequence to provide accurate version information in the Home Assistant logs.
+
+---
+
 ## [2.24.11] — 2026-05-17
 
 ### Fix: Warp to Mobile Stability
