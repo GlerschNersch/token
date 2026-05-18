@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.15] — 2026-05-17
+
+### Performance: Optimized QR Scanner
+
+- **High-Frequency Scanning** — Doubled the scanning frame rate (FPS) to 20, resulting in significantly faster and more responsive QR code detection when using Warp Link on mobile devices.
+- **Improved Target Area** — Expanded the scanning viewport and guide area to provide a more forgiving target, making it easier to capture codes in various lighting conditions.
+
+---
+
 ## [2.24.14] — 2026-05-17
 
 ### Fix: Warp QR 404 Error

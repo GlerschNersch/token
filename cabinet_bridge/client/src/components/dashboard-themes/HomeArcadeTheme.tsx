@@ -116,7 +116,11 @@ function WarpScanner({
 }) {
   useEffect(() => {
     const scanner = new Html5Qrcode("warp-scanner-viewport");
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    const config = { 
+      fps: 20, 
+      qrbox: { width: 280, height: 280 },
+      aspectRatio: 1.0
+    };
 
     scanner.start(
       { facingMode: "environment" },
