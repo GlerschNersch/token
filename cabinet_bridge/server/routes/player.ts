@@ -88,7 +88,7 @@ export function renderEmulatorPage({ title, returnTo, romHash }: { title: string
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>${safeTitle} · HomeArcade</title>
+    <title>${safeTitle} · Cabinet Bridge</title>
     <style>
       html, body {
         width: 100%;
@@ -1055,12 +1055,12 @@ export function renderEmulatorPage({ title, returnTo, romHash }: { title: string
         <button type="button" id="cabinet-display-open" data-testid="button-display-settings">Display</button>
         <button type="button" id="cabinet-remap-open" data-testid="button-remap-controls">Remap Keys</button>
         <button type="button" id="cabinet-gamepad-test-open" data-testid="button-gamepad-tester">Test Pad</button>
-        <button type="button" id="cabinet-warp-open" data-testid="button-warp-handoff">Warp Link</button>
         <button type="button" id="cabinet-netplay-open" data-testid="button-netplay">Netplay</button>
         <button type="button" id="cabinet-sleep-open" data-testid="button-sleep-timer">Sleep Timer</button>
         <button type="button" id="cabinet-crt-toggle" aria-pressed="false" data-testid="button-crt-filter">CRT Filter</button>
         <div class="cabinet-menu-divider" role="separator"></div>
-        <button type="button" class="danger" id="cabinet-exit" data-testid="button-exit-player">Exit Game</button>
+        <button type="button" id="cabinet-warp-open" data-testid="button-warp-handoff">Warp Link</button>
+        <button type="button" id="cabinet-exit" class="danger" data-testid="button-exit-player">Exit Game</button>
       </div>
     </nav>
     <section class="cabinet-save-panel" id="cabinet-save-panel" aria-label="Save state manager" aria-hidden="true" data-testid="panel-save-manager">
@@ -1239,14 +1239,14 @@ export function renderEmulatorPage({ title, returnTo, romHash }: { title: string
       </div>
       <div style="padding:24px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center;">
         <div id="cabinet-warp-qr" style="padding:16px;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
-          <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Synchronizing Warp Point...</div>
+          <div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Synchronizing...</div>
         </div>
         <div id="cabinet-warp-manual" style="display:none;flex-direction:column;gap:8px;">
-          <div style="font:600 11px ui-monospace,monospace;color:rgba(248,250,252,0.6);letter-spacing:0.05em;">QR generation failed. Manual warp link:</div>
+          <div style="font:600 11px ui-monospace,monospace;color:rgba(248,250,252,0.6);letter-spacing:0.05em;">Manual warp link:</div>
           <input id="cabinet-warp-url" type="text" readonly style="background:#1a1a2e;border:1px solid rgba(248,250,252,0.15);border-radius:8px;color:#f8fafc;font:600 10px ui-monospace,monospace;padding:8px 10px;width:100%;box-sizing:border-box;" />
         </div>
         <div style="max-width:280px;color:rgba(248,250,252,0.6);font:600 11px ui-monospace,monospace;letter-spacing:0.05em;line-height:1.5;">
-          Your current game state will be saved and synced automatically to a dedicated handoff slot.
+          Your current game state will be synced automatically to a dedicated handoff slot.
         </div>
       </div>
     </section>
@@ -1254,7 +1254,7 @@ export function renderEmulatorPage({ title, returnTo, romHash }: { title: string
     <div id="game">
       <div class="loading">
         <div>Loading ${safeTitle}</div>
-        <div class="hint">If this message stays visible, the preview frame blocked the emulator loader. Use the standalone player button above, or run HomeArcade locally in Home Assistant.</div>
+        <div class="hint">If this message stays visible, the preview frame blocked the emulator loader. Use the standalone player button above, or run Cabinet Bridge locally in Home Assistant.</div>
       </div>
     </div>
     <div class="cabinet-launch-overlay" id="cabinet-launch-overlay" role="status" aria-live="polite" data-testid="overlay-launch-progress">
@@ -1533,8 +1533,6 @@ var cabinetRomId = ${JSON.stringify(romId)};
 var cabinetRomHash = ${JSON.stringify(romHash || "")};
 var cabinetSaveSlots = [];
 var cabinetCurrentSaveSlot = 1;
-var cabinetServerBackups = [];
-
 function cabinetSaveStateEndpoint(slot) {
   return "./save-states" + (slot ? "/" + slot : "");
 }
@@ -2020,131 +2018,293 @@ function cabinetSetupSystemMenu() {
     cabinetSetMenuOpen(false);
     cabinetSetSaveManagerOpen(false);
     cabinetSetControlsPanel(false);
-    cabinetSetPanelOpen("cabinet-warp-panel", false);
   });
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") {
       cabinetSetMenuOpen(false);
       cabinetSetSaveManagerOpen(false);
       cabinetSetControlsPanel(false);
-      cabinetSetPanelOpen("cabinet-warp-panel", false);
     }
   });
 }
-function cabinetSetupWarp() {
-  var openBtn = document.querySelector("#cabinet-warp-open");
-  var closeBtn = document.querySelector("#cabinet-warp-close");
-  var panel = document.querySelector("#cabinet-warp-panel");
-  var qrContainer = document.querySelector("#cabinet-warp-qr");
-  var manualSection = document.querySelector("#cabinet-warp-manual");
-  var urlInput = document.querySelector("#cabinet-warp-url");
-  
-  if (!openBtn || !panel) return;
-
-  openBtn.addEventListener("click", async function () {
-    console.log("[Warp] Initializing handoff sequence...");
+document.addEventListener("click", function (event) {
+  var target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.id === "cabinet-resume") {
     cabinetSetMenuOpen(false);
-    cabinetSetPanelOpen("cabinet-warp-panel", true);
-    
-    if (manualSection) manualSection.style.display = "none";
-    if (qrContainer) {
-      qrContainer.style.display = "flex";
-      qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#000;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Synchronizing Warp Point...</div>';
+  }
+  if (target.id === "cabinet-exit") {
+    var returnTo = window.CABINET_RETURN_TO || "";
+    var duration = cabinetSessionStart ? Math.round((Date.now() - cabinetSessionStart) / 1000) : 0;
+    var doExit = function () {
+      if (returnTo) { window.location.href = returnTo; return; }
+      if (window.opener) { window.close(); return; }
+      window.location.href = "/";
+    };
+    var doPostAndExit = function () {
+      fetch("./play-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: "ended", durationSeconds: duration }),
+      }).catch(function () {}).finally(doExit);
+    };
+    if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") {
+      cabinetToast("Auto-saving…");
+      try {
+        window.EJS_emulator.saveState(0);
+        setTimeout(doPostAndExit, 800);
+      } catch (e) {
+        doPostAndExit();
+      }
+    } else {
+      doPostAndExit();
     }
-
-    try {
-      // 1. Trigger quick save to slot 9 (High slot, safe from auto-saves)
-      var slot = 9;
-      cabinetSetEmulatorSaveSlot(slot);
-      var emulator = window.EJS_emulator;
-      var saved = false;
-      
-      console.log("[Warp] Attempting quickSave to slot " + slot);
-      if (emulator && emulator.gameManager && typeof emulator.gameManager.quickSave === "function") {
-        try { saved = !!emulator.gameManager.quickSave(String(slot)); } catch (_error) { saved = false; }
-      }
-      
-      if (!saved && emulator && emulator.gameManager && typeof emulator.gameManager.saveState === "function") {
-        console.log("[Warp] quickSave failed/missing, trying saveState");
-        try { emulator.gameManager.saveState(slot); saved = true; } catch (_error) { saved = false; }
-      }
-
-      if (!saved) { 
-        console.log("[Warp] Function calls failed, using hotkey fallback (1)");
-        cabinetSendInput(24, "1"); 
-      }
-
-      // 2. Wait for VFS to flush and upload (Retrying up to 5 times)
-      var attempt = 0;
-      var maxAttempts = 5;
-      var checkAndSync = async function() {
-        try {
-          attempt++;
-          console.log("[Warp] Sync attempt " + attempt + "/" + maxAttempts);
-          
-          // Ensure VFS is synced if the core supports it
-          if (emulator && emulator.gameManager && emulator.gameManager.FS && typeof emulator.gameManager.FS.syncfs === "function") {
-            await new Promise(function(resolve) { emulator.gameManager.FS.syncfs(false, resolve); });
-          }
-
-          console.log("[Warp] Capturing thumbnail...");
-          await cabinetCaptureThumb(slot);
-          
-          console.log("[Warp] Backing up slot " + slot + " to server...");
-          await cabinetBackupSlot(slot);
-          
-          console.log("[Warp] Recording metadata...");
-          await cabinetRecordSaveSlot(slot);
-
-          // Success -> Generate Warp URL
-          var currentUrl = new URL(window.location.href);
-          currentUrl.searchParams.set("loadSlot", String(slot));
-          currentUrl.searchParams.set("warp", "true");
-          currentUrl.searchParams.set("t", String(Date.now())); // Cache buster
-          var warpUrl = currentUrl.toString();
-          console.log("[Warp] Warp URL generated: " + warpUrl);
-
-          // 3. Show QR Code
-          if (qrContainer) {
-            var qrSize = 200;
-            var qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=" + qrSize + "x" + qrSize + "&data=" + encodeURIComponent(warpUrl);
-            var img = new Image();
-            img.width = qrSize; img.height = qrSize;
-            img.style.display = "block"; img.style.borderRadius = "4px";
-            img.alt = "Warp QR Code";
-            img.onload = function() { qrContainer.innerHTML = ""; qrContainer.appendChild(img); cabinetToast("Warp Point Ready \\u2728"); };
-            img.onerror = function() {
-              console.error("[Warp] QR Code load failed (likely CSP)");
-              qrContainer.style.display = "none";
-              if (manualSection && urlInput) {
-                manualSection.style.display = "flex";
-                urlInput.value = warpUrl;
-                cabinetToast("QR Blocked, showing manual link");
-              }
-            };
-            img.src = qrApi;
-          }
-        } catch (e) {
-          console.warn("[Warp] Attempt " + attempt + " failed: " + e.message);
-          if (attempt < maxAttempts) {
-            setTimeout(checkAndSync, 1200);
-          } else {
-            console.error("[Warp] Final failure after " + maxAttempts + " attempts.", e);
-            cabinetToast("Warp failed: check logs");
-            if (qrContainer) qrContainer.innerHTML = '<div style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:#ef4444;font:800 10px ui-monospace,monospace;letter-spacing:0.1em;text-transform:uppercase;text-align:center;padding:20px;">Warp Failed<br><br>Check browser console for details</div>';
-          }
-        }
-      };
-
-      setTimeout(checkAndSync, 1000); 
-    } catch (e) {
-      console.error("[Warp] Fatal Error:", e);
-      cabinetToast("Warp failed");
+  }
+  if (target.id === "cabinet-save") {
+    cabinetQuickSaveSlot(cabinetCurrentSaveSlot);
+    cabinetSetMenuOpen(false);
+  }
+  if (target.id === "cabinet-load") {
+    cabinetQuickLoadSlot(cabinetCurrentSaveSlot);
+    cabinetSetMenuOpen(false);
+  }
+  if (target.id === "cabinet-save-manager-open") {
+    cabinetSetSaveManagerOpen(true);
+  }
+  if (target.id === "cabinet-save-manager-close") {
+    cabinetSetSaveManagerOpen(false);
+  }
+  if (target.id === "cabinet-sync-from-server") {
+    cabinetAutoSyncFromServer();
+  }
+  if (target.id === "cabinet-sleep-open") {
+    cabinetSetMenuOpen(false);
+    cabinetSetPanelOpen("cabinet-sleep-panel", true);
+  }
+  if (target.id === "cabinet-sleep-close") {
+    cabinetSetPanelOpen("cabinet-sleep-panel", false);
+  }
+  if (target.id === "cabinet-sleep-cancel") {
+    cabinetCancelSleepTimer();
+  }
+  if (target.id === "cabinet-sleep-start") {
+    cabinetStartSleepTimer();
+  }
+  var sleepMins = target.getAttribute("data-sleep-mins");
+  if (sleepMins) {
+    cabinetSelectSleepDuration(Number(sleepMins));
+  }
+  var saveAction = target.getAttribute("data-save-action");
+  if (saveAction) {
+    var slot = Number(target.getAttribute("data-slot"));
+    if (!Number.isNaN(slot)) {
+      if (saveAction === "save") { cabinetQuickSaveSlot(slot); }
+      if (saveAction === "load") { cabinetQuickLoadSlot(slot); cabinetSetSaveManagerOpen(false); }
+      if (saveAction === "delete") { cabinetDeleteLocalSaveSlot(slot); }
+      if (saveAction === "backup") { cabinetBackupSlot(slot); }
+      if (saveAction === "restore") { cabinetRestoreSlot(slot); }
     }
-  });
-
-  if (closeBtn) closeBtn.addEventListener("click", function() { cabinetSetPanelOpen("cabinet-warp-panel", false); });
+  }
+  if (target.id === "cabinet-pad-toggle") { cabinetSetMenuOpen(false); }
+  if (target.id === "cabinet-controls") { cabinetSetMenuOpen(false); cabinetSetControlsPanel(true); }
+  if (target.id === "cabinet-controls-close") { cabinetSetControlsPanel(false); }
+  if (target.id === "cabinet-ff-toggle") {
+    var ffOn = target.getAttribute("aria-pressed") === "true";
+    cabinetSetMenuOpen(false);
+    cabinetSetFastForward(!ffOn);
+  }
+  if (target.id === "cabinet-cheats") { cabinetOpenCheats(); }
+  if (target.id === "cabinet-screenshot") { cabinetTakeScreenshot(); }
+  if (target.id === "cabinet-crt-toggle") {
+    var _game = document.querySelector("#game");
+    var _crtOn = _game && _game.classList.contains("cabinet-filter-crt");
+    cabinetApplyFilter(_crtOn ? "none" : "crt");
+    var _crtBtn = document.querySelector("#cabinet-crt-toggle");
+    if (_crtBtn) { _crtBtn.setAttribute("aria-pressed", _crtOn ? "false" : "true"); _crtBtn.textContent = _crtOn ? "CRT Filter" : "CRT On"; }
+  }
+  if (target.id === "cabinet-display-open") { cabinetSetDisplayPanel(true); }
+  if (target.id === "cabinet-display-close") { cabinetSetDisplayPanel(false); }
+  if (target.id === "cabinet-remap-open") { cabinetSetRemapPanel(true); }
+  if (target.id === "cabinet-remap-close") { cabinetSetRemapPanel(false); }
+  if (target.id === "cabinet-remap-reset") {
+    try { localStorage.removeItem(cabinetRemapStorageKey()); } catch (_e) {}
+    cabinetRemapTarget = null;
+    cabinetRenderRemapGrid();
+    cabinetToast("Controls reset to defaults");
+  }
+  if (target.hasAttribute && target.hasAttribute("data-remap-index")) {
+    var remapIndex = parseInt(target.getAttribute("data-remap-index"), 10);
+    cabinetRemapTarget = { index: remapIndex };
+    cabinetRenderRemapGrid();
+  }
+  if (target.dataset && target.dataset.aspect) { cabinetApplyAspect(target.dataset.aspect); }
+  if (target.dataset && target.dataset.filter) { cabinetApplyFilter(target.dataset.filter); }
+});
+function cabinetSetControlsPanel(open) {
+  var panel = document.querySelector("#cabinet-controls-panel");
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  if (!panel || !backdrop) return;
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  panel.classList.toggle("is-open", open);
+  backdrop.classList.toggle("is-open", open);
+  if (open) cabinetRenderControls();
 }
+function cabinetRenderControls() {
+  var body = document.querySelector("#cabinet-controls-body");
+  var subtitle = document.querySelector("#cabinet-controls-subtitle");
+  if (!body) return;
+  var isPsx = window.CABINET_CORE === "psx" || window.CABINET_CORE === "pcsx2";
+  var isGba = window.CABINET_CORE === "gba";
+  var isGb  = window.CABINET_CORE === "gb" || window.CABINET_CORE === "gbc";
+  var isN64 = window.CABINET_CORE === "n64";
+  var isNds = window.CABINET_CORE === "nds";
+  var isPsp = window.CABINET_CORE === "psp";
+  if (subtitle) {
+    var coreLabel = isPsx ? "PlayStation" : isGba ? "Game Boy Advance" : isGb ? "Game Boy / GBC" : isN64 ? "Nintendo 64" : isNds ? "Nintendo DS" : isPsp ? "PSP" : "SNES / NES / Genesis";
+    subtitle.textContent = coreLabel + " · keyboard & gamepad";
+  }
+  var ROW_STYLE = 'display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(248,250,252,0.06);';
+  var LABEL_STYLE = 'color:rgba(248,250,252,0.5);font:700 9px ui-monospace,monospace;letter-spacing:0.14em;text-transform:uppercase;';
+  var KEY_STYLE = 'color:#f8fafc;font:700 11px ui-monospace,monospace;background:rgba(248,250,252,0.08);border:1px solid rgba(248,250,252,0.18);border-radius:6px;padding:3px 8px;';
+  function row(label, key) {
+    return '<div style="' + ROW_STYLE + '"><span style="' + LABEL_STYLE + '">' + label + '</span><span style="' + KEY_STYLE + '">' + key + '</span></div>';
+  }
+  var rows = [];
+  var SECTION_STYLE = 'color:rgba(248,250,252,0.35);font:800 8px ui-monospace,monospace;letter-spacing:0.2em;text-transform:uppercase;margin-top:4px;';
+  function section(label) {
+    return '<div style="' + SECTION_STYLE + '">' + label + '</div>';
+  }
+  if (isPsx) {
+    rows.push(section("Face Buttons")); rows.push(row("Cross", "Z")); rows.push(row("Circle", "X")); rows.push(row("Square", "A")); rows.push(row("Triangle", "S"));
+    rows.push(section("Shoulders")); rows.push(row("L1 / R1", "Q / W")); rows.push(row("L2 / R2", "E / R")); rows.push(row("L3 / R3", "Tab / C"));
+    rows.push(section("System")); rows.push(row("Start / Select", "Enter / Shift")); rows.push(row("D-Pad", "Arrow Keys"));
+  } else if (isGba) {
+    rows.push(section("Buttons")); rows.push(row("A / B", "Z / X")); rows.push(row("L / R", "Q / W"));
+    rows.push(section("System")); rows.push(row("Start / Select", "Enter / Shift")); rows.push(row("D-Pad", "Arrow Keys"));
+  } else if (isGb) {
+    rows.push(section("Buttons")); rows.push(row("A / B", "Z / X"));
+    rows.push(section("System")); rows.push(row("Start / Select", "Enter / Shift")); rows.push(row("D-Pad", "Arrow Keys"));
+  } else if (isN64) {
+    rows.push(section("Buttons")); rows.push(row("A / B", "Z / X")); rows.push(row("C-Up/Down/Left/Right", "I / K / J / L")); rows.push(row("L / R / Z", "Q / W / E"));
+    rows.push(section("System")); rows.push(row("Start", "Enter")); rows.push(row("Analog Stick", "Arrow Keys"));
+  } else if (isNds) {
+    rows.push(section("Buttons")); rows.push(row("A / B / X / Y", "Z / X / A / S")); rows.push(row("L / R", "Q / W"));
+    rows.push(section("System")); rows.push(row("Start / Select", "Enter / Shift")); rows.push(row("D-Pad", "Arrow Keys"));
+  } else if (isPsp) {
+    rows.push(section("Buttons")); rows.push(row("Cross / Circle", "Z / X")); rows.push(row("Square / Triangle", "A / S")); rows.push(row("L / R", "Q / W"));
+    rows.push(section("System")); rows.push(row("Start / Select", "Enter / Shift")); rows.push(row("Analog / D-Pad", "Arrow Keys"));
+  } else {
+    rows.push(section("Buttons")); rows.push(row("A / B", "Z / X")); rows.push(row("X / Y", "A / S")); rows.push(row("L / R", "Q / W"));
+    rows.push(section("System")); rows.push(row("Start / Select", "Enter / Shift")); rows.push(row("D-Pad", "Arrow Keys"));
+  }
+  rows.push(section("Emulator"));
+  rows.push(row("Quick Save / Load", "1 / 2"));
+  rows.push(row("Rewind", "Backspace"));
+  body.innerHTML = rows.join("");
+}
+function cabinetStartRewind() {
+  var btn = document.querySelector("#cabinet-rewind-toggle");
+  if (btn) btn.setAttribute("aria-pressed", "true");
+  var emulator = window.EJS_emulator;
+  var gm = emulator && emulator.gameManager;
+  var M = gm && gm.Module;
+  if (M) {
+    if (typeof M.setRewind === "function") { try { M.setRewind(1); } catch (_e) {} }
+    else if (typeof M._RA_cmd_rewind_flush === "function") { try { M._RA_cmd_rewind_flush(); } catch (_e) {} }
+  }
+}
+function cabinetStopRewind() {
+  var btn = document.querySelector("#cabinet-rewind-toggle");
+  if (btn) btn.setAttribute("aria-pressed", "false");
+  var emulator = window.EJS_emulator;
+  var gm = emulator && emulator.gameManager;
+  var M = gm && gm.Module;
+  if (M && typeof M.setRewind === "function") { try { M.setRewind(0); } catch (_e) {} }
+}
+function cabinetSetFastForward(enabled) {
+  var btn = document.querySelector("#cabinet-ff-toggle");
+  if (btn) btn.setAttribute("aria-pressed", String(enabled));
+  var emulator = window.EJS_emulator;
+  var gm = emulator && emulator.gameManager;
+  var M = gm && gm.Module;
+  var ok = false;
+  if (M) {
+    if (typeof M.setFastForward === "function") { try { M.setFastForward(enabled ? 1 : 0); ok = true; } catch (_e) {} }
+    if (!ok && typeof M._RA_cmd_toggle_fastforward === "function") { try { M._RA_cmd_toggle_fastforward(); ok = true; } catch (_e) {} }
+  }
+  if (!ok && emulator && typeof emulator.setFastForward === "function") { try { emulator.setFastForward(enabled); ok = true; } catch (_e) {} }
+  cabinetToast(enabled ? "Fast-forward ON (3×)" : "Fast-forward OFF");
+}
+function cabinetOpenCheats() { cabinetSetPanelOpen("cabinet-cheats-panel", true); cabinetLoadCheats(); }
+function cabinetLoadCheats() {
+  var list = document.querySelector("#cabinet-cheats-list");
+  var subtitle = document.querySelector("#cabinet-cheats-subtitle");
+  if (!list) return;
+  list.innerHTML = '<div style="color:rgba(248,250,252,0.4);font:600 10px ui-monospace,monospace;text-align:center;padding:16px 0;">Loading…</div>';
+  fetch("../../roms/" + cabinetRomId + "/cheats?profileId=" + encodeURIComponent(window.CABINET_PROFILE_ID || "1"))
+    .then(function(r) { return r.json(); })
+    .then(function(cheats) {
+      cabinetRenderCheats(cheats);
+      if (subtitle) subtitle.textContent = cheats.length + " cheat" + (cheats.length !== 1 ? "s" : "") + " saved for this game.";
+    })
+    .catch(function() {
+      list.innerHTML = '<div style="color:rgba(239,68,68,0.8);font:600 10px ui-monospace,monospace;text-align:center;padding:16px 0;">Failed to load cheats.</div>';
+    });
+}
+function cabinetRenderCheats(cheats) {
+  var list = document.querySelector("#cabinet-cheats-list");
+  if (!list) return;
+  if (!cheats || cheats.length === 0) { list.innerHTML = '<div style="color:rgba(248,250,252,0.35);font:600 10px ui-monospace,monospace;text-align:center;padding:24px 0;">No cheats yet. Add one above.</div>'; return; }
+  list.innerHTML = "";
+  cheats.forEach(function(cheat) {
+    var row = document.createElement("div");
+    row.style.cssText = "display:flex;align-items:center;gap:8px;background:rgba(248,250,252,0.05);border:1px solid rgba(248,250,252,0.1);border-radius:8px;padding:8px 10px;";
+    var toggle = document.createElement("button");
+    toggle.type = "button"; toggle.setAttribute("aria-pressed", cheat.enabled ? "true" : "false");
+    toggle.style.cssText = "flex-shrink:0;width:28px;height:16px;border-radius:8px;border:none;cursor:pointer;transition:background 0.2s;background:" + (cheat.enabled ? "hsl(322 92% 60%)" : "rgba(255,255,255,0.15)") + ";position:relative;";
+    var dot = document.createElement("span");
+    dot.style.cssText = "position:absolute;top:2px;width:12px;height:12px;background:#fff;border-radius:50%;transition:left 0.2s;left:" + (cheat.enabled ? "14px" : "2px") + ";";
+    toggle.appendChild(dot);
+    toggle.addEventListener("click", function() {
+      var wasEnabled = toggle.getAttribute("aria-pressed") === "true";
+      fetch("../../cheats/" + cheat.id, { method: "PATCH", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ enabled: !wasEnabled }) })
+        .then(function() { cabinetLoadCheats(); })
+        .catch(function() { cabinetToast("Failed to update cheat"); });
+    });
+    var info = document.createElement("div"); info.style.cssText = "flex:1;min-width:0;";
+    var desc = document.createElement("div"); desc.style.cssText = "color:#f8fafc;font:600 11px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; desc.textContent = cheat.description;
+    var code = document.createElement("div"); code.style.cssText = "color:rgba(248,250,252,0.45);font:500 9px ui-monospace,monospace;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"; code.textContent = cheat.code;
+    info.appendChild(desc); info.appendChild(code);
+    var del = document.createElement("button"); del.type = "button"; del.style.cssText = "flex-shrink:0;appearance:none;border:1px solid rgba(239,68,68,0.3);border-radius:6px;background:rgba(239,68,68,0.1);color:rgba(239,68,68,0.8);cursor:pointer;font:700 10px ui-monospace,monospace;padding:3px 7px;"; del.textContent = "Del";
+    del.addEventListener("click", function() {
+      fetch("../../cheats/" + cheat.id, { method: "DELETE" }).then(function() { cabinetLoadCheats(); cabinetToast("Cheat deleted"); }).catch(function() { cabinetToast("Failed to delete cheat"); });
+    });
+    row.appendChild(toggle); row.appendChild(info); row.appendChild(del); list.appendChild(row);
+  });
+}
+(function cabinetInitCheatsPanel() {
+  document.addEventListener("DOMContentLoaded", function() {
+    var closeBtn = document.querySelector("#cabinet-cheats-close");
+    if (closeBtn) closeBtn.addEventListener("click", function() { cabinetSetPanelOpen("cabinet-cheats-panel", false); });
+    var addBtn = document.querySelector("#cabinet-cheat-add");
+    if (addBtn) addBtn.addEventListener("click", function() {
+      var descInput = document.querySelector("#cabinet-cheat-desc");
+      var codeInput = document.querySelector("#cabinet-cheat-code");
+      var desc = (descInput || {}).value || "";
+      var code = (codeInput || {}).value || "";
+      if (!desc.trim() || !code.trim()) { cabinetToast("Enter a description and code"); return; }
+      addBtn.disabled = true; addBtn.textContent = "Adding…";
+      fetch("../../roms/" + cabinetRomId + "/cheats", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ description: desc.trim(), code: code.trim(), profileId: Number(window.CABINET_PROFILE_ID || 1) })
+      }).then(function(r) {
+        if (r.status === 409) { cabinetToast("Cheat already exists"); return; }
+        if (descInput) descInput.value = ""; if (codeInput) codeInput.value = "";
+        cabinetLoadCheats(); cabinetToast("Cheat added");
+      }).catch(function() { cabinetToast("Failed to add cheat"); }).finally(function() { addBtn.disabled = false; addBtn.textContent = "+ Add"; });
+    });
+  });
+})();
 function cabinetTakeScreenshot() {
   cabinetSetMenuOpen(false);
   var canvas = document.querySelector("#game canvas");
@@ -2191,6 +2351,24 @@ function cabinetInitDisplay() {
       if (_crtBtn) { var _on = filter === "crt"; _crtBtn.setAttribute("aria-pressed", _on ? "true" : "false"); _crtBtn.textContent = _on ? "CRT On" : "CRT Filter"; }
     }, 500);
   } catch (_e) {}
+}
+var cabinetRemapTarget = null;
+var CABINET_BUTTON_LABELS = [
+  "Cross / A", "Square / B", "Select", "Start", "D-Pad Up", "D-Pad Down", "D-Pad Left", "D-Pad Right",
+  "Circle / A2", "Triangle / B2", "L1", "R1", "L2", "R2", "L3", "R3",
+];
+function cabinetRemapStorageKey() { return "cabinet_remap_" + (window.EJS_gameID || "game"); }
+function cabinetLoadRemap() { try { var raw = localStorage.getItem(cabinetRemapStorageKey()); return raw ? JSON.parse(raw) : null; } catch (_e) { return null; } }
+function cabinetSaveRemap(mapping) { try { localStorage.setItem(cabinetRemapStorageKey(), JSON.stringify(mapping)); } catch (_e) {} }
+function cabinetProfilesKey() { return "cabinet_remap_profiles_" + (window.EJS_gameID || "game"); }
+function cabinetLoadProfiles() { try { var raw = localStorage.getItem(cabinetProfilesKey()); return raw ? JSON.parse(raw) : {}; } catch (_e) { return {}; } }
+function cabinetSaveProfiles(profiles) { try { localStorage.setItem(cabinetProfilesKey(), JSON.stringify(profiles)); } catch (_e) {} }
+function cabinetRefreshProfileSelect() {
+  var sel = document.querySelector("#cabinet-remap-profile-select");
+  if (!sel) return;
+  var profiles = cabinetLoadProfiles();
+  var names = Object.keys(profiles);
+  sel.innerHTML = names.length === 0 ? '<option value="">— no saved profiles —</option>' : names.map(function (n) { return '<option value="' + cabinetEscapeText(n) + '">' + cabinetEscapeText(n) + '</option>'; }).join("");
 }
 function cabinetSetupRemapProfiles() {
   var loadBtn = document.querySelector("#cabinet-remap-profile-load");
@@ -2263,6 +2441,39 @@ function cabinetRenderRemapGrid() {
     row.appendChild(nameEl); row.appendChild(keyBtn); grid.appendChild(row);
   });
 }
+document.addEventListener("keydown", function (e) {
+  if (!cabinetRemapTarget) return;
+  e.preventDefault(); e.stopPropagation();
+  var key = e.key.toLowerCase();
+  if (key === "escape") { cabinetRemapTarget = null; cabinetRenderRemapGrid(); return; }
+  var mapping = cabinetLoadRemap() || {}; mapping[cabinetRemapTarget.index] = key;
+  cabinetSaveRemap(mapping); cabinetApplyRemap(mapping); cabinetRemapTarget = null; cabinetRenderRemapGrid();
+  cabinetToast("Mapped to " + key);
+}, true);
+window.addEventListener("EJS_emulator_ready", function () {
+  cabinetApplyRemap(cabinetLoadRemap());
+  (function () {
+    var opts = window.CABINET_DISPLAY_OPTS || {}; var canvas = document.querySelector("#game canvas");
+    if (!canvas) return; if (opts.integerScale) canvas.style.imageRendering = "pixelated";
+    if (opts.aspectRatio) { canvas.style.aspectRatio = opts.aspectRatio; canvas.style.width = "auto"; canvas.style.height = "100%"; }
+  })();
+  if (window.CABINET_RUMBLE === false) {
+    var _origGetGamepads = navigator.getGamepads.bind(navigator);
+    navigator.getGamepads = function () {
+      var pads = _origGetGamepads();
+      return Array.from(pads).map(function (p) { if (!p) return p; Object.defineProperty(p, "vibrationActuator", { get: function () { return null; } }); return p; });
+    };
+  }
+  setTimeout(cabinetAutoSyncFromServer, 1500);
+  var rewindBtn = document.querySelector("#cabinet-rewind-toggle");
+  if (rewindBtn) {
+    rewindBtn.addEventListener("mousedown", function (e) { e.preventDefault(); cabinetStartRewind(); });
+    rewindBtn.addEventListener("touchstart", function (e) { e.preventDefault(); cabinetStartRewind(); }, { passive: false });
+    rewindBtn.addEventListener("mouseup", cabinetStopRewind); rewindBtn.addEventListener("mouseleave", cabinetStopRewind);
+    rewindBtn.addEventListener("touchend", cabinetStopRewind); rewindBtn.addEventListener("touchcancel", cabinetStopRewind);
+  }
+});
+var cabinetServerBackups = [];
 async function cabinetFetchServerBackups() {
   try { var r = await fetch("./save-backups"); if (!r.ok) return; var d = await r.json(); cabinetServerBackups = d.slots || []; } catch (_e) { cabinetServerBackups = []; }
 }
@@ -2270,7 +2481,7 @@ async function cabinetBackupSlot(slot) {
   var emulator = window.EJS_emulator;
   if (!emulator || !emulator.gameManager || !emulator.gameManager.FS) { cabinetToast("Game must be running to back up a save"); return; }
   var FS = emulator.gameManager.FS; var gameId = window.EJS_gameID || "";
-  var candidates = ["/" + gameId + "-" + slot + ".state", "/" + gameId + "-" + slot + "-quick.state", "/" + slot + ".state", slot + "-quick.state", "/" + gameId + "/auto.state", "/auto.state"];
+  var candidates = ["/" + gameId + "-" + slot + ".state", "/" + gameId + "-" + slot + "-quick.state", "/" + slot + ".state", slot + "-quick.state"];
   try {
     var rootFiles = FS.readdir("/");
     for (var i = 0; i < rootFiles.length; i++) {
@@ -2280,10 +2491,7 @@ async function cabinetBackupSlot(slot) {
   } catch (_scanErr) {}
   var data;
   for (var ci = 0; ci < candidates.length; ci++) { try { data = FS.readFile(candidates[ci], { encoding: "binary" }); if (data && data.length > 0) break; } catch (_e) {} }
-  if (!data || data.length === 0) { 
-    console.warn("[Backup] No data found for slot " + slot + " yet.");
-    throw new Error("Save data not found yet"); 
-  }
+  if (!data || data.length === 0) { cabinetToast("No save data in slot " + slot + " to back up"); return; }
   try {
     var r = await fetch("./save-backup/" + slot, { method: "PUT", headers: { "Content-Type": "application/octet-stream" }, body: data instanceof Uint8Array ? data : new Uint8Array(data), });
     if (!r.ok) throw new Error((await r.json()).message || "Failed");
@@ -2330,7 +2538,114 @@ async function cabinetAutoSyncFromServer() {
     cabinetToast("\u2601 Synced " + restored + " save state" + (restored > 1 ? "s" : "") + " from server");
   }
 }
-cabinetSetupSystemMenu(); cabinetSetupVirtualPad(); cabinetSetupGamepadPanel(); cabinetSetupRemapProfiles(); cabinetSetupNetplay(); cabinetSetupWarp(); cabinetFetchSaveSlots(); cabinetFetchServerBackups();
+function cabinetSetupGamepadPanel() {
+  var openBtn = document.querySelector("#cabinet-gamepad-test-open");
+  var closeBtn = document.querySelector("#cabinet-gamepad-panel-close");
+  var panel = document.querySelector("#cabinet-gamepad-panel");
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  if (!openBtn || !panel || !backdrop) return;
+  var gpRaf = null;
+  function renderGamepads() {
+    var statusEl = document.querySelector("#cabinet-gp-status");
+    var listEl = document.querySelector("#cabinet-gp-list");
+    if (!statusEl || !listEl) return;
+    var gamepads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+    if (gamepads.length === 0) { statusEl.textContent = "No controller detected. Press any button on your gamepad."; listEl.innerHTML = ""; }
+    else {
+      statusEl.textContent = gamepads.length + " controller" + (gamepads.length > 1 ? "s" : "") + " connected.";
+      listEl.innerHTML = gamepads.map(function (gp) {
+        var btnHtml = (gp.buttons || []).map(function (btn, i) {
+          var pressed = btn.pressed || btn.value > 0.1;
+          return '<span style="display:inline-block;min-width:28px;padding:3px 5px;margin:2px;border-radius:6px;font:700 9px ui-monospace,monospace;text-align:center;background:' + (pressed ? "#22c55e" : "rgba(248,250,252,0.08)") + ';color:' + (pressed ? "#fff" : "rgba(248,250,252,0.4)") + ';" title="Button ' + i + '">' + i + '</span>';
+        }).join("");
+        var axisHtml = (gp.axes || []).map(function (v, i) { return '<span style="display:inline-block;margin:2px 4px;font:600 9px ui-monospace,monospace;color:rgba(248,250,252,0.6);">A' + i + ':<b style="color:#f8fafc;">' + v.toFixed(2) + '</b></span>'; }).join("");
+        return '<div style="background:rgba(248,250,252,0.04);border:1px solid rgba(248,250,252,0.1);border-radius:12px;padding:10px 14px;margin-bottom:6px;">' + '<div style="font:700 11px ui-monospace,monospace;color:#f8fafc;margin-bottom:6px;">' + (gp.id || "Unknown Controller") + '</div>' + '<div style="margin-bottom:4px;">' + (btnHtml || "<em style='font-style:italic;color:rgba(248,250,252,0.3);font-size:10px;'>No buttons</em>") + '</div>' + '<div>' + (axisHtml || "") + '</div>' + '</div>';
+      }).join("");
+    }
+    if (panel.getAttribute("aria-hidden") !== "true") gpRaf = requestAnimationFrame(renderGamepads);
+  }
+  openBtn.addEventListener("click", function () { cabinetSetMenuOpen(false); panel.setAttribute("aria-hidden", "false"); panel.classList.add("is-open"); backdrop.classList.add("is-open"); renderGamepads(); });
+  function closePanel() { panel.setAttribute("aria-hidden", "true"); panel.classList.remove("is-open"); backdrop.classList.remove("is-open"); if (gpRaf) { cancelAnimationFrame(gpRaf); gpRaf = null; } }
+  if (closeBtn) closeBtn.addEventListener("click", closePanel);
+  backdrop.addEventListener("click", function () { if (panel.classList.contains("is-open")) closePanel(); });
+  window.addEventListener("gamepadconnected", function (e) { cabinetToast("Gamepad connected: " + e.gamepad.id.slice(0, 40)); if (panel.classList.contains("is-open")) renderGamepads(); });
+  window.addEventListener("gamepaddisconnected", function () { cabinetToast("Gamepad disconnected"); if (panel.classList.contains("is-open")) renderGamepads(); });
+}
+function cabinetNetplayConnect(onOpen) {
+  if (cabinetNetplayWs && cabinetNetplayWs.readyState === WebSocket.OPEN) { onOpen(cabinetNetplayWs); return; }
+  var proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  var _np = window.location.pathname; var _ni = _np.indexOf("/api/roms/"); var base = _ni >= 0 ? _np.slice(0, _ni) : "";
+  var url = proto + "//" + window.location.host + base + "/api/netplay";
+  var ws = new WebSocket(url);
+  ws.addEventListener("open", function () { cabinetNetplayWs = ws; onOpen(ws); });
+  ws.addEventListener("error", function () { cabinetToast("Netplay: connection failed"); });
+  ws.addEventListener("close", function () { cabinetNetplayWs = null; cabinetNetplayRole = null; });
+  return ws;
+}
+function cabinetSetupNetplay() {
+  var openBtn = document.querySelector("#cabinet-netplay-open");
+  var closeBtn = document.querySelector("#cabinet-netplay-close");
+  var panel = document.querySelector("#cabinet-netplay-panel");
+  var backdrop = document.querySelector("#cabinet-menu-backdrop");
+  var hostBtn = document.querySelector("#cabinet-netplay-host");
+  var joinBtn = document.querySelector("#cabinet-netplay-join");
+  var hostSection = document.querySelector("#cabinet-netplay-host-section");
+  var joinSection = document.querySelector("#cabinet-netplay-join-section");
+  var roomCodeEl = document.querySelector("#cabinet-netplay-room-code");
+  var codeInput = document.querySelector("#cabinet-netplay-code-input");
+  var connectBtn = document.querySelector("#cabinet-netplay-connect");
+  var statusEl = document.querySelector("#cabinet-netplay-status");
+  if (!openBtn || !panel) return;
+  function setStatus(msg) { if (statusEl) statusEl.textContent = msg; }
+  function showSection(which) { if (hostSection) hostSection.style.display = which === "host" ? "flex" : "none"; if (joinSection) joinSection.style.display = which === "join" ? "flex" : "none"; }
+  openBtn.addEventListener("click", function () { cabinetSetMenuOpen(false); panel.setAttribute("aria-hidden", "false"); panel.classList.add("is-open"); backdrop.classList.add("is-open"); showSection(null); setStatus(""); });
+  function closePanel() { panel.setAttribute("aria-hidden", "true"); panel.classList.remove("is-open"); backdrop.classList.remove("is-open"); }
+  if (closeBtn) closeBtn.addEventListener("click", closePanel);
+  if (hostBtn) hostBtn.addEventListener("click", function () {
+    setStatus("Connecting to netplay server…"); showSection("host"); if (roomCodeEl) roomCodeEl.textContent = "…";
+    cabinetNetplayRole = "host";
+    cabinetNetplayConnect(function (ws) {
+      ws.send(JSON.stringify({ type: "create-room" }));
+      ws.addEventListener("message", function onMsg(e) {
+        var msg; try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === "room-created") {
+          var code = msg.room; if (roomCodeEl) roomCodeEl.textContent = code; setStatus("Share this code with your opponent.");
+          try {
+            var emu = window.EJS_emulator;
+            if (emu && emu.netplay && typeof emu.netplay.host === "function") emu.netplay.host(code);
+            else if (emu && typeof emu.enableNetplay === "function") emu.enableNetplay(true, code, true);
+          } catch (_e) {}
+        } else if (msg.type === "peer-joined") { setStatus("Opponent connected! Game syncing…"); cabinetToast("Netplay: opponent joined!"); }
+        else if (msg.type === "peer-disconnected") { setStatus("Opponent disconnected."); cabinetToast("Netplay: opponent left"); }
+        else if (msg.type === "error") setStatus("Error: " + msg.message);
+      });
+    });
+  });
+  if (roomCodeEl) roomCodeEl.addEventListener("click", function () {
+    var code = roomCodeEl.textContent || ""; if (code && code !== "\u2014" && code !== "\u2026") navigator.clipboard.writeText(code).then(function () { cabinetToast("Room code copied!"); }).catch(function () {});
+  });
+  if (joinBtn) joinBtn.addEventListener("click", function () { showSection("join"); setStatus("Enter the host's room code and press Connect."); if (codeInput) codeInput.focus(); });
+  if (connectBtn) connectBtn.addEventListener("click", function () {
+    var code = (codeInput ? codeInput.value : "").trim().toUpperCase(); if (!code || code.length < 4) { setStatus("Please enter a valid room code."); return; }
+    setStatus("Connecting to room " + code + "\u2026"); cabinetNetplayRole = "client";
+    cabinetNetplayConnect(function (ws) {
+      ws.send(JSON.stringify({ type: "join-room", room: code }));
+      ws.addEventListener("message", function onMsg(e) {
+        var msg; try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === "room-joined") {
+          setStatus("Connected! Waiting for game sync\u2026"); cabinetToast("Netplay: joined room " + code);
+          try {
+            var emu = window.EJS_emulator;
+            if (emu && emu.netplay && typeof emu.netplay.join === "function") emu.netplay.join(code);
+            else if (emu && typeof emu.enableNetplay === "function") emu.enableNetplay(true, code, false);
+          } catch (_e) {}
+        } else if (msg.type === "peer-disconnected") { setStatus("Host disconnected."); cabinetToast("Netplay: host left"); }
+        else if (msg.type === "error") { setStatus("Error: " + msg.message); cabinetToast("Netplay: " + msg.message); }
+      });
+    });
+  });
+}
+cabinetSetupSystemMenu(); cabinetSetupVirtualPad(); cabinetSetupGamepadPanel(); cabinetSetupRemapProfiles(); cabinetSetupNetplay(); cabinetFetchSaveSlots(); cabinetFetchServerBackups();
 (function () {
   var RETROPAD_TO_PHYSICAL = ${JSON.stringify(gamepadBindings)};
   var DEFAULT_MAP = { 0: 0, 1: 2, 2: 8, 3: 9, 4: 12, 5: 13, 6: 14, 7: 15, 8: 1, 9: 3, 10: 4, 11: 5, 12: 6, 13: 7, 14: 10, 15: 11, };
@@ -2366,18 +2681,8 @@ window.EJS_onGameStart = function () {
   document.addEventListener("visibilitychange", function () { if (document.hidden && window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") try { window.EJS_emulator.saveState(0); cabinetCaptureThumb("auto"); localStorage.setItem("cabinet_autosave_" + (window.EJS_gameID || ""), String(Date.now())); } catch (_e) {} });
   window.addEventListener("pagehide", function () { if (window.EJS_emulator && typeof window.EJS_emulator.saveState === "function") try { window.EJS_emulator.saveState(0); } catch (_e) {} });
   var _autoKey = "cabinet_autosave_" + (window.EJS_gameID || ""); var _autoTs = null;
-  var _urlParams = new URLSearchParams(window.location.search);
-  var _loadSlot = _urlParams.get("loadSlot");
-
   try { _autoTs = localStorage.getItem(_autoKey); } catch (_e) {}
-  
-  if (_loadSlot) {
-    var slotNum = _loadSlot === "latest" ? 1 : Number(_loadSlot); // 'latest' logic can be improved but 1 is safe default
-    setTimeout(function () { 
-      cabinetToast("Resuming from slot " + slotNum + "\u2026");
-      if (window.EJS_emulator && typeof window.EJS_emulator.loadState === "function") try { window.EJS_emulator.loadState(slotNum); } catch (_e) {} 
-    }, 2500);
-  } else if (_autoTs) {
+  if (_autoTs) {
     try { localStorage.removeItem(_autoKey); } catch (_e) {}
     var _autoMins = Math.round((Date.now() - Number(_autoTs)) / 60000); var _autoLabel = _autoMins < 1 ? "just now" : _autoMins + " min ago";
     setTimeout(function () { cabinetToast("Resuming auto-save from " + _autoLabel + "\u2026"); if (window.EJS_emulator && typeof window.EJS_emulator.loadState === "function") try { window.EJS_emulator.loadState(0); } catch (_e) {} }, 2500);
