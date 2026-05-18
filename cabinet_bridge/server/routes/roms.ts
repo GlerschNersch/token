@@ -34,6 +34,21 @@ async function ensureEjsCacheDir() {
 export function registerRomRoutes(app: Express) {
   const BIOS_ROOT = dataPath("bios");
 
+  app.get("/api/roms/warp-qr", async (req, res) => {
+    const url = String(req.query.url ?? "");
+    if (!url) return res.status(400).send("No URL provided");
+    try {
+      const dataUrl = await QRCode.toDataURL(url, {
+        margin: 1,
+        width: 400,
+        color: { dark: "#000000", light: "#ffffff" }
+      });
+      res.json({ dataUrl });
+    } catch (err) {
+      res.status(500).json({ message: "QR generation failed" });
+    }
+  });
+
   app.get("/api/upload-limits", (_req, res) => {
     res.json({
       maxUploadMb: MAX_UPLOAD_MB,
@@ -509,20 +524,5 @@ export function registerRomRoutes(app: Express) {
       try { await fs.unlink(resolved); fileRemoved = true; } catch { fileRemoved = false; }
     }
     res.json({ deleted: true, id: deleted.id, fileRemoved });
-  });
-
-  app.get("/api/roms/warp-qr", async (req, res) => {
-    const url = String(req.query.url ?? "");
-    if (!url) return res.status(400).send("No URL provided");
-    try {
-      const dataUrl = await QRCode.toDataURL(url, {
-        margin: 1,
-        width: 400,
-        color: { dark: "#000000", light: "#ffffff" }
-      });
-      res.json({ dataUrl });
-    } catch (err) {
-      res.status(500).json({ message: "QR generation failed" });
-    }
   });
 }

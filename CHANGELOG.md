@@ -4,6 +4,15 @@ All notable changes to HomeArcade are documented here.
 
 ---
 
+## [2.24.14] — 2026-05-17
+
+### Fix: Warp QR 404 Error
+
+- **Route Prioritization** — Fixed an issue where the `warp-qr` API endpoint was being incorrectly shadowed by the generic ROM detail route, causing 404 errors when generating Warp Links from the in-game menu.
+- **Cleanup** — Removed redundant route registrations to improve server stability and performance.
+
+---
+
 ## [2.24.13] — 2026-05-17
 
 ### Fix: SQL Fail-safe for rom_hash
