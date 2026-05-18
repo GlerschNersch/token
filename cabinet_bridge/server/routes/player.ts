@@ -636,8 +636,19 @@ function cabinetSetupWarp() {
     var qr = document.querySelector("#cabinet-warp-qr");
     qr.innerHTML = "Warping...";
     var slot = 9;
+    
+    // 1. Trigger the save using the proven logic
     cabinetSetEmulatorSaveSlot(slot);
-    window.EJS_emulator.gameManager.saveState(slot);
+    var emu = window.EJS_emulator;
+    var saved = false;
+    
+    if (emu && emu.gameManager && typeof emu.gameManager.quickSave === "function") {
+      try { saved = !!emu.gameManager.quickSave(String(slot)); } catch(e) { saved = false; }
+    }
+    if (!saved && emu && typeof emu.saveState === "function") {
+      try { emu.saveState(); saved = true; } catch(e) { saved = false; }
+    }
+    if (!saved) { cabinetSendInput(24, "1"); } // Hotkey fallback
     
     var attempt = 0;
     var check = async function() {
@@ -647,22 +658,22 @@ function cabinetSetupWarp() {
         await cabinetRecordSaveSlot(slot);
         var url = new URL(window.location.href);
         url.searchParams.set("loadSlot", "9");
+        url.searchParams.set("warp", "true");
         var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(url.toString());
-        qr.innerHTML = '<img src="'+qrUrl+'" />';
+        qr.innerHTML = '<img src="'+qrUrl+'" style="display:block;margin:0 auto;" />';
         cabinetToast("Warp Point Ready ✨");
       } catch(e) {
-        if (attempt < 5) setTimeout(check, 1200);
+        if (attempt < 6) setTimeout(check, 1500);
         else {
-          qr.innerHTML = "Warp failed";
+          qr.innerHTML = "Warp failed - could not sync save";
           cabinetToast("Warp failed");
         }
       }
     };
-    setTimeout(check, 1000);
+    setTimeout(check, 1200);
   };
-  document.getElementById("cabinet-warp-close").onclick = function() {
-    cabinetSetPanelOpen("cabinet-warp-panel", false);
-  };
+  var closeBtn = document.getElementById("cabinet-warp-close");
+  if (closeBtn) closeBtn.onclick = function() { cabinetSetPanelOpen("cabinet-warp-panel", false); };
 }
 function cabinetSetupSystemMenu() {
   var btn = document.getElementById("cabinet-menu-toggle");
