@@ -1,3 +1,7 @@
+## 2.24.9 – 2026-05-17
+
+- **Fix**: **Warp Link Database Error** — Resolved the "no such column: rom_hash" error that prevented save-state syncing during Warp sessions.
+
 ## 2.24.8 – 2026-05-17
 
 - **Feature**: **Warp to Mobile (Pre-launch)** — Added the ability to generate a Warp QR code directly from the game detail dialog and dashboard.
