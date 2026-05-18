@@ -1,8 +1,10 @@
+## 2.24.25 – 2026-05-18
+
+- **Feature**: **Art Coverage Test Suite** — Added `e2e/art-coverage.spec.ts` to diagnose missing game cover thumbnails. Reports per-game and per-system art coverage, flags recently-played games missing art, and distinguishes real images vs. gradient fallbacks.
+
 ## 2.24.24 – 2026-05-18
 
 - **Feature**: **Comprehensive Playwright UX Test Suite** — Added `e2e/ux.spec.ts` covering sidebar navigation, game library interactions, search/sort/filter, game detail dialogs, settings, keyboard navigation, mobile responsive, and edge cases.
-
-## 2.24.10 – 2026-05-17
 
 - **Fix**: **Exit Game Button** — Fixed a bug where the "Exit Game" button in the emulator menu was non-functional. It now correctly returns you to the library.
 
