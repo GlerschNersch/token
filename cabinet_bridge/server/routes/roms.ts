@@ -214,6 +214,60 @@ export function registerRomRoutes(app: Express) {
     }
   });
 
+  app.get("/api/roms/:id/art", async (req, res) => {
+    const id = Number(req.params.id);
+    const rom = await storage.getUploadedRom(id);
+    if (!rom) return res.status(404).json({ message: "ROM not found." });
+
+    const artUrl = (rom as any).artUrl as string | null;
+    if (!artUrl) return res.status(404).json({ message: "No art available." });
+
+    // Check disk cache first
+    const cacheDir = path.resolve(dataPath("art-cache"));
+    const safeName = `${id}-${Buffer.from(artUrl).toString("base64url").slice(0, 64)}`;
+    const cachePath = path.join(cacheDir, safeName.replace(/[/\\?%*:|"<>/]/g, "_") + ".jpg");
+
+    // Serve from cache if exists
+    try {
+      const exists = await fs.access(cachePath).then(() => true).catch(() => false);
+      if (exists) {
+        res.setHeader("Content-Type", "image/jpeg");
+        res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+        return res.sendFile(cachePath);
+      }
+    } catch {}
+
+    // Fetch from upstream
+    try {
+      const upstream = await fetch(artUrl, {
+        headers: { "User-Agent": "CabinetBridge/0.1", Referer: artUrl },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!upstream.ok || !upstream.body) return res.status(502).json({ message: "Failed to fetch art." });
+
+      const ct = upstream.headers.get("Content-Type") ?? "image/jpeg";
+      res.setHeader("Content-Type", ct);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+
+      // Stream to browser AND save to disk cache
+      await fs.mkdir(cacheDir, { recursive: true }).catch(() => {});
+      const { Readable } = await import("stream");
+      const chunks: Buffer[] = [];
+
+      for await (const chunk of Readable.fromWeb(upstream.body as any)) {
+        res.write(chunk);
+        chunks.push(Buffer.from(chunk));
+      }
+      res.end();
+
+      // Write to cache asynchronously after response
+      fs.writeFile(cachePath, Buffer.concat(chunks)).catch(() => {});
+    } catch (err) {
+      console.error(`[Art] Failed to proxy art for ROM ${id}:`, err);
+      res.status(502).json({ message: "Art fetch error." });
+    }
+  });
+
   // ── EmulatorJS CDN proxy with disk cache ──────────────────────────────────
   // Assets are immutable once fetched (WASM, JS cores, etc.).
   // We cache them on disk so subsequent requests are served locally at LAN

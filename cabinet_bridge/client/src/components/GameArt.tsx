@@ -32,7 +32,26 @@ export function GameArt({
         background: `linear-gradient(${angle}deg, ${dark} 0%, ${accent} 55%, ${light} 100%)`,
       }}
     >
-      {game.artUrl ? (
+      {/*
+       * artUrl is proxied through /api/roms/:id/art to avoid CORS.
+       * uploaded games use the server-side proxy; demo/seeded games
+       * (no romId) use artUrl directly since those are static.
+       * On proxy error the img is hidden so the gradient fallback shows.
+       */}
+      {game.romId ? (
+        <img
+          src={`/api/roms/${game.romId}/art`}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          data-testid={`img-art-${game.id}`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : game.artUrl ? (
         <img
           src={game.artUrl}
           alt=""
@@ -42,6 +61,9 @@ export function GameArt({
           decoding="async"
           crossOrigin="anonymous"
           data-testid={`img-art-${game.id}`}
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
         />
       ) : null}
       {game.artUrl ? <div className="absolute inset-0 bg-black/10" /> : null}

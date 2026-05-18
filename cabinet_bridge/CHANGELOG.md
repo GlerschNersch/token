@@ -1,8 +1,8 @@
+## 2.24.27 – 2026-05-18
+
+- **Fix**: **Art CORS Proxy** — Added `GET /api/roms/:id/art` server-side proxy that fetches from Libretro/TheGamesDB/ScreenScraper and streams back with proper CORS headers. Art is cached to disk in `data/art-cache/` on first fetch. `GameArt` now routes uploaded ROM cover art through the proxy (`/api/roms/:id/art`) and falls back to the gradient on error — eliminating CORS errors and 404s on thumbnails.
+
 ## 2.24.26 – 2026-05-18
-
-- **Feature**: **Persistent Now Playing Bar** — Added `NowPlayingBar` component that slides up from the bottom when a game is active, showing cover art, game title, system, live session timer, Return and Exit buttons. Survives navigation between pages and sits above the mobile bottom nav. Backed by new `startedAt` field on the `/api/now-playing` endpoint. Includes a Playwright test suite (`e2e/now-playing.spec.ts`).
-
-## 2.24.25 – 2026-05-18
 
 - **Feature**: **Comprehensive Playwright UX Test Suite** — Added `e2e/ux.spec.ts` covering sidebar navigation, game library interactions, search/sort/filter, game detail dialogs, settings, keyboard navigation, mobile responsive, and edge cases.
 
