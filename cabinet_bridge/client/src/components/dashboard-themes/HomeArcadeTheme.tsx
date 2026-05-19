@@ -571,13 +571,13 @@ export default function HomeArcadeTheme() {
 
       <div className="flex-1 flex flex-col min-h-0 relative z-10">
 
-        {/* Recently Played — collapsible, below Browse Systems */}
+        {/* Recently Played — desktop only, hidden on mobile */}
         {recentlyPlayed.length > 0 && !searchQuery && (
-          <div className="shrink-0 border-t border-white/5">
+          <div className="shrink-0 border-t border-white/5 hidden sm:block">
             <button
               type="button"
               onClick={() => setRecentlyPlayedCollapsed((v) => !v)}
-              className="w-full flex items-center justify-between px-8 py-3 hover:bg-white/5 transition-colors"
+              className="w-full flex items-center justify-between px-4 sm:px-8 py-3 hover:bg-white/5 transition-colors"
             >
               <div className="font-display text-[12px] font-black uppercase tracking-[0.25em] text-white/40">Recently Played</div>
               {recentlyPlayedCollapsed
@@ -617,34 +617,46 @@ export default function HomeArcadeTheme() {
           </div>
         )}
 
-        {/* Browse Systems */}
-        <div className="shrink-0 border-b border-white/5 px-8 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-display text-[12px] font-black uppercase tracking-[0.25em] text-white/40">Browse Systems</div>
-          </div>
-          <div className="grid gap-3"
-            style={{
-              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-            }}>
-            {SYSTEMS.filter((s) => s.count > 0).map((system) => {
+        {/* Browse Systems — horizontal scrolling carousel on mobile */}
+        <div className="shrink-0 border-b border-white/5 px-4 sm:px-8 py-4">
+          <div className="font-display text-[12px] font-black uppercase tracking-[0.25em] text-white/40 mb-3">Browse Systems</div>
+          <div
+            className="flex gap-3 overflow-x-auto scrollbar-none pb-1 snap-x snap-mandatory flex-nowrap"
+            style={{ scrollPaddingLeft: "1rem" }}
+          >
+            {SYSTEMS.filter((s) => {
+              const count = allGames.filter((g) => g.system === s.id).length;
+              return count > 0;
+            }).map((system) => {
               const count = allGames.filter((g) => g.system === system.id).length;
-              if (count === 0) return null;
               return (
                 <button
                   key={system.id}
                   type="button"
                   onClick={() => setSearchQuery("filter:" + system.id)}
-                  className="relative aspect-video rounded-xl overflow-hidden border border-white/10 group hover:border-white/30 transition-all"
-                  style={{ background: `linear-gradient(140deg, hsl(${system.art[0]}) 0%, hsl(${system.art[1]}) 100%)` }}
+                  className="snap-start shrink-0 w-36 sm:w-44 aspect-[4/3] rounded-2xl overflow-hidden border border-white/10 group hover:border-white/40 hover:scale-105 transition-all duration-200 relative"
+                  style={{ background: `linear-gradient(135deg, hsl(${system.art[0]}) 0%, hsl(${system.art[1]}) 100%)` }}
                 >
-                  <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                    <div className="text-2xl font-black text-white">{system.mono}</div>
+                  {/* Subtle system mono watermark */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-10">
+                    <span className="font-black text-4xl text-white">{system.mono}</span>
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  <div className="absolute bottom-1.5 left-2 right-2">
-                    <div className="text-[11px] font-black uppercase truncate text-white">{system.shortName}</div>
-                    <div className="text-[10px] text-white/50 font-mono">{count} titles</div>
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  {/* Content */}
+                  <div className="absolute inset-0 flex flex-col justify-between p-3">
+                    {/* System mono badge top-left */}
+                    <div className="flex items-start">
+                      <span className="font-black text-xs text-white/60">{system.mono}</span>
+                    </div>
+                    {/* Name + count bottom */}
+                    <div>
+                      <div className="font-display text-sm font-black uppercase tracking-wide text-white truncate leading-tight drop-shadow">{system.shortName}</div>
+                      <div className="font-mono text-[10px] text-white/40 mt-0.5">{count} titles</div>
+                    </div>
                   </div>
+                  {/* Glowing border on hover */}
+                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity border-2 border-white/30 pointer-events-none" />
                 </button>
               );
             })}
