@@ -315,16 +315,42 @@ export class DatabaseStorage implements IStorage {
       db.insert(profileControlBindings).values({ profileId, core, bindings: value, updatedAt: Date.now() }).run();
     }
   }
-  async getGamepadBindings(profileId: number, gamepadId: string): Promise<any> {
-    const row = db.select().from(gamepadBindings).where(and(eq(gamepadBindings.profileId, profileId), eq(gamepadBindings.gamepadId, gamepadId))).get();
+  async getGamepadBindings(profileId: number, gamepadId: string, romId?: number): Promise<any> {
+    // Per-game binding takes priority; fall back to profile-level default
+    if (romId !== undefined) {
+      const row = db.select().from(gamepadBindings).where(and(
+        eq(gamepadBindings.profileId, profileId),
+        eq(gamepadBindings.gamepadId, gamepadId),
+        eq(gamepadBindings.romId, romId)
+      )).get();
+      if (row) return JSON.parse(row.bindings);
+    }
+    // Profile-level fallback
+    const row = db.select().from(gamepadBindings).where(and(
+      eq(gamepadBindings.profileId, profileId),
+      eq(gamepadBindings.gamepadId, gamepadId),
+    )).get();
     return row ? JSON.parse(row.bindings) : null;
   }
-  async setGamepadBindings(profileId: number, gamepadId: string, bindings: any): Promise<void> {
+  async setGamepadBindings(profileId: number, gamepadId: string, bindings: any, romId?: number): Promise<void> {
     const value = JSON.stringify(bindings);
-    const existing = db.select().from(gamepadBindings).where(and(eq(gamepadBindings.profileId, profileId), eq(gamepadBindings.gamepadId, gamepadId))).get();
-    if (existing) {
-      db.update(gamepadBindings).set({ bindings: value, updatedAt: Date.now() }).where(eq(gamepadBindings.id, existing.id)).run();
+    if (romId !== undefined) {
+      const existing = db.select().from(gamepadBindings).where(and(
+        eq(gamepadBindings.profileId, profileId),
+        eq(gamepadBindings.gamepadId, gamepadId),
+        eq(gamepadBindings.romId, romId)
+      )).get();
+      if (existing) {
+        db.update(gamepadBindings).set({ bindings: value, updatedAt: Date.now() }).where(eq(gamepadBindings.id, existing.id)).run();
+      } else {
+        db.insert(gamepadBindings).values({ profileId, gamepadId, romId, bindings: value, updatedAt: Date.now() }).run();
+      }
     } else {
+      // Profile-level binding (clear any per-game overrides for this profile/gamepad)
+      db.delete(gamepadBindings).where(and(
+        eq(gamepadBindings.profileId, profileId),
+        eq(gamepadBindings.gamepadId, gamepadId),
+      )).run();
       db.insert(gamepadBindings).values({ profileId, gamepadId, bindings: value, updatedAt: Date.now() }).run();
     }
   }

@@ -256,11 +256,22 @@ export const gamepadBindings = sqliteTable("gamepad_bindings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   profileId: integer("profile_id").notNull().default(1),
   gamepadId: text("gamepad_id").notNull().default("default"),
+  romId: integer("rom_id"),
   bindings: text("bindings").notNull().default("{}"),
   updatedAt: integer("updated_at").notNull(),
 });
 
 export type GamepadBinding = typeof gamepadBindings.$inferSelect;
+
+export const gamepadBindingsSchema = z.object({
+  profileId: z.number().int().default(1),
+  gamepadId: z.string().default("default"),
+  romId: z.number().int().nullable(),
+  bindings: z.record(z.string(), z.union([
+    z.number().int(),
+    z.object({ kind: z.enum(["button", "axis"]), buttonIndex: z.number().int().optional(), axisIndex: z.number().int().optional(), direction: z.number().int().optional() }),
+  ])).default({}),
+});
 
 export const cheatIndexCache = sqliteTable("cheat_index_cache", {
   id:        integer("id").primaryKey({ autoIncrement: true }),

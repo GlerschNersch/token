@@ -768,6 +768,7 @@ function ControlsSettings() {
           listeningAction={null}
           listenedBtn={null}
           lastPressedLabel=""
+          gamepadId={gamepads[0]?.id ?? ""}
           onRemapAction={(actionId) => {
             // Poll for the next button or axis press to assign
             let resolved = false;
@@ -857,9 +858,29 @@ function ControlsSettings() {
                       <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{gp.buttons.length} Buttons</span>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 font-mono text-[10px] uppercase tracking-wider"
+                    onClick={() => {
+                      const hasRumble = gp.vibrationActuator || gp.hapticActuators?.[0];
+                      if (hasRumble) {
+                        (gp.vibrationActuator || gp.hapticActuators![0]).playEffect("dual-rumble", {
+                          strongMagnitude: 1.0, weakMagnitude: 0.5, duration: 300,
+                        }).catch(() => {});
+                      }
+                      toast({
+                        title: "Rumble Test",
+                        description: hasRumble ? "Rumble fired!" : "No rumble support on this controller.",
+                      });
+                    }}
+                  >
+                    <Activity className="size-3" />
+                    Test Rumble
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="h-8 gap-2 font-mono text-[10px] uppercase tracking-wider"
                     onClick={() => fetchAutoconfig(gp)}
                     disabled={!!fetchingAutoconfig}

@@ -102,7 +102,8 @@ export function registerProfileRoutes(app: Express) {
       const profileId = Number(req.params.profileId);
       const port = Number(req.query.port ?? 0);
       const gamepadId = port === 1 ? `${req.params.gamepadId}_p2` : req.params.gamepadId;
-      const bindings = await storage.getGamepadBindings(profileId, gamepadId);
+      const romId = req.query.romId ? Number(req.query.romId) : undefined;
+      const bindings = await storage.getGamepadBindings(profileId, gamepadId, romId);
       res.json(bindings);
     } catch (err: any) {
       console.error("GET /api/profiles/:profileId/gamepad-bindings/:gamepadId error:", err);
@@ -115,11 +116,12 @@ export function registerProfileRoutes(app: Express) {
       const profileId = Number(req.params.profileId);
       const port = Number(req.query.port ?? 0);
       const gamepadId = port === 1 ? `${req.params.gamepadId}_p2` : req.params.gamepadId;
+      const romId = req.query.romId ? Number(req.query.romId) : undefined;
       const bindings = req.body;
       if (typeof bindings !== "object" || bindings === null) {
         return res.status(400).json({ message: "bindings must be an object" });
       }
-      await storage.setGamepadBindings(profileId, gamepadId, bindings);
+      await storage.setGamepadBindings(profileId, gamepadId, bindings, romId);
       res.json({ ok: true });
     } catch (err: any) {
       console.error("PUT /api/profiles/:profileId/gamepad-bindings/:gamepadId error:", err);
