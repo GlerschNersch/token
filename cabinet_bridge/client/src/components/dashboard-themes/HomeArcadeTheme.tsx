@@ -579,7 +579,7 @@ export default function HomeArcadeTheme() {
               onClick={() => setRecentlyPlayedCollapsed((v) => !v)}
               className="w-full flex items-center justify-between px-8 py-3 hover:bg-white/5 transition-colors"
             >
-              <div className="font-display text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Recently Played</div>
+              <div className="font-display text-[12px] font-black uppercase tracking-[0.25em] text-white/40">Recently Played</div>
               {recentlyPlayedCollapsed
                 ? <ChevronUp className="size-3.5 text-white/30" />
                 : <ChevronDown className="size-3.5 text-white/30" />
@@ -607,7 +607,7 @@ export default function HomeArcadeTheme() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     </div>
                     <div className="w-full bg-white/5 px-1.5 py-1 text-center">
-                      <div className="text-[9px] font-bold truncate text-white/80 leading-tight">{game.title}</div>
+                      <div className="text-[11px] font-bold truncate text-white/80 leading-tight">{game.title}</div>
                       <div className="text-[8px] text-white/30 uppercase">{game.system.toUpperCase()}</div>
                     </div>
                   </button>
@@ -620,9 +620,12 @@ export default function HomeArcadeTheme() {
         {/* Browse Systems */}
         <div className="shrink-0 border-b border-white/5 px-8 py-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="font-display text-[10px] font-black uppercase tracking-[0.3em] text-white/30">Browse Systems</div>
+            <div className="font-display text-[12px] font-black uppercase tracking-[0.25em] text-white/40">Browse Systems</div>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
+          <div className="grid gap-3"
+            style={{
+              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+            }}>
             {SYSTEMS.filter((s) => s.count > 0).map((system) => {
               const count = allGames.filter((g) => g.system === system.id).length;
               if (count === 0) return null;
@@ -639,8 +642,8 @@ export default function HomeArcadeTheme() {
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                   <div className="absolute bottom-1.5 left-2 right-2">
-                    <div className="text-[9px] font-black uppercase truncate text-white">{system.shortName}</div>
-                    <div className="text-[8px] text-white/50 font-mono">{count} titles</div>
+                    <div className="text-[11px] font-black uppercase truncate text-white">{system.shortName}</div>
+                    <div className="text-[10px] text-white/50 font-mono">{count} titles</div>
                   </div>
                 </button>
               );
@@ -660,7 +663,10 @@ export default function HomeArcadeTheme() {
               {searchQuery && <div className="text-xs mt-1">Try a different search</div>}
             </div>
           ) : (
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-6">
+             <div className="grid gap-4 sm:gap-5 md:gap-6"
+               style={{
+                 gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+               }}>
                 {filteredGames.map((game, i) => {
                   const isActive = i === activeGameIdx;
                   return (
@@ -682,7 +688,7 @@ export default function HomeArcadeTheme() {
                         {game.artUrl ? (
                           <img src={game.artUrl} className="w-full h-full object-cover" alt="" />
                         ) : (
-                          <span className="text-[10px] font-black uppercase text-white/20 px-4 text-center">{game.title}</span>
+                          <span className="text-xs font-black uppercase text-white/20 px-4 text-center">{game.title}</span>
                         )}
                       </div>
 
