@@ -155,11 +155,14 @@ export const integrationSettingsSchema = z.object({
     integerScale: z.boolean().optional(),
     shader: z.string().max(64).optional(),
   })).default({}),
-  uiGamepadMapping: z.record(z.string(), z.number().int()).default({
-    select: 0,   // A
-    back: 1,     // B
-    favorite: 3, // Y
-    menu: 9,     // Start
+  uiGamepadMapping: z.record(z.string(), z.union([
+    z.number().int(),
+    z.object({ kind: z.enum(["button", "axis"]), buttonIndex: z.number().int().optional(), axisIndex: z.number().int().optional(), direction: z.number().int().optional() }),
+  ])).default({
+    select:   { kind: "button", buttonIndex: 0 },
+    back:     { kind: "button", buttonIndex: 1 },
+    favorite: { kind: "button", buttonIndex: 3 },
+    menu:     { kind: "button", buttonIndex: 9 },
   }),
 });
 
