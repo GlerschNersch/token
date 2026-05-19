@@ -1,5 +1,5 @@
 name: "HomeArcade"
-version: "2.24.42"
+version: "2.24.43"
 slug: "cabinet_bridge"
 description: "The premium retro gaming frontend for Home Assistant. Manage ROMs, browse systems, and launch games from your sidebar or TV."
 url: "https://github.com/GlerschNersch/token"
@@ -21,4 +21,5 @@ options:
 schema:
   max_upload_mb: "int(16,16384)"
   steamgriddb_api_key: str?
+
 
